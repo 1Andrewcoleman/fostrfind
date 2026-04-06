@@ -6,15 +6,16 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 1. Onboarding & Profile Creation
 
-- [~] Shelter onboarding form → currently logs to console; needs `insert` into `shelters` table
-- [~] Foster onboarding form → currently logs to console; needs `insert` into `foster_parents` table
-- [ ] Post-login role detection — login always redirects to `/shelter/dashboard`; should detect role and route to correct portal
-- [ ] Google OAuth callback handling (button exists, flow untested end-to-end)
+- [x] Shelter onboarding form — `insert` into `shelters` (slug + random suffix, `user_id` from session)
+- [x] Foster onboarding form — `insert` into `foster_parents`
+- [x] Post-login role detection — `getPostAuthDestination()` in `src/lib/auth-routing.ts`; login redirects to `/shelter/dashboard`, `/foster/browse`, or `/onboarding`
+- [x] Google OAuth callback — `src/app/auth/callback/route.ts` exchanges code, then same role-based redirect (configure provider + redirect URL in Supabase dashboard)
 
 ## 2. Dog CRUD (Shelter Side)
 
-- [~] Create dog — `DogForm` renders with Zod validation; needs Supabase `insert` into `dogs` + link to shelter
-- [~] Edit dog — edit page loads `DogForm` in edit mode; needs `select` by id then `update`
+- [x] Create dog — `DogForm` inserts into `dogs` with `shelter_id` from session
+- [x] Edit dog — edit page loads dog via `select`; `DogForm` updates row
+- [x] List dogs — `/shelter/dogs` loads `dogs` for the signed-in shelter
 - [ ] Delete dog — no UI or logic exists
 - [ ] Dog photo upload — file input renders; `/api/upload/photo` is a stub; needs FormData parsing, resize, Supabase Storage upload
 - [ ] Photo preview/reorder in `DogForm`
@@ -22,15 +23,15 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 3. Browse & Search (Foster Side)
 
-- [~] Browse dogs page — renders 3 hardcoded `PLACEHOLDER_DOGS`; needs Supabase `select` from `dogs` where `status = 'available'`
-- [~] Filter sidebar — checkbox/radio state works client-side; needs to drive real query params (size, age, gender, medical)
+- [x] Browse dogs page — Supabase `select` from `dogs` where `status = 'available'`, nested `shelters` for name/logo (DEV_MODE still uses placeholders)
+- [~] Filter sidebar — filters fetched rows client-side (size, age, gender); medical filter not applied to query; URL query params not wired
 - [ ] Distance-based search — schema has lat/lng; needs haversine/PostGIS query
 - [ ] Pagination / infinite scroll
-- [~] Dog detail page — hardcoded dog; needs `select` dog + shelter by id
+- [x] Dog detail page — `select` dog + shelter by id; apply flow uses real `shelter_id`
 
 ## 4. Applications
 
-- [~] Apply for dog — button sets local state; needs `insert` into `applications` table
+- [x] Apply for dog — `insert` into `applications` (`submitted`, `note`, `foster_id` / `dog_id` / `shelter_id`)
 - [~] Foster "My Applications" page — empty array; needs `select` from `applications` joined with `dogs` + `shelters`
 - [~] Shelter "Applications" page — empty array; needs `select` from `applications` joined with `dogs` + `foster_parents`
 - [~] Application detail (shelter) — shows hardcoded foster data; needs real fetch + foster profile view
@@ -75,7 +76,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 9. Dashboard (Shelter)
 
-- [~] Dashboard page — renders cards with hardcoded zeros
+- [~] Dashboard page — renders cards with hardcoded zeros (shelter dogs list page now loads real dogs separately)
 - [ ] Fetch active dog count (`select count` from `dogs` where shelter)
 - [ ] Fetch pending application count
 - [ ] Fetch recent applications list
@@ -119,7 +120,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [ ] Toast notifications on success/error for all mutations (shadcn `Sonner` is installed)
 - [ ] Mobile navigation (sidebar is `hidden md:flex`; no hamburger menu)
 - [ ] Active nav link highlighting (currently all links same style)
-- [ ] Empty state components (`EmptyState` exists but not used on most pages)
+- [~] Empty state components — used on browse and shelter dogs list; not wired on most other pages
 - [ ] Form error display improvements
 - [ ] Optimistic UI updates for messaging
 - [ ] Confirmation dialogs before destructive actions

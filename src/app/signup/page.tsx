@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 
+const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
 function SignUpForm() {
   const searchParams = useSearchParams()
   const role = searchParams.get('role')
@@ -32,6 +34,12 @@ function SignUpForm() {
     }
 
     setLoading(true)
+
+    if (DEV_MODE) {
+      window.location.href = '/onboarding'
+      return
+    }
+
     const supabase = createClient()
     const { error } = await supabase.auth.signUp({
       email,
@@ -52,6 +60,10 @@ function SignUpForm() {
   }
 
   async function handleGoogleSignUp() {
+    if (DEV_MODE) {
+      window.location.href = '/onboarding'
+      return
+    }
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',

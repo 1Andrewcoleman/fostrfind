@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase/client'
 import { getPostAuthDestination } from '@/lib/auth-routing'
 
+const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -21,6 +23,11 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (DEV_MODE) {
+      window.location.href = '/shelter/dashboard'
+      return
+    }
 
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -38,6 +45,10 @@ export default function LoginPage() {
   }
 
   async function handleGoogleSignIn() {
+    if (DEV_MODE) {
+      window.location.href = '/shelter/dashboard'
+      return
+    }
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',

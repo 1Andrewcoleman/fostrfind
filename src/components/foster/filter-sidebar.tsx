@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
@@ -15,33 +15,32 @@ export interface FilterState {
   medicalOk: boolean
 }
 
-interface FilterSidebarProps {
-  onFilterChange: (filters: FilterState) => void
-}
-
-const defaultFilters: FilterState = {
+export const DEFAULT_FILTERS: FilterState = {
   sizes: [],
   ages: [],
   gender: null,
   medicalOk: false,
 }
 
-export function FilterSidebar({ onFilterChange }: FilterSidebarProps) {
-  const [filters, setFilters] = useState<FilterState>(defaultFilters)
+interface FilterSidebarProps {
+  filters: FilterState
+  onFilterChange: (filters: FilterState) => void
+}
 
-  function updateFilters(updates: Partial<FilterState>) {
-    const next = { ...filters, ...updates }
-    setFilters(next)
-    onFilterChange(next)
-  }
+export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
+  const updateFilters = useCallback(
+    (updates: Partial<FilterState>) => {
+      onFilterChange({ ...filters, ...updates })
+    },
+    [filters, onFilterChange],
+  )
 
   function toggleArray(arr: string[], value: string): string[] {
     return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
   }
 
   function clearAll() {
-    setFilters(defaultFilters)
-    onFilterChange(defaultFilters)
+    onFilterChange(DEFAULT_FILTERS)
   }
 
   return (

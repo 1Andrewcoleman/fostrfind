@@ -66,8 +66,8 @@ All cross-table RLS policies (`applications`, `foster_parents` "shelters can rea
 |------|----------|
 | Onboarding | Client inserts into `shelters` (slug + suffix) or `foster_parents` after signup |
 | Shelter dogs | Create/update via `DogForm`; list on `/shelter/dogs` server-fetches by shelter |
-| Foster browse | Client fetches `dogs` + nested `shelters`; filters applied client-side |
-| Apply | Client inserts into `applications` from dog detail page |
+| Foster browse | Client fetches `dogs` + nested `shelters`; filters (size, age, gender, medical needs) applied client-side; filter state synced to URL search params via `useSearchParams` + `router.replace` so filters survive navigation |
+| Apply | Client inserts into `applications` from dog detail page; page checks for existing application on load and disables "Apply" button if already applied (duplicate prevention) |
 | Profiles | Foster profile and shelter settings server-fetch existing data; client forms upsert/update via Supabase |
 | Applications | Both portals server-fetch joined applications; tab filtering client-side; shelter detail page shows real foster profile + ratings |
 | Accept/Decline/Complete | API routes with auth + ownership + idempotency guards; dog status transitions (pending/placed) |
@@ -90,6 +90,7 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 | `src/lib/auth-routing.ts` | `getPostAuthDestination()` — role-based redirect after auth |
 | `src/components/auth-guard.tsx` | Server component: redirects if no session |
 | `src/components/role-guard.tsx` | Server component: wrong role → other portal; no profile → onboarding |
+| `src/components/foster/filter-sidebar.tsx` | Client: controlled filter sidebar; parent owns state via `filters` + `onFilterChange` props |
 | `src/components/foster/foster-profile-form.tsx` | Client form: upserts `foster_parents` row |
 | `src/components/shelter/shelter-settings-form.tsx` | Client form: updates `shelters` row |
 | `src/components/shelter/applications-list.tsx` | Client component: tab-filtered shelter applications |
@@ -100,6 +101,7 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 | `src/components/shelter/dog-delete-button.tsx` | Client: confirmed delete → `DELETE /api/dogs/[id]` |
 | `src/components/messages/message-thread.tsx` | Client: message list + send (optimistic append); initial payload from server |
 | `src/components/portal-nav.tsx` | Client: shared foster/shelter nav (active state, mobile sheet, unread badge) |
+| `src/app/**/loading.tsx` | Skeleton loading states for server-rendered pages (dashboard, applications, history, messages) |
 | `supabase/migrations/` | Schema + RLS; includes recursion fix and messages read-column UPDATE hardening |
 
 ### API Routes

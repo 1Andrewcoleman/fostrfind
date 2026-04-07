@@ -24,7 +24,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ## 3. Browse & Search (Foster Side)
 
 - [x] Browse dogs page — Supabase `select` from `dogs` where `status = 'available'`, nested `shelters` for name/logo (DEV_MODE still uses placeholders)
-- [~] Filter sidebar — filters fetched rows client-side (size, age, gender); medical filter not applied to query; URL query params not wired
+- [x] Filter sidebar — filters fetched rows client-side (size, age, gender, medical needs); URL query params synced via `useSearchParams` + `router.replace`
 - [ ] Distance-based search — schema has lat/lng; needs haversine/PostGIS query
 - [ ] Pagination / infinite scroll
 - [x] Dog detail page — `select` dog + shelter by id; apply flow uses real `shelter_id`
@@ -115,7 +115,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Verify application ownership before status changes (all three API routes check shelter `user_id`)
 - [ ] Rate limiting on API routes
 - [ ] Input sanitization on all user-submitted text (XSS prevention)
-- [ ] Prevent duplicate applications (same foster + same dog)
+- [x] Prevent duplicate applications (same foster + same dog) — dog detail page checks for existing application on load; button disabled if already applied
 - [ ] Handle expired/revoked sessions gracefully
 - [ ] CSRF protection on mutation endpoints
 
@@ -123,7 +123,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] Toast notifications on success/error for all mutations (Sonner wired on profiles, application actions, internal notes)
 - [x] Confirmation dialogs before destructive actions (accept/decline/complete use `AlertDialog`)
-- [ ] Loading skeletons on data-fetching pages (shadcn `Skeleton` is installed)
+- [x] Loading skeletons on data-fetching pages — `loading.tsx` for dashboard, applications, history, messages (both portals); inline skeletons for browse grid and dog detail
 - [x] Mobile navigation — `MobileNav` + `Sheet` in `portal-nav.tsx` (foster + shelter layouts)
 - [x] Active nav link highlighting — `usePathname` in `portal-nav.tsx`
 - [~] Empty state components — used on browse, shelter dogs, applications, dashboard, history

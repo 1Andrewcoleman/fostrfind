@@ -1,9 +1,14 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { FilterSidebar, type FilterState } from '@/components/foster/filter-sidebar'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import {
+  FilterSidebar,
+  type FilterState,
+} from '@/components/foster/filter-sidebar'
 import { BrowseDogCard } from '@/components/foster/browse-dog-card'
 import { EmptyState } from '@/components/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
 import type { DogWithShelter } from '@/types/database'
 
@@ -36,12 +41,74 @@ const PLACEHOLDER_DOGS: DogWithShelter[] = [
   },
 ]
 
+// ---------------------------------------------------------------------------
+// URL <-> FilterState helpers
+// ---------------------------------------------------------------------------
+
+function parseFiltersFromParams(params: URLSearchParams): FilterState {
+  const sizes = params.get('sizes')?.split(',').filter(Boolean) ?? []
+  const ages = params.get('ages')?.split(',').filter(Boolean) ?? []
+  const gender = params.get('gender') || null
+  const medicalOk = params.get('medicalOk') === '1'
+  return { sizes, ages, gender, medicalOk }
+}
+
+function filtersToParams(filters: FilterState): string {
+  const params = new URLSearchParams()
+  if (filters.sizes.length > 0) params.set('sizes', filters.sizes.join(','))
+  if (filters.ages.length > 0) params.set('ages', filters.ages.join(','))
+  if (filters.gender) params.set('gender', filters.gender)
+  if (filters.medicalOk) params.set('medicalOk', '1')
+  return params.toString()
+}
+
+// ---------------------------------------------------------------------------
+// Browse grid skeleton shown while dogs are loading
+// ---------------------------------------------------------------------------
+
+function BrowseGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="rounded-xl border p-4 space-y-3">
+          <Skeleton className="h-40 w-full rounded-lg" />
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="flex gap-2">
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Page component
+// ---------------------------------------------------------------------------
+
 export default function BrowsePage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const [dogs, setDogs] = useState<DogWithShelter[]>(DEV_MODE ? PLACEHOLDER_DOGS : [])
   const [loadingDogs, setLoadingDogs] = useState(!DEV_MODE)
-  const [filters, setFilters] = useState<FilterState>({
-    sizes: [], ages: [], gender: null, medicalOk: false,
-  })
+  const [filters, setFilters] = useState<FilterState>(() =>
+    parseFiltersFromParams(searchParams),
+  )
+
+  // Keep URL in sync whenever filters change
+  const handleFilterChange = useCallback(
+    (next: FilterState) => {
+      setFilters(next)
+      const qs = filtersToParams(next)
+      router.replace(qs ? `/foster/browse?${qs}` : '/foster/browse', {
+        scroll: false,
+      })
+    },
+    [router],
+  )
 
   useEffect(() => {
     if (DEV_MODE) return
@@ -71,6 +138,7 @@ export default function BrowsePage() {
     if (filters.sizes.length > 0 && dog.size && !filters.sizes.includes(dog.size)) return false
     if (filters.ages.length > 0 && dog.age && !filters.ages.includes(dog.age)) return false
     if (filters.gender && dog.gender !== filters.gender) return false
+    if (!filters.medicalOk && dog.special_needs) return false
     return true
   }), [dogs, filters])
 
@@ -79,15 +147,19 @@ export default function BrowsePage() {
       <div>
         <h1 className="text-2xl font-bold">Browse Dogs</h1>
         <p className="text-muted-foreground">
-          {loadingDogs ? 'Loading...' : `${filteredDogs.length} dog${filteredDogs.length !== 1 ? 's' : ''} available near you`}
+          {loadingDogs
+            ? 'Finding dogs near you\u2026'
+            : `${filteredDogs.length} dog${filteredDogs.length !== 1 ? 's' : ''} available near you`}
         </p>
       </div>
 
       <div className="flex gap-6">
-        <FilterSidebar onFilterChange={setFilters} />
+        <FilterSidebar filters={filters} onFilterChange={handleFilterChange} />
 
         <div className="flex-1">
-          {!loadingDogs && filteredDogs.length === 0 ? (
+          {loadingDogs ? (
+            <BrowseGridSkeleton />
+          ) : filteredDogs.length === 0 ? (
             <EmptyState
               title="No dogs match your filters"
               description="Try adjusting your filters to see more results."

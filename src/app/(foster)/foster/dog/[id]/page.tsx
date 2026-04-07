@@ -5,6 +5,7 @@ import { ChevronLeft, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
+import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/client'
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
@@ -40,7 +42,9 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
   const [note, setNote] = useState('')
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
+  const [checkingApplied, setCheckingApplied] = useState(!DEV_MODE)
   const [applyError, setApplyError] = useState<string | null>(null)
+  const [notFound, setNotFound] = useState(false)
 
   const [dog, setDog] = useState(DEV_MODE ? PLACEHOLDER_DOG : null)
   const [shelter, setShelter] = useState(DEV_MODE ? PLACEHOLDER_SHELTER : null)
@@ -49,16 +53,48 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
     if (DEV_MODE) return
     async function load() {
       const supabase = createClient()
+
       const { data } = await supabase
         .from('dogs')
         .select('*, shelter:shelters(name, location)')
         .eq('id', params.id)
-        .single()
-      if (data) {
-        const shelterData = data.shelter as { name: string; location: string } | null
-        setDog(data as typeof PLACEHOLDER_DOG)
-        setShelter(shelterData ?? PLACEHOLDER_SHELTER)
+        .maybeSingle()
+
+      if (!data) {
+        setNotFound(true)
+        setCheckingApplied(false)
+        return
       }
+
+      const shelterData = data.shelter as { name: string; location: string } | null
+      setDog(data as typeof PLACEHOLDER_DOG)
+      setShelter(shelterData ?? PLACEHOLDER_SHELTER)
+
+      // Check whether the current foster has already applied to this dog
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: fosterRow } = await supabase
+          .from('foster_parents')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        if (fosterRow) {
+          const { data: existingApp } = await supabase
+            .from('applications')
+            .select('id')
+            .eq('dog_id', params.id)
+            .eq('foster_id', fosterRow.id)
+            .limit(1)
+            .maybeSingle()
+
+          if (existingApp) {
+            setApplied(true)
+          }
+        }
+      }
+
+      setCheckingApplied(false)
     }
     load()
   }, [params.id])
@@ -81,7 +117,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       .from('foster_parents')
       .select('id')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
     if (!fosterRow) { setApplyError('Complete your foster profile first.'); setApplying(false); return }
 
     const { error } = await supabase.from('applications').insert({
@@ -102,8 +138,44 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
     setApplying(false)
   }
 
+  if (notFound) {
+    return (
+      <EmptyState
+        title="Dog not found"
+        description="This dog may have been removed or the link is invalid."
+        action={{ label: 'Browse Dogs', href: '/foster/browse' }}
+      />
+    )
+  }
+
   if (!dog || !shelter) {
-    return <div className="py-12 text-center text-muted-foreground">Loading...</div>
+    return (
+      <div className="max-w-2xl space-y-6">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-md" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+          <Skeleton className="h-5 w-16 rounded-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+        <div className="rounded-lg border p-4 space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -130,7 +202,9 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
         </div>
 
         {applied ? (
-          <Button disabled variant="outline">Application Sent ✓</Button>
+          <Button disabled variant="outline">Application Sent &#10003;</Button>
+        ) : checkingApplied ? (
+          <Button disabled variant="outline" size="lg">Loading&hellip;</Button>
         ) : (
           <Dialog>
             <DialogTrigger asChild>

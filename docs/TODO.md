@@ -199,7 +199,9 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 25. UI/UX Aesthetic Overhaul
 
-> The platform currently uses the default shadcn/ui slate-navy theme with no custom typography, no brand personality, and minimal visual hierarchy. Everything below is aesthetic-first — the goal is to feel warm, trustworthy, and purpose-built for animal rescue, not like a generic SaaS tool.
+> **Current state:** A warm brand palette, Plus Jakarta Sans + Inter, `--warm` accent, larger radius, portal nav treatment, browse dog cards, sticky filter `Card` (desktop), `StatusBadge` icons, shelter dashboard greeting + stat pills, `Loader2` on async buttons, and Sonner toast styling are **shipped**. See [`CLAUDE.md`](../CLAUDE.md) **Design system & UI** for where tokens and key components live.
+>
+> Everything below remains aesthetic-first — the goal is to feel warm, trustworthy, and purpose-built for animal rescue. Open items are mostly **landing (25b)**, **sidebar user identity + sign-out (25c.1, overlaps §16)**, **browse chips + mobile filter sheet (25e)**, **messaging UI (25j)**, and other polish.
 
 ### 25a. Brand Identity & Design Tokens
 

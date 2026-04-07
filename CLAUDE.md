@@ -27,6 +27,21 @@ Next.js 14 App Router project. Two route groups share layouts without affecting 
 
 Public routes: `/`, `/login`, `/signup`, `/onboarding`. OAuth returns to `/auth/callback` (see below).
 
+### Design system & UI
+
+The app uses a **warm rescue-oriented** palette (not the default shadcn slate-navy). Prefer **semantic tokens** over one-off hex/HSL in new UI.
+
+| Concern | Where |
+|--------|--------|
+| **CSS variables** | [`src/app/globals.css`](src/app/globals.css) — `--primary` (amber-brown), `--warm` / `--warm-foreground` (honey accent for paw, highlights), warm off-white `--background`, cream `--muted`, `--radius` `0.75rem`, warm `--ring` for focus. `.dark` is calibrated to match. |
+| **Fonts** | [`src/app/layout.tsx`](src/app/layout.tsx) — **Inter** (`--font-sans`, body via `font-sans`) and **Plus Jakarta Sans** (`--font-display`, headings via `font-display`). |
+| **Tailwind** | [`tailwind.config.ts`](tailwind.config.ts) — `fontFamily.sans` / `display`, `colors.warm`, shared `borderRadius` from `--radius`. |
+| **Toasts** | [`src/components/ui/sonner.tsx`](src/components/ui/sonner.tsx) — typed toast classNames (success green tint, error red, etc.). |
+
+Notable surfaces: [`src/components/portal-nav.tsx`](src/components/portal-nav.tsx) (warm active nav pill + left border, unread badge), [`src/components/foster/browse-dog-card.tsx`](src/components/foster/browse-dog-card.tsx), [`src/components/foster/filter-sidebar.tsx`](src/components/foster/filter-sidebar.tsx) (filter panel as `Card`, sticky on `md+`; **filters hidden on small screens** until a mobile filter flow ships — see [`docs/TODO.md`](docs/TODO.md) §25e), [`src/components/status-badge.tsx`](src/components/status-badge.tsx), shelter [`src/app/(shelter)/shelter/dashboard/page.tsx`](src/app/(shelter)/shelter/dashboard/page.tsx) (greeting + stat icon pills). Async buttons use **`Loader2`** from lucide where loading state is shown.
+
+Remaining UI polish is tracked in [`docs/TODO.md`](docs/TODO.md) **§25** (landing, messaging bubbles, mobile filters, sign-out in sidebar, etc.).
+
 ### Auth / Dev Mode
 
 `AuthGuard` and `RoleGuard` are **async Server Components** that redirect unauthenticated or wrong-role users. Both check a `DEV_MODE` constant:
@@ -76,7 +91,7 @@ All cross-table RLS policies (`applications`, `foster_parents` "shelters can rea
 | Messaging | Thread list + thread view (foster/shelter): server-fetched threads, `MessageThread` client sends inserts; mark-as-read on thread open (server `UPDATE`); nav + list unread badges. **No Supabase Realtime** yet — refresh to see new messages from the other party. |
 | Shelter ratings | After placement complete, `RatingDialog` + `POST /api/ratings` (auth, shelter ownership, idempotency); "Rate Foster" available on completed applications until a rating exists. |
 | Dog delete | `DELETE /api/dogs/[id]` + `DogDeleteButton` on edit dog page; blocks delete when active applications exist (409). |
-| Portal nav | `portal-nav.tsx`: active route highlighting, desktop `NavLinks`, mobile `Sheet` menu, unread badge on Messages. |
+| Portal nav | `portal-nav.tsx`: warm-tinted active state, desktop `NavLinks`, mobile `Sheet` menu, unread badge on Messages (pulse when unread count is positive). |
 
 Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging, uploads, email, etc.).
 
@@ -100,7 +115,10 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 | `src/components/shelter/rating-dialog.tsx` | Client: post-complete foster rating → `POST /api/ratings` |
 | `src/components/shelter/dog-delete-button.tsx` | Client: confirmed delete → `DELETE /api/dogs/[id]` |
 | `src/components/messages/message-thread.tsx` | Client: message list + send (optimistic append); initial payload from server |
-| `src/components/portal-nav.tsx` | Client: shared foster/shelter nav (active state, mobile sheet, unread badge) |
+| `src/components/portal-nav.tsx` | Client: shared foster/shelter nav (warm active pill, mobile sheet, unread badge) |
+| `src/components/status-badge.tsx` | Status chips with icons + colors (application vs dog statuses) |
+| `src/components/foster/browse-dog-card.tsx` | Foster browse grid cards (aspect photo, semantic badges) |
+| `src/components/ui/sonner.tsx` | Toaster — brand-tinted success/error/warning/info styles |
 | `src/app/**/loading.tsx` | Skeleton loading states for server-rendered pages (dashboard, applications, history, messages) |
 | `supabase/migrations/` | Schema + RLS; includes recursion fix and messages read-column UPDATE hardening |
 

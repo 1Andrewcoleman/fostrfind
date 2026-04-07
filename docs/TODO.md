@@ -140,3 +140,57 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [ ] Production deployment (Vercel)
 - [ ] Database backups strategy
 - [ ] Seed script for development data
+
+---
+
+## 16. Auth — Critical Gaps
+
+- [ ] **Sign-out button** — no sign-out exists anywhere in either portal layout or nav; users cannot log out; add `supabase.auth.signOut()` + redirect to `/` in both sidebars and mobile sheets
+- [ ] **Forgot password / reset password flow** — login page has no "Forgot password?" link; implement `supabase.auth.resetPasswordForEmail()` + a `/auth/reset-password` callback route that handles the magic-link token and lets the user set a new password
+- [ ] **Email verification handling** — after `signUp()` Supabase sends a confirmation email but the app immediately redirects to `/onboarding` with no check on `email_confirmed_at`; add a `/auth/confirm` route handler and an "please verify your email" interstitial
+
+## 17. Foster Dashboard
+
+- [ ] Foster home / dashboard page at `/foster/dashboard` — show active application count, current fostering placements, unread messages badge, and recent application cards (mirrors the shelter dashboard pattern)
+- [ ] Redirect foster post-login to `/foster/dashboard` instead of `/foster/browse`
+- [ ] Add Dashboard nav item to `FOSTER_NAV` in `portal-nav.tsx`
+
+## 18. Application Workflow Gaps
+
+- [ ] **"Reviewing" status transition** — DB supports `submitted → reviewing → accepted/declined` but there is no shelter UI button to move an application to `reviewing`; add a "Mark as Reviewing" action to `AcceptDeclineButtons` + a `POST /api/applications/[id]/review` route
+- [ ] **Foster application withdrawal** — foster parents have no way to cancel a `submitted` or `reviewing` application; add a "Withdraw Application" button on the foster application detail/list + `DELETE /api/applications/[id]` (guard: only when status is `submitted` or `reviewing`)
+- [ ] **"View Conversation" link from application pages** — shelter application detail and foster application list have no direct link to the message thread; add a "Message" button linking to `/shelter/messages/[applicationId]` or `/foster/messages/[applicationId]` when the application is accepted/completed
+
+## 19. Dog & Shelter Management Gaps
+
+- [ ] **Manual dog status override** — if an accepted placement falls through, shelters have no way to reset a dog from `pending` back to `available`; add a status dropdown or "Re-list Dog" action on the edit dog page + a `PATCH /api/dogs/[id]/status` route
+- [ ] **Shelter placed/completed dogs history** — `/shelter/dogs` only shows active dogs; add a "Placed" tab or separate page listing dogs with `status = 'placed'` and their associated completed application records
+
+## 20. Browse & Discovery Gaps
+
+- [ ] **Text / keyword / breed search** — the filter sidebar has no free-text input; add a search box that filters by dog `name` and `breed` (client-side against loaded data or a Supabase `ilike` query)
+- [ ] **Pre-populate browse filters from foster preferences** — `foster_parents` has `pref_size`, `pref_age`, and `pref_medical` columns collected during onboarding but browse never uses them; on first load (no URL params), initialise `FilterState` from the signed-in foster's saved preferences
+- [ ] **Public shelter profile page** — dog cards show the shelter name but it is not clickable; add a `/shelter/[slug]` public page showing shelter bio, logo, location, and active listings so fosters can vet a shelter before applying
+- [ ] **Pagination on all list pages** — pagination is noted for browse only; shelter applications, foster applications, shelter dogs, and message thread lists all fetch all records; add cursor/page-based pagination or infinite scroll
+
+## 21. Account Settings
+
+- [ ] **Change password** — no auth-level account settings page exists; add `/account/settings` (or extend shelter settings / foster profile) with a "Change Password" section calling `supabase.auth.updateUser({ password })`
+- [ ] **Change email** — similarly, users cannot update their login email; add an email-change form that calls `supabase.auth.updateUser({ email })` and handles the re-confirmation flow
+- [ ] **Account deletion** — users cannot delete their accounts; required by GDPR / CCPA; add a "Delete Account" danger-zone section that anonymises profile data, cancels active applications, and calls `supabase.auth.admin.deleteUser()` via a server action
+
+## 22. Two-Way Trust & Ratings
+
+- [ ] **Foster-to-shelter ratings** — only shelters can rate foster parents; add a reverse rating flow so fosters can rate their shelter experience after a completed placement; requires a new `shelter_ratings` table (or a `rater_role` column on `ratings`) + `POST /api/shelter-ratings`
+- [ ] **Shelter verification workflow** — `shelters.is_verified` is always `false`; add a verification request button on shelter settings, an admin review queue, and surface the verified badge on shelter profiles and dog listings
+
+## 23. Collaboration & Scale
+
+- [ ] **Shelter multi-staff access** — each shelter is bound to a single `user_id`; add a `shelter_members` join table with roles (owner / staff) + an invitation flow so multiple staff can manage the same shelter account
+- [ ] **In-app notification center** — the only notification surface is the unread message badge; add a notification bell + dropdown/page for events like "your application was accepted," "a foster applied to your dog," and "new message received" backed by a `notifications` table
+
+## 24. Legal & Compliance
+
+- [ ] **Terms of Service page** — no legal pages exist; add `/terms` with ToS content; link from signup and footer
+- [ ] **Privacy Policy page** — add `/privacy` covering data collected (location, housing info, children/pets details, EIN); link from signup and footer
+- [ ] **Terms acceptance on signup** — add a required checkbox on the signup form confirming the user accepts the ToS and Privacy Policy; store acceptance timestamp on the user record

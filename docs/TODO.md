@@ -16,7 +16,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Create dog — `DogForm` inserts into `dogs` with `shelter_id` from session
 - [x] Edit dog — edit page loads dog via `select`; `DogForm` updates row
 - [x] List dogs — `/shelter/dogs` loads `dogs` for the signed-in shelter
-- [ ] Delete dog — no UI or logic exists
+- [x] Delete dog — `DogDeleteButton` → `DELETE /api/dogs/[id]`; shelter ownership; 409 if active applications block deletion
 - [ ] Dog photo upload — file input renders; `/api/upload/photo` is a stub; needs FormData parsing, resize, Supabase Storage upload
 - [ ] Photo preview/reorder in `DogForm`
 - [ ] Dog status transitions (available → pending → placed) — no toggle/control in UI
@@ -48,24 +48,26 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] `POST /api/applications/[id]/complete` — auth check, verify shelter ownership, idempotency guard, update status + dog → placed
 - [ ] `POST /api/notifications/send` — Resend integration (code is commented out), email templates
 - [ ] `POST /api/upload/photo` — auth check, FormData parse, image resize, Supabase Storage upload, return public URL
+- [x] `POST /api/ratings` — auth, completed application, shelter ownership, idempotent insert
+- [x] `DELETE /api/dogs/[id]` — auth, shelter ownership, guard against deleting dogs tied to active applications
 
 ## 6. Messaging
 
-- [~] Message thread pages (foster + shelter) — UI renders with hardcoded placeholder messages
-- [ ] Send message — input exists; needs `insert` into `messages` table
-- [ ] Fetch messages — needs `select` from `messages` where `application_id` matches
-- [ ] Message list pages — empty arrays; needs `select distinct application_id` grouped threads
-- [ ] Supabase Realtime subscription — subscribe to `postgres_changes` on `messages` table for live updates
-- [ ] Unread message count / indicators
-- [ ] Mark messages as read on open
+- [x] Message thread pages (foster + shelter) — server fetch application + messages; `MessageThread` client for send/display; DEV_MODE placeholder when no Supabase URL
+- [x] Send message — `MessageThread` inserts into `messages` with `sender_id` / `sender_role`; optimistic UI
+- [x] Fetch messages — server `select` by `application_id`, ordered for display; initial props mirrored after mark-as-read `UPDATE` so client state matches DB
+- [x] Message list pages — server-fetched threads (accepted/completed apps) with last message preview + per-thread unread badges
+- [ ] Supabase Realtime subscription — subscribe to `postgres_changes` on `messages` for live updates without refresh
+- [x] Unread message count / indicators — layouts count unread (by role); thread list badges; nav badge via `portal-nav`
+- [x] Mark messages as read on open — server marks other-party unread rows when thread loads; RLS allows `UPDATE (read)` only (see migrations `20240103000000`, `20240104000000`)
 
 ## 7. Ratings & Reviews
 
-- [ ] Rating submission UI after foster completion (no UI exists)
-- [ ] `StarRating` component exists but is unused — wire into completion flow
-- [ ] `insert` into `ratings` table
-- [ ] Display average rating on foster profile (`calculateAverageRating` helper exists)
-- [ ] Rating history on foster history page
+- [x] Rating submission after foster completion — `RatingDialog` from `AcceptDeclineButtons`; optional prompt after "Mark Complete"; "Rate Foster" on completed applications when no rating yet (`hasExistingRating` from application detail query)
+- [x] `StarRating` — wired in `RatingDialog` for score selection
+- [x] `insert` into `ratings` — `POST /api/ratings` with Zod validation, shelter ownership, idempotency
+- [x] Display average rating on foster profile — application detail / profile views use existing data + `calculateAverageRating` where applicable
+- [~] Rating history on foster history page — completed apps + ratings shown; further polish optional
 
 ## 8. Profile Management
 
@@ -109,6 +111,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ## 13. Security & Edge Cases
 
 - [x] RLS recursion fix — `SECURITY DEFINER` helpers (`get_my_foster_ids`, `get_my_shelter_ids`) break circular policy deps (migration `20240102000000`)
+- [x] Messages mark-as-read hardening — column-scoped `UPDATE (read)` + tightened policy so participants cannot edit message body or sender columns (migration `20240104000000`)
 - [x] Verify application ownership before status changes (all three API routes check shelter `user_id`)
 - [ ] Rate limiting on API routes
 - [ ] Input sanitization on all user-submitted text (XSS prevention)
@@ -121,11 +124,11 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Toast notifications on success/error for all mutations (Sonner wired on profiles, application actions, internal notes)
 - [x] Confirmation dialogs before destructive actions (accept/decline/complete use `AlertDialog`)
 - [ ] Loading skeletons on data-fetching pages (shadcn `Skeleton` is installed)
-- [ ] Mobile navigation (sidebar is `hidden md:flex`; no hamburger menu)
-- [ ] Active nav link highlighting (currently all links same style)
+- [x] Mobile navigation — `MobileNav` + `Sheet` in `portal-nav.tsx` (foster + shelter layouts)
+- [x] Active nav link highlighting — `usePathname` in `portal-nav.tsx`
 - [~] Empty state components — used on browse, shelter dogs, applications, dashboard, history
 - [ ] Form error display improvements
-- [ ] Optimistic UI updates for messaging
+- [x] Optimistic UI updates for messaging — `MessageThread` appends sent messages before insert completes
 
 ## 15. Infrastructure
 

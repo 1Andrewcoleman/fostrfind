@@ -39,6 +39,8 @@ When `DEV_MODE` is true (no real Supabase URL), all auth checks are skipped and 
 
 **Post-login routing**: After password sign-in or OAuth callback, [`src/lib/auth-routing.ts`](src/lib/auth-routing.ts) `getPostAuthDestination()` queries `shelters` and `foster_parents` by `user_id` and returns `/shelter/dashboard`, `/foster/browse`, or `/onboarding`. Used from [`src/app/login/page.tsx`](src/app/login/page.tsx) and [`src/app/auth/callback/route.ts`](src/app/auth/callback/route.ts).
 
+**Hard navigations after auth state changes**: Signup, login, and onboarding use `window.location.href` (not `router.push()`) to ensure the full page load sends fresh session cookies to the server. This prevents stale-session redirect loops between `RoleGuard` and `/onboarding`.
+
 ### Supabase
 
 - **Client Components**: `src/lib/supabase/client.ts` — `createBrowserClient()`
@@ -46,6 +48,15 @@ When `DEV_MODE` is true (no real Supabase URL), all auth checks are skipped and 
 - **Middleware**: `src/lib/supabase/middleware.ts` — `updateSession()` refreshes the session token on every request; skips entirely if no real URL
 
 Uses `@supabase/ssr` (not the deprecated `auth-helpers-nextjs`).
+
+### RLS Policies & SECURITY DEFINER Helpers
+
+The initial schema (`20240101000000`) had circular RLS policies: `foster_parents` policies queried `applications`, whose policies queried `foster_parents` back, causing PostgreSQL infinite recursion. Migration `20240102000000_fix_rls_recursion.sql` fixes this by introducing two `SECURITY DEFINER` helper functions:
+
+- `get_my_foster_ids()` — returns the current user's `foster_parents.id` values, bypassing RLS
+- `get_my_shelter_ids()` — returns the current user's `shelters.id` values, bypassing RLS
+
+All cross-table RLS policies (`applications`, `foster_parents` "shelters can read applicants", `messages`) now use these helpers instead of raw subqueries, breaking the recursion cycle. **Any new RLS policy that references `foster_parents` or `shelters` for ownership checks should use these helpers.**
 
 ### Implemented data flows (MVP)
 
@@ -55,8 +66,13 @@ Uses `@supabase/ssr` (not the deprecated `auth-helpers-nextjs`).
 | Shelter dogs | Create/update via `DogForm`; list on `/shelter/dogs` server-fetches by shelter |
 | Foster browse | Client fetches `dogs` + nested `shelters`; filters applied client-side |
 | Apply | Client inserts into `applications` from dog detail page |
+| Profiles | Foster profile and shelter settings server-fetch existing data; client forms upsert/update via Supabase |
+| Applications | Both portals server-fetch joined applications; tab filtering client-side; shelter detail page shows real foster profile + ratings |
+| Accept/Decline/Complete | API routes with auth + ownership + idempotency guards; dog status transitions (pending/placed) |
+| Dashboard | Server-fetches real counts (active dogs, pending apps, unread messages) + recent applications |
+| Foster History | Server-fetches completed applications + ratings; wires `FosterHistoryCard` + stats |
 
-Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (messaging, accept/decline APIs, uploads, email, etc.).
+Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (messaging, uploads, email, ratings UI, etc.).
 
 ### Key Files
 
@@ -68,15 +84,23 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (messaging, accept/
 | `src/lib/auth-routing.ts` | `getPostAuthDestination()` — role-based redirect after auth |
 | `src/components/auth-guard.tsx` | Server component: redirects if no session |
 | `src/components/role-guard.tsx` | Server component: wrong role → other portal; no profile → onboarding |
-| `supabase/migrations/` | Full schema with RLS policies for all 6 tables |
+| `src/components/foster/foster-profile-form.tsx` | Client form: upserts `foster_parents` row |
+| `src/components/shelter/shelter-settings-form.tsx` | Client form: updates `shelters` row |
+| `src/components/shelter/applications-list.tsx` | Client component: tab-filtered shelter applications |
+| `src/components/foster/applications-list.tsx` | Client component: tab-filtered foster applications |
+| `src/components/shelter/shelter-note-editor.tsx` | Client component: saves internal `shelter_note` |
+| `src/components/shelter/accept-decline-buttons.tsx` | Client component: accept/decline/complete with confirmation dialogs + toasts |
+| `supabase/migrations/` | Full schema with RLS policies for all 6 tables + recursion fix |
 
 ### API Routes
 
-Under `src/app/api/` — **still stubs** returning placeholder JSON with `// TODO` comments (not used by the happy-path UI yet):
+Under `src/app/api/`:
 
-- `applications/[id]/accept` / `decline` / `complete`
-- `notifications/send`
-- `upload/photo`
+- `applications/[id]/accept` — **implemented**: auth → ownership → idempotency → status + dog update
+- `applications/[id]/decline` — **implemented**: auth → ownership → idempotency → status update
+- `applications/[id]/complete` — **implemented**: auth → ownership → idempotency → status + dog update
+- `notifications/send` — **stub** returning placeholder JSON
+- `upload/photo` — **stub** returning placeholder JSON
 
 ### ESLint
 

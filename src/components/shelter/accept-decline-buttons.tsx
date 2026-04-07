@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Flag } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -23,6 +24,8 @@ interface AcceptDeclineButtonsProps {
   fosterName?: string
 }
 
+type ActionKind = 'accept' | 'decline' | 'complete'
+
 export function AcceptDeclineButtons({
   applicationId,
   currentStatus,
@@ -30,33 +33,41 @@ export function AcceptDeclineButtons({
   fosterName = 'this foster parent',
 }: AcceptDeclineButtonsProps) {
   const router = useRouter()
-  const [loading, setLoading] = useState<'accept' | 'decline' | null>(null)
+  const [loading, setLoading] = useState<ActionKind | null>(null)
 
-  const isLocked = ['accepted', 'declined', 'completed'].includes(currentStatus)
+  const isTerminal = ['declined', 'completed'].includes(currentStatus)
 
-  async function handleAccept() {
-    setLoading('accept')
+  async function handleAction(action: ActionKind): Promise<void> {
+    setLoading(action)
+
     try {
-      // TODO: replace with real API call
-      await fetch(`/api/applications/${applicationId}/accept`, { method: 'POST' })
+      const res = await fetch(`/api/applications/${applicationId}/${action}`, {
+        method: 'POST',
+      })
+
+      const body = await res.json()
+
+      if (!res.ok) {
+        toast.error(body.error ?? `Failed to ${action} application.`)
+        return
+      }
+
+      const labels: Record<ActionKind, string> = {
+        accept: 'Application accepted',
+        decline: 'Application declined',
+        complete: 'Foster placement completed',
+      }
+
+      toast.success(labels[action])
       router.refresh()
+    } catch {
+      toast.error('Something went wrong. Please try again.')
     } finally {
       setLoading(null)
     }
   }
 
-  async function handleDecline() {
-    setLoading('decline')
-    try {
-      // TODO: replace with real API call
-      await fetch(`/api/applications/${applicationId}/decline`, { method: 'POST' })
-      router.refresh()
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  if (isLocked) {
+  if (isTerminal) {
     return (
       <p className="text-sm text-muted-foreground">
         This application has been <span className="font-medium">{currentStatus}</span>.
@@ -64,6 +75,36 @@ export function AcceptDeclineButtons({
     )
   }
 
+  // Accepted applications can only be completed
+  if (currentStatus === 'accepted') {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button disabled={!!loading}>
+            <Flag className="mr-2 h-4 w-4" />
+            {loading === 'complete' ? 'Completing...' : 'Mark Complete'}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete this foster placement?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This marks the foster of <strong>{dogName}</strong> by{' '}
+              <strong>{fosterName}</strong> as completed. The dog will be recorded as placed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleAction('complete')}>
+              Confirm Complete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+  }
+
+  // Submitted / reviewing — can accept or decline
   return (
     <div className="flex gap-3">
       {/* Accept */}
@@ -71,7 +112,7 @@ export function AcceptDeclineButtons({
         <AlertDialogTrigger asChild>
           <Button className="bg-green-600 hover:bg-green-700" disabled={!!loading}>
             <CheckCircle className="mr-2 h-4 w-4" />
-            Accept
+            {loading === 'accept' ? 'Accepting...' : 'Accept'}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -79,14 +120,13 @@ export function AcceptDeclineButtons({
             <AlertDialogTitle>Accept this application?</AlertDialogTitle>
             <AlertDialogDescription>
               You&apos;ll accept <strong>{fosterName}</strong> to foster{' '}
-              <strong>{dogName}</strong>. A message thread will open and the dog will be
-              marked as pending.
+              <strong>{dogName}</strong>. The dog will be marked as pending.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleAccept}
+              onClick={() => handleAction('accept')}
               className="bg-green-600 hover:bg-green-700"
             >
               Confirm Accept
@@ -98,9 +138,13 @@ export function AcceptDeclineButtons({
       {/* Decline */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" disabled={!!loading}>
+          <Button
+            variant="outline"
+            className="border-destructive text-destructive hover:bg-destructive/10"
+            disabled={!!loading}
+          >
             <XCircle className="mr-2 h-4 w-4" />
-            Decline
+            {loading === 'decline' ? 'Declining...' : 'Decline'}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -113,7 +157,10 @@ export function AcceptDeclineButtons({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDecline} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={() => handleAction('decline')}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               Confirm Decline
             </AlertDialogAction>
           </AlertDialogFooter>

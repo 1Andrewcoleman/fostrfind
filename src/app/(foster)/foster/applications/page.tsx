@@ -1,34 +1,46 @@
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { EmptyState } from '@/components/empty-state'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { FosterApplicationsList } from '@/components/foster/applications-list'
+import type { ApplicationWithDetails } from '@/types/database'
 
-export default function FosterApplicationsPage() {
-  // TODO: fetch applications for this foster from Supabase
-  const applications: [] = []
+const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
+export default async function FosterApplicationsPage(): Promise<React.JSX.Element> {
+  let applications: ApplicationWithDetails[] = []
+
+  if (!DEV_MODE) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    const { data: fosterRow } = await supabase
+      .from('foster_parents')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!fosterRow) {
+      redirect('/onboarding')
+    }
+
+    const { data } = await supabase
+      .from('applications')
+      .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+      .eq('foster_id', fosterRow.id)
+      .order('created_at', { ascending: false })
+
+    applications = (data ?? []) as ApplicationWithDetails[]
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold">My Applications</h1>
-
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="submitted">Submitted</TabsTrigger>
-          <TabsTrigger value="accepted">Accepted</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {applications.length === 0 ? (
-        <EmptyState
-          title="No applications yet"
-          description="Browse available dogs and submit your first application."
-          action={{ label: 'Browse Dogs', href: '/foster/browse' }}
-        />
-      ) : (
-        <div className="space-y-3">
-          {/* TODO: map over applications and render <ApplicationStatusCard application={app} /> */}
-        </div>
-      )}
+      <FosterApplicationsList applications={applications} />
     </div>
   )
 }

@@ -1,23 +1,53 @@
-// import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } }
-) {
-  // TODO: 1. Verify caller is authenticated shelter owner of this application
-  // const supabase = await createClient()
+  { params }: { params: { id: string } },
+): Promise<NextResponse> {
+  const supabase = await createClient()
 
-  // TODO: 2. Update application status → 'declined'
-  // await supabase.from('applications').update({ status: 'declined' }).eq('id', params.id)
+  // 1. Authenticate the caller
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // Note: dog status stays 'available' — it can receive more applications
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // TODO: 3. Send decline notification email
-  // await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-  //   method: 'POST',
-  //   body: JSON.stringify({ type: 'application_declined', applicationId: params.id }),
-  // })
+  // 2. Fetch application and verify shelter ownership
+  const { data: application, error: fetchError } = await supabase
+    .from('applications')
+    .select('*, shelter:shelters!inner(user_id)')
+    .eq('id', params.id)
+    .single()
+
+  if (fetchError || !application) {
+    return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+  }
+
+  if (application.shelter.user_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // 3. Idempotency guard — only submitted or reviewing apps can be declined
+  if (!['submitted', 'reviewing'].includes(application.status)) {
+    return NextResponse.json(
+      { error: `Cannot decline an application with status "${application.status}"` },
+      { status: 409 },
+    )
+  }
+
+  // 4. Update application status to declined (dog stays available)
+  const { error: updateError } = await supabase
+    .from('applications')
+    .update({ status: 'declined' })
+    .eq('id', params.id)
+
+  if (updateError) {
+    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true, applicationId: params.id })
 }

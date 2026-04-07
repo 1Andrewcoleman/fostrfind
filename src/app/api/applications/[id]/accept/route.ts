@@ -1,34 +1,63 @@
-// import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } }
-) {
-  // TODO: 1. Verify caller is authenticated
-  // const supabase = await createClient()
-  // const { data: { user } } = await supabase.auth.getUser()
-  // if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  { params }: { params: { id: string } },
+): Promise<NextResponse> {
+  const supabase = await createClient()
 
-  // TODO: 2. Verify caller is shelter owner of this application
-  // const { data: application } = await supabase
-  //   .from('applications')
-  //   .select('*, shelter:shelters(user_id), dog_id')
-  //   .eq('id', params.id)
-  //   .single()
-  // if (application?.shelter.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // 1. Authenticate the caller
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // TODO: 3. Update application status → 'accepted'
-  // await supabase.from('applications').update({ status: 'accepted' }).eq('id', params.id)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // TODO: 4. Update dog status → 'pending'
-  // await supabase.from('dogs').update({ status: 'pending' }).eq('id', application.dog_id)
+  // 2. Fetch application and verify shelter ownership
+  const { data: application, error: fetchError } = await supabase
+    .from('applications')
+    .select('*, shelter:shelters!inner(user_id)')
+    .eq('id', params.id)
+    .single()
 
-  // TODO: 5. Send acceptance email via /api/notifications/send
-  // await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notifications/send`, {
-  //   method: 'POST',
-  //   body: JSON.stringify({ type: 'application_accepted', applicationId: params.id }),
-  // })
+  if (fetchError || !application) {
+    return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+  }
+
+  if (application.shelter.user_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // 3. Idempotency guard — only submitted or reviewing apps can be accepted
+  if (!['submitted', 'reviewing'].includes(application.status)) {
+    return NextResponse.json(
+      { error: `Cannot accept an application with status "${application.status}"` },
+      { status: 409 },
+    )
+  }
+
+  // 4. Update application status to accepted
+  const { error: updateError } = await supabase
+    .from('applications')
+    .update({ status: 'accepted' })
+    .eq('id', params.id)
+
+  if (updateError) {
+    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
+  }
+
+  // 5. Set the dog's status to pending
+  const { error: dogError } = await supabase
+    .from('dogs')
+    .update({ status: 'pending' })
+    .eq('id', application.dog_id)
+
+  if (dogError) {
+    return NextResponse.json({ error: 'Application accepted but failed to update dog status' }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true, applicationId: params.id })
 }

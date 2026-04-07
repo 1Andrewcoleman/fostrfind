@@ -1,12 +1,80 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Plus, Dog, FileText, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
+import { ApplicationCard } from '@/components/shelter/application-card'
+import { createClient } from '@/lib/supabase/server'
+import type { ApplicationWithDetails } from '@/types/database'
 
-export default function ShelterDashboard() {
-  // TODO: fetch real data from Supabase
-  const stats = { activeDogs: 0, pendingApplications: 0, unreadMessages: 0 }
+const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
+interface DashboardStats {
+  activeDogs: number
+  pendingApplications: number
+  unreadMessages: number
+}
+
+export default async function ShelterDashboard(): Promise<React.JSX.Element> {
+  let stats: DashboardStats = { activeDogs: 0, pendingApplications: 0, unreadMessages: 0 }
+  let recentApplications: ApplicationWithDetails[] = []
+
+  if (!DEV_MODE) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    const { data: shelterRow } = await supabase
+      .from('shelters')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!shelterRow) {
+      redirect('/onboarding')
+    }
+
+    const shelterId = shelterRow.id
+
+    // Run all count queries in parallel
+    const [dogsCount, appsCount, messagesCount, recentApps] = await Promise.all([
+      supabase
+        .from('dogs')
+        .select('*', { count: 'exact', head: true })
+        .eq('shelter_id', shelterId)
+        .eq('status', 'available'),
+      supabase
+        .from('applications')
+        .select('*', { count: 'exact', head: true })
+        .eq('shelter_id', shelterId)
+        .in('status', ['submitted', 'reviewing']),
+      supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('sender_role', 'foster')
+        .eq('read', false),
+      supabase
+        .from('applications')
+        .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+        .eq('shelter_id', shelterId)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ])
+
+    stats = {
+      activeDogs: dogsCount.count ?? 0,
+      pendingApplications: appsCount.count ?? 0,
+      unreadMessages: messagesCount.count ?? 0,
+    }
+
+    recentApplications = (recentApps.data ?? []) as ApplicationWithDetails[]
+  }
 
   return (
     <div className="space-y-8">
@@ -61,11 +129,26 @@ export default function ShelterDashboard() {
 
       {/* Recent Applications */}
       <section>
-        <h2 className="text-lg font-semibold mb-4">Recent Applications</h2>
-        <EmptyState
-          title="No applications yet"
-          description="Applications will appear here once fosters apply to your dogs."
-        />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Recent Applications</h2>
+          {recentApplications.length > 0 && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/shelter/applications">View all</Link>
+            </Button>
+          )}
+        </div>
+        {recentApplications.length === 0 ? (
+          <EmptyState
+            title="No applications yet"
+            description="Applications will appear here once fosters apply to your dogs."
+          />
+        ) : (
+          <div className="space-y-3">
+            {recentApplications.map((app) => (
+              <ApplicationCard key={app.id} application={app} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Your Dogs */}
@@ -76,11 +159,20 @@ export default function ShelterDashboard() {
             <Link href="/shelter/dogs">View all</Link>
           </Button>
         </div>
-        <EmptyState
-          title="No dogs listed yet"
-          description="Add your first dog to start receiving foster applications."
-          action={{ label: 'Add Dog', href: '/shelter/dogs/new' }}
-        />
+        {stats.activeDogs === 0 ? (
+          <EmptyState
+            title="No dogs listed yet"
+            description="Add your first dog to start receiving foster applications."
+            action={{ label: 'Add Dog', href: '/shelter/dogs/new' }}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            You have {stats.activeDogs} active listing{stats.activeDogs !== 1 ? 's' : ''}.{' '}
+            <Link href="/shelter/dogs" className="text-primary hover:underline">
+              Manage your dogs
+            </Link>
+          </p>
+        )}
       </section>
     </div>
   )

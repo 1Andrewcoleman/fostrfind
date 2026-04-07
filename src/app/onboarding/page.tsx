@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { PawPrint, Building2, Heart } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,7 +25,6 @@ const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 type Step = 'role' | 'shelter-form' | 'foster-form'
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const [step, setStep] = useState<Step>('role')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,32 +47,51 @@ export default function OnboardingPage() {
     setError(null)
 
     if (DEV_MODE) {
-      router.push('/shelter/dashboard')
+      window.location.href = '/shelter/dashboard'
       return
     }
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('You must be logged in.'); setLoading(false); return }
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-    const baseSlug = slugify(shelter.name) || 'shelter'
-    const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
+      if (!user) {
+        setError('You must be logged in.')
+        toast.error('You must be logged in.')
+        setLoading(false)
+        return
+      }
 
-    const { error: dbError } = await supabase.from('shelters').insert({
-      user_id: user.id,
-      name: shelter.name,
-      slug,
-      email: shelter.email,
-      phone: shelter.phone || null,
-      location: shelter.location,
-      ein: shelter.ein || null,
-      bio: shelter.bio || null,
-      website: shelter.website || null,
-      instagram: shelter.instagram || null,
-    })
+      const baseSlug = slugify(shelter.name) || 'shelter'
+      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
 
-    if (dbError) { setError(dbError.message); setLoading(false); return }
-    router.push('/shelter/dashboard')
+      const { error: dbError } = await supabase.from('shelters').insert({
+        user_id: user.id,
+        name: shelter.name,
+        slug,
+        email: shelter.email,
+        phone: shelter.phone || null,
+        location: shelter.location,
+        ein: shelter.ein || null,
+        bio: shelter.bio || null,
+        website: shelter.website || null,
+        instagram: shelter.instagram || null,
+      })
+
+      if (dbError) {
+        setError(dbError.message)
+        toast.error(dbError.message)
+        setLoading(false)
+        return
+      }
+
+      toast.success('Shelter created! Redirecting...')
+      window.location.href = '/shelter/dashboard'
+    } catch {
+      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.')
+      setLoading(false)
+    }
   }
 
   async function handleFosterSubmit(e: React.FormEvent) {
@@ -82,33 +100,52 @@ export default function OnboardingPage() {
     setError(null)
 
     if (DEV_MODE) {
-      router.push('/foster/browse')
+      window.location.href = '/foster/browse'
       return
     }
 
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('You must be logged in.'); setLoading(false); return }
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
 
-    const { error: dbError } = await supabase.from('foster_parents').insert({
-      user_id: user.id,
-      first_name: foster.first_name,
-      last_name: foster.last_name,
-      email: foster.email,
-      phone: foster.phone || null,
-      location: foster.location,
-      housing_type: foster.housing_type || null,
-      has_yard: foster.has_yard,
-      has_other_pets: foster.has_other_pets,
-      other_pets_info: foster.other_pets_info || null,
-      has_children: foster.has_children,
-      children_info: foster.children_info || null,
-      experience: foster.experience || null,
-      bio: foster.bio || null,
-    })
+      if (!user) {
+        setError('You must be logged in.')
+        toast.error('You must be logged in.')
+        setLoading(false)
+        return
+      }
 
-    if (dbError) { setError(dbError.message); setLoading(false); return }
-    router.push('/foster/browse')
+      const { error: dbError } = await supabase.from('foster_parents').insert({
+        user_id: user.id,
+        first_name: foster.first_name,
+        last_name: foster.last_name,
+        email: foster.email,
+        phone: foster.phone || null,
+        location: foster.location,
+        housing_type: foster.housing_type || null,
+        has_yard: foster.has_yard,
+        has_other_pets: foster.has_other_pets,
+        other_pets_info: foster.other_pets_info || null,
+        has_children: foster.has_children,
+        children_info: foster.children_info || null,
+        experience: foster.experience || null,
+        bio: foster.bio || null,
+      })
+
+      if (dbError) {
+        setError(dbError.message)
+        toast.error(dbError.message)
+        setLoading(false)
+        return
+      }
+
+      toast.success('Profile created! Redirecting...')
+      window.location.href = '/foster/browse'
+    } catch {
+      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.')
+      setLoading(false)
+    }
   }
 
   if (step === 'role') {

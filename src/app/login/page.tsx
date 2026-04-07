@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { PawPrint } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,6 @@ import { createClient } from '@/lib/supabase/client'
 import { getPostAuthDestination } from '@/lib/auth-routing'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,13 +27,14 @@ export default function LoginPage() {
 
     if (error) {
       setError(error.message)
+      toast.error(error.message)
       setLoading(false)
       return
     }
 
     const { data: { user } } = await supabase.auth.getUser()
     const dest = user ? await getPostAuthDestination(supabase, user.id) : '/onboarding'
-    router.push(dest)
+    window.location.href = dest
   }
 
   async function handleGoogleSignIn() {

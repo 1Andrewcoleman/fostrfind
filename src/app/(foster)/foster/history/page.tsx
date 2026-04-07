@@ -1,10 +1,63 @@
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/empty-state'
+import { FosterHistoryCard } from '@/components/foster/foster-history-card'
+import { calculateAverageRating } from '@/lib/helpers'
+import type { ApplicationWithDetails, Rating } from '@/types/database'
 
-export default function FosterHistoryPage() {
-  // TODO: fetch completed applications + ratings for this foster from Supabase
-  const placements: [] = []
-  const totalPlacements = 0
-  const averageRating = 0
+const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
+export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
+  let placements: ApplicationWithDetails[] = []
+  const ratingsMap: Record<string, Rating | undefined> = {}
+  let averageRating = 0
+
+  if (!DEV_MODE) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      redirect('/login')
+    }
+
+    const { data: fosterRow } = await supabase
+      .from('foster_parents')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!fosterRow) {
+      redirect('/onboarding')
+    }
+
+    const [applicationsResult, ratingsResult] = await Promise.all([
+      supabase
+        .from('applications')
+        .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+        .eq('foster_id', fosterRow.id)
+        .eq('status', 'completed')
+        .order('updated_at', { ascending: false }),
+      supabase
+        .from('ratings')
+        .select('*')
+        .eq('foster_id', fosterRow.id)
+        .order('created_at', { ascending: false }),
+    ])
+
+    placements = (applicationsResult.data ?? []) as ApplicationWithDetails[]
+    const allRatings = (ratingsResult.data ?? []) as Rating[]
+
+    // Build a lookup from application_id to its rating
+    for (const rating of allRatings) {
+      ratingsMap[rating.application_id] = rating
+    }
+
+    averageRating = calculateAverageRating(allRatings)
+  }
+
+  const totalPlacements = placements.length
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -18,7 +71,9 @@ export default function FosterHistoryPage() {
             <p className="text-sm text-muted-foreground">Total Placements</p>
           </div>
           <div className="rounded-lg border p-4 text-center">
-            <p className="text-3xl font-bold">{averageRating > 0 ? averageRating.toFixed(1) : '—'}</p>
+            <p className="text-3xl font-bold">
+              {averageRating > 0 ? averageRating.toFixed(1) : '\u2014'}
+            </p>
             <p className="text-sm text-muted-foreground">Average Rating</p>
           </div>
         </div>
@@ -32,7 +87,13 @@ export default function FosterHistoryPage() {
         />
       ) : (
         <div className="space-y-3">
-          {/* TODO: map over placements and render <FosterHistoryCard application={p} rating={ratings[p.id]} /> */}
+          {placements.map((placement) => (
+            <FosterHistoryCard
+              key={placement.id}
+              application={placement}
+              rating={ratingsMap[placement.id]}
+            />
+          ))}
         </div>
       )}
     </div>

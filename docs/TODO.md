@@ -32,20 +32,20 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ## 4. Applications
 
 - [x] Apply for dog — `insert` into `applications` (`submitted`, `note`, `foster_id` / `dog_id` / `shelter_id`)
-- [~] Foster "My Applications" page — empty array; needs `select` from `applications` joined with `dogs` + `shelters`
-- [~] Shelter "Applications" page — empty array; needs `select` from `applications` joined with `dogs` + `foster_parents`
-- [~] Application detail (shelter) — shows hardcoded foster data; needs real fetch + foster profile view
-- [ ] Shelter internal notes — textarea exists; needs save on blur/submit (`update` `shelter_note`)
-- [~] Accept application — `AcceptDeclineButtons` call `/api/applications/[id]/accept` which is a stub
-- [~] Decline application — same; stub returns `{ success: true }`
-- [~] Complete foster — same; stub returns `{ success: true, promptRating: true }`
-- [ ] Status change side effects: accepting should set dog → `pending`, declining others, completing should set dog → `placed`
+- [x] Foster "My Applications" page — server-fetches `applications` joined with `dogs` + `shelters`; tab filtering via `FosterApplicationsList` client component
+- [x] Shelter "Applications" page — server-fetches `applications` joined with `dogs` + `foster_parents`; tab filtering via `ShelterApplicationsList` client component
+- [x] Application detail (shelter) — real fetch with joins; `FosterProfileView` with ratings; `ShelterNoteEditor` for internal notes
+- [x] Shelter internal notes — `ShelterNoteEditor` client component saves `shelter_note` on submit via Supabase
+- [x] Accept application — `AcceptDeclineButtons` calls `/api/applications/[id]/accept`; auth + ownership + idempotency guard; sets dog → `pending`
+- [x] Decline application — same pattern; sets application → `declined`; dog stays `available`
+- [x] Complete foster — "Mark Complete" button (shown when `accepted`); sets application → `completed` + dog → `placed`
+- [x] Status change side effects: accepting sets dog → `pending`, completing sets dog → `placed`
 
-## 5. API Routes (All Stubs)
+## 5. API Routes
 
-- [ ] `POST /api/applications/[id]/accept` — auth check, verify shelter ownership, update status, update dog, email foster
-- [ ] `POST /api/applications/[id]/decline` — auth check, verify shelter ownership, update status, email foster
-- [ ] `POST /api/applications/[id]/complete` — auth check, update status, set dog → placed, prompt rating
+- [x] `POST /api/applications/[id]/accept` — auth check, verify shelter ownership, idempotency guard, update status + dog → pending
+- [x] `POST /api/applications/[id]/decline` — auth check, verify shelter ownership, idempotency guard, update status
+- [x] `POST /api/applications/[id]/complete` — auth check, verify shelter ownership, idempotency guard, update status + dog → placed
 - [ ] `POST /api/notifications/send` — Resend integration (code is commented out), email templates
 - [ ] `POST /api/upload/photo` — auth check, FormData parse, image resize, Supabase Storage upload, return public URL
 
@@ -69,23 +69,24 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 8. Profile Management
 
-- [~] Foster profile page — form state works; needs `upsert` into `foster_parents`
-- [~] Shelter settings page — form renders; needs `update` on `shelters` table
-- [ ] Avatar/logo upload — file inputs exist; needs Supabase Storage wiring
-- [~] `ProfileCompleteness` component — calculates % from local state; needs to read from DB
+- [x] Foster profile page — server-fetches `foster_parents` row; `FosterProfileForm` client component upserts via Supabase; Sonner toasts
+- [x] Shelter settings page — server-fetches `shelters` row; `ShelterSettingsForm` client component updates via Supabase; Sonner toasts
+- [ ] Avatar/logo upload — file inputs exist (disabled); needs Supabase Storage wiring
+- [x] `ProfileCompleteness` component — reads from server-fetched data passed via props
 
 ## 9. Dashboard (Shelter)
 
-- [~] Dashboard page — renders cards with hardcoded zeros (shelter dogs list page now loads real dogs separately)
-- [ ] Fetch active dog count (`select count` from `dogs` where shelter)
-- [ ] Fetch pending application count
-- [ ] Fetch recent applications list
-- [ ] Fetch unread message count
+- [x] Dashboard page — server-fetches real counts (active dogs, pending apps, unread messages) and last 5 applications with joins
+- [x] Fetch active dog count (`select count` from `dogs` where shelter + available)
+- [x] Fetch pending application count (submitted + reviewing)
+- [x] Fetch recent applications list (last 5 with `ApplicationCard`)
+- [x] Fetch unread message count
 
 ## 10. Foster History
 
-- [~] History page — empty array; needs `select` from `applications` where `status = 'completed'` joined with `dogs` + `ratings`
-- [ ] `FosterHistoryCard` component exists but is unused by the page
+- [x] History page — server-fetches completed `applications` joined with `dogs` + `shelters`; separate ratings query
+- [x] `FosterHistoryCard` component wired with real data + optional rating display
+- [x] Stats: total placements + average rating computed via `calculateAverageRating`
 
 ## 11. Email Notifications (Resend)
 
@@ -107,23 +108,24 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 13. Security & Edge Cases
 
+- [x] RLS recursion fix — `SECURITY DEFINER` helpers (`get_my_foster_ids`, `get_my_shelter_ids`) break circular policy deps (migration `20240102000000`)
+- [x] Verify application ownership before status changes (all three API routes check shelter `user_id`)
 - [ ] Rate limiting on API routes
 - [ ] Input sanitization on all user-submitted text (XSS prevention)
 - [ ] Prevent duplicate applications (same foster + same dog)
-- [ ] Verify application ownership before status changes
 - [ ] Handle expired/revoked sessions gracefully
 - [ ] CSRF protection on mutation endpoints
 
 ## 14. UX Polish
 
+- [x] Toast notifications on success/error for all mutations (Sonner wired on profiles, application actions, internal notes)
+- [x] Confirmation dialogs before destructive actions (accept/decline/complete use `AlertDialog`)
 - [ ] Loading skeletons on data-fetching pages (shadcn `Skeleton` is installed)
-- [ ] Toast notifications on success/error for all mutations (shadcn `Sonner` is installed)
 - [ ] Mobile navigation (sidebar is `hidden md:flex`; no hamburger menu)
 - [ ] Active nav link highlighting (currently all links same style)
-- [~] Empty state components — used on browse and shelter dogs list; not wired on most other pages
+- [~] Empty state components — used on browse, shelter dogs, applications, dashboard, history
 - [ ] Form error display improvements
 - [ ] Optimistic UI updates for messaging
-- [ ] Confirmation dialogs before destructive actions
 
 ## 15. Infrastructure
 

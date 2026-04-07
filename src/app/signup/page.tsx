@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { PawPrint } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +13,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase/client'
 
 function SignUpForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const role = searchParams.get('role')
 
@@ -43,11 +43,12 @@ function SignUpForm() {
 
     if (error) {
       setError(error.message)
+      toast.error(error.message)
       setLoading(false)
       return
     }
 
-    router.push('/onboarding')
+    window.location.href = '/onboarding'
   }
 
   async function handleGoogleSignUp() {

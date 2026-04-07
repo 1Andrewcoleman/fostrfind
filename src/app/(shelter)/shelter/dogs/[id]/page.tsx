@@ -1,19 +1,8 @@
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { notFound } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { DogForm } from '@/components/shelter/dog-form'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { DogDeleteButton } from '@/components/shelter/dog-delete-button'
 import { createClient } from '@/lib/supabase/server'
 import type { Dog } from '@/types/database'
 
@@ -46,27 +35,7 @@ export default async function EditDogPage({ params }: EditDogPageProps) {
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Edit {dogName}</h1>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">Delete Dog</Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete {dogName}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently remove this dog listing and all associated applications.
-                This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction className="bg-destructive hover:bg-destructive/90">
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {dog && <DogDeleteButton dogId={dog.id} dogName={dogName} />}
       </div>
 
       <DogForm mode="edit" dogId={params.id} initialData={dog ?? undefined} />

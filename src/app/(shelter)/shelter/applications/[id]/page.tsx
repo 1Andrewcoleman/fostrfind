@@ -67,6 +67,10 @@ export default async function ApplicationDetailPage({
   const ratings = (ratingsData ?? []) as Rating[]
   const fosterName = `${app.foster.first_name} ${app.foster.last_name}`
 
+  // A rating is tied to a specific application, not just the foster.
+  // Checking here avoids showing the "Rate Foster" button when one already exists.
+  const hasExistingRating = ratings.some((r) => r.application_id === app.id)
+
   return (
     <div className="max-w-2xl space-y-6">
       <Link
@@ -121,6 +125,7 @@ export default async function ApplicationDetailPage({
           currentStatus={app.status}
           dogName={app.dog.name}
           fosterName={fosterName}
+          hasExistingRating={hasExistingRating}
         />
       </div>
 

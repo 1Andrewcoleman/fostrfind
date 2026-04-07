@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Flag } from 'lucide-react'
+import { CheckCircle, XCircle, Flag, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,12 +16,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { RatingDialog } from '@/components/shelter/rating-dialog'
 
 interface AcceptDeclineButtonsProps {
   applicationId: string
   currentStatus: string
   dogName?: string
   fosterName?: string
+  /**
+   * Pass `true` when a rating already exists for this application.
+   * Hides the "Rate Foster" button to avoid a confusing double-submit attempt.
+   * Defaults to `false` so the button is shown when unknown.
+   */
+  hasExistingRating?: boolean
 }
 
 type ActionKind = 'accept' | 'decline' | 'complete'
@@ -31,9 +38,11 @@ export function AcceptDeclineButtons({
   currentStatus,
   dogName = 'this dog',
   fosterName = 'this foster parent',
+  hasExistingRating = false,
 }: AcceptDeclineButtonsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState<ActionKind | null>(null)
+  const [showRatingDialog, setShowRatingDialog] = useState(false)
 
   const isTerminal = ['declined', 'completed'].includes(currentStatus)
 
@@ -59,7 +68,14 @@ export function AcceptDeclineButtons({
       }
 
       toast.success(labels[action])
-      router.refresh()
+
+      if (action === 'complete') {
+        // Open the rating dialog before refreshing so the shelter can rate
+        // the foster right away. The page refreshes when the dialog closes.
+        setShowRatingDialog(true)
+      } else {
+        router.refresh()
+      }
     } catch {
       toast.error('Something went wrong. Please try again.')
     } finally {
@@ -67,40 +83,84 @@ export function AcceptDeclineButtons({
     }
   }
 
+  function handleRatingDialogClose() {
+    setShowRatingDialog(false)
+    router.refresh()
+  }
+
   if (isTerminal) {
     return (
-      <p className="text-sm text-muted-foreground">
-        This application has been <span className="font-medium">{currentStatus}</span>.
-      </p>
+      <>
+        <p className="text-sm text-muted-foreground">
+          This application has been <span className="font-medium">{currentStatus}</span>.
+        </p>
+
+        {/*
+         * Show a "Rate Foster" button when the placement is completed but
+         * has not yet been rated. This covers the case where the shelter
+         * dismissed the post-complete rating dialog and navigated back later.
+         */}
+        {currentStatus === 'completed' && !hasExistingRating && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => setShowRatingDialog(true)}
+            >
+              <Star className="mr-2 h-4 w-4" />
+              Rate Foster
+            </Button>
+
+            <RatingDialog
+              applicationId={applicationId}
+              dogName={dogName}
+              fosterName={fosterName}
+              isOpen={showRatingDialog}
+              onClose={handleRatingDialogClose}
+            />
+          </>
+        )}
+      </>
     )
   }
 
   // Accepted applications can only be completed
   if (currentStatus === 'accepted') {
     return (
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button disabled={!!loading}>
-            <Flag className="mr-2 h-4 w-4" />
-            {loading === 'complete' ? 'Completing...' : 'Mark Complete'}
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Complete this foster placement?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This marks the foster of <strong>{dogName}</strong> by{' '}
-              <strong>{fosterName}</strong> as completed. The dog will be recorded as placed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleAction('complete')}>
-              Confirm Complete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button disabled={!!loading}>
+              <Flag className="mr-2 h-4 w-4" />
+              {loading === 'complete' ? 'Completing…' : 'Mark Complete'}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Complete this foster placement?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This marks the foster of <strong>{dogName}</strong> by{' '}
+                <strong>{fosterName}</strong> as completed. The dog will be recorded as placed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => handleAction('complete')}>
+                Confirm Complete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <RatingDialog
+          applicationId={applicationId}
+          dogName={dogName}
+          fosterName={fosterName}
+          isOpen={showRatingDialog}
+          onClose={handleRatingDialogClose}
+        />
+      </>
     )
   }
 
@@ -112,7 +172,7 @@ export function AcceptDeclineButtons({
         <AlertDialogTrigger asChild>
           <Button className="bg-green-600 hover:bg-green-700" disabled={!!loading}>
             <CheckCircle className="mr-2 h-4 w-4" />
-            {loading === 'accept' ? 'Accepting...' : 'Accept'}
+            {loading === 'accept' ? 'Accepting…' : 'Accept'}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -144,7 +204,7 @@ export function AcceptDeclineButtons({
             disabled={!!loading}
           >
             <XCircle className="mr-2 h-4 w-4" />
-            {loading === 'decline' ? 'Declining...' : 'Decline'}
+            {loading === 'decline' ? 'Declining…' : 'Decline'}
           </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>

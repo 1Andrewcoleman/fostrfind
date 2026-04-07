@@ -10,6 +10,13 @@ import type { ApplicationWithDetails } from '@/types/database'
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 interface DashboardStats {
   activeDogs: number
   pendingApplications: number
@@ -19,6 +26,7 @@ interface DashboardStats {
 export default async function ShelterDashboard(): Promise<React.JSX.Element> {
   let stats: DashboardStats = { activeDogs: 0, pendingApplications: 0, unreadMessages: 0 }
   let recentApplications: ApplicationWithDetails[] = []
+  let shelterName = 'your shelter'
 
   if (!DEV_MODE) {
     const supabase = await createClient()
@@ -32,7 +40,7 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
 
     const { data: shelterRow } = await supabase
       .from('shelters')
-      .select('id')
+      .select('id, name')
       .eq('user_id', user.id)
       .single()
 
@@ -41,8 +49,8 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
     }
 
     const shelterId = shelterRow.id
+    shelterName = shelterRow.name ?? 'your shelter'
 
-    // Run all count queries in parallel
     const [dogsCount, appsCount, messagesCount, recentApps] = await Promise.all([
       supabase
         .from('dogs')
@@ -79,7 +87,10 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-display font-bold">{getGreeting()}, {shelterName}</h1>
+          <p className="text-muted-foreground text-sm mt-1">Here&apos;s what&apos;s happening today.</p>
+        </div>
         <Button asChild>
           <Link href="/shelter/dogs/new">
             <Plus className="mr-2 h-4 w-4" />
@@ -93,68 +104,76 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Dog className="h-4 w-4" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-100 text-teal-700">
+                <Dog className="h-4 w-4" />
+              </span>
               Active Listings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{stats.activeDogs}</p>
+            <p className="text-4xl font-extrabold">{stats.activeDogs}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <FileText className="h-4 w-4" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                <FileText className="h-4 w-4" />
+              </span>
               Pending Applications
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{stats.pendingApplications}</p>
+            <p className="text-4xl font-extrabold">{stats.pendingApplications}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                <MessageCircle className="h-4 w-4" />
+              </span>
               Unread Messages
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{stats.unreadMessages}</p>
+            <p className="text-4xl font-extrabold">{stats.unreadMessages}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Recent Applications */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Recent Applications</h2>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-4">
+          <CardTitle className="text-lg font-display font-semibold">Recent Applications</CardTitle>
           {recentApplications.length > 0 && (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/shelter/applications">View all</Link>
             </Button>
           )}
-        </div>
-        {recentApplications.length === 0 ? (
-          <EmptyState
-            title="No applications yet"
-            description="Applications will appear here once fosters apply to your dogs."
-          />
-        ) : (
-          <div className="space-y-3">
-            {recentApplications.map((app) => (
-              <ApplicationCard key={app.id} application={app} />
-            ))}
-          </div>
-        )}
-      </section>
+        </CardHeader>
+        <CardContent>
+          {recentApplications.length === 0 ? (
+            <EmptyState
+              title="No applications yet"
+              description="Applications will appear here once fosters apply to your dogs."
+            />
+          ) : (
+            <div className="space-y-3">
+              {recentApplications.map((app) => (
+                <ApplicationCard key={app.id} application={app} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Your Dogs */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Your Dogs</h2>
+          <h2 className="text-lg font-display font-semibold">Your Dogs</h2>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/shelter/dogs">View all</Link>
           </Button>

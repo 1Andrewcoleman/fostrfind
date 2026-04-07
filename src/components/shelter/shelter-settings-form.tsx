@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload } from 'lucide-react'
+import { Upload, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -159,7 +159,7 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
               </div>
 
               <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Changes'}
               </Button>
             </form>
           </CardContent>

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
@@ -44,9 +45,10 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 space-y-5">
+    <aside className="w-64 flex-shrink-0 hidden md:block sticky top-6 self-start">
+      <Card className="p-5 shadow-sm space-y-5">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold">Filters</h2>
+        <h2 className="font-display font-semibold">Filters</h2>
         <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs h-auto py-1">
           Clear all
         </Button>
@@ -129,6 +131,7 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
           Open to medical needs
         </Label>
       </div>
+      </Card>
     </aside>
   )
 }

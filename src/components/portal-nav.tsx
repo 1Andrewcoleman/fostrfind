@@ -83,17 +83,18 @@ function NavLinkItem({ item, isActive, unreadMessages, onClick }: NavLinkItemPro
       href={href}
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150',
         isActive
-          ? 'bg-accent text-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+          ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary'
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground motion-safe:hover:translate-x-0.5 border-l-[3px] border-transparent',
       )}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
       <span className="flex-1">{label}</span>
       {badgeCount > 0 && (
-        <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+        <span className="relative flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-warm px-1.5 text-[10px] font-semibold text-warm-foreground">
           {badgeCount > 99 ? '99+' : badgeCount}
+          <span className="absolute inset-0 rounded-full bg-warm/60 animate-ping" />
         </span>
       )}
     </Link>
@@ -151,9 +152,9 @@ export function MobileNav({ portal, portalLabel, unreadMessages = 0 }: MobileNav
       </SheetTrigger>
 
       <SheetContent side="left" className="w-60 p-0 flex flex-col">
-        <SheetHeader className="flex flex-row items-center gap-2 px-6 h-16 border-b shrink-0">
-          <PawPrint className="h-5 w-5 text-primary" />
-          <SheetTitle className="font-bold text-lg">Fostr Fix</SheetTitle>
+        <SheetHeader className="flex flex-row items-center gap-2.5 px-6 h-16 border-b shrink-0">
+          <PawPrint className="h-6 w-6 text-warm" />
+          <SheetTitle className="font-display font-bold text-lg">Fostr Fix</SheetTitle>
         </SheetHeader>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">

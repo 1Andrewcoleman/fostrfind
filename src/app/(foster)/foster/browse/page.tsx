@@ -145,7 +145,7 @@ export default function BrowsePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Browse Dogs</h1>
+        <h1 className="text-2xl font-display font-bold">Browse Dogs</h1>
         <p className="text-muted-foreground">
           {loadingDogs
             ? 'Finding dogs near you\u2026'

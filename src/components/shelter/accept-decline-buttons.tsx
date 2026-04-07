@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Flag, Star } from 'lucide-react'
+import { CheckCircle, XCircle, Flag, Star, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -132,7 +132,7 @@ export function AcceptDeclineButtons({
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button disabled={!!loading}>
-              <Flag className="mr-2 h-4 w-4" />
+              {loading === 'complete' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Flag className="mr-2 h-4 w-4" />}
               {loading === 'complete' ? 'Completing…' : 'Mark Complete'}
             </Button>
           </AlertDialogTrigger>
@@ -171,7 +171,7 @@ export function AcceptDeclineButtons({
       <AlertDialog>
         <AlertDialogTrigger asChild>
           <Button className="bg-green-600 hover:bg-green-700" disabled={!!loading}>
-            <CheckCircle className="mr-2 h-4 w-4" />
+            {loading === 'accept' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
             {loading === 'accept' ? 'Accepting…' : 'Accept'}
           </Button>
         </AlertDialogTrigger>
@@ -203,7 +203,7 @@ export function AcceptDeclineButtons({
             className="border-destructive text-destructive hover:bg-destructive/10"
             disabled={!!loading}
           >
-            <XCircle className="mr-2 h-4 w-4" />
+            {loading === 'decline' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
             {loading === 'decline' ? 'Declining…' : 'Decline'}
           </Button>
         </AlertDialogTrigger>

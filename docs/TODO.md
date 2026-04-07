@@ -203,12 +203,12 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25a. Brand Identity & Design Tokens
 
-- [ ] **Replace primary color with a warm brand palette** — the current `--primary: 222.2 47.4% 11.2%` (cold dark navy) reads as corporate; swap to a warm, approachable palette (e.g. a deep amber-brown primary with a complementary soft sage or terracotta accent) that reflects care and warmth without being childish; update all HSL tokens in `globals.css`
-- [ ] **Add a custom Google Font pairing** — import a friendly but refined heading font (e.g. *DM Sans*, *Plus Jakarta Sans*, or *Nunito*) for `h1`–`h3` and keep Inter or the system stack for body; set `font-family` on the `html` element and configure the Tailwind `fontFamily` extension so `font-display` and `font-body` utilities are available
-- [ ] **Increase `--radius` to `0.75rem`** — the current `0.5rem` feels stiff; rounder corners soften the UI and are consistent with modern consumer apps; cascade through card, input, badge, button, and dialog radius tokens
-- [ ] **Define a semantic color for "warm accent"** — add a `--warm` token (warm amber/honey) used for highlights, active states, and the paw/brand icon; prevents the icon from being the same navy as text
-- [ ] **Add a subtle background texture or tint** — replace the flat `--background: 0 0% 100%` with a very faint warm off-white (e.g. `30 20% 99%`) so the page doesn't feel stark white; similarly shift `--muted` to a warm cream rather than the current cool gray
-- [ ] **Dark mode design pass** — the dark mode CSS variables exist but are untouched default shadcn values; once the light palette is set, calibrate the dark equivalents so dark mode feels intentionally designed, not auto-inverted
+- [x] **Replace primary color with a warm brand palette** — the current `--primary: 222.2 47.4% 11.2%` (cold dark navy) reads as corporate; swap to a warm, approachable palette (e.g. a deep amber-brown primary with a complementary soft sage or terracotta accent) that reflects care and warmth without being childish; update all HSL tokens in `globals.css`
+- [x] **Add a custom Google Font pairing** — import a friendly but refined heading font (e.g. *DM Sans*, *Plus Jakarta Sans*, or *Nunito*) for `h1`–`h3` and keep Inter or the system stack for body; set `font-family` on the `html` element and configure the Tailwind `fontFamily` extension so `font-display` and `font-body` utilities are available
+- [x] **Increase `--radius` to `0.75rem`** — the current `0.5rem` feels stiff; rounder corners soften the UI and are consistent with modern consumer apps; cascade through card, input, badge, button, and dialog radius tokens
+- [x] **Define a semantic color for "warm accent"** — add a `--warm` token (warm amber/honey) used for highlights, active states, and the paw/brand icon; prevents the icon from being the same navy as text
+- [x] **Add a subtle background texture or tint** — replace the flat `--background: 0 0% 100%` with a very faint warm off-white (e.g. `30 20% 99%`) so the page doesn't feel stark white; similarly shift `--muted` to a warm cream rather than the current cool gray
+- [x] **Dark mode design pass** — the dark mode CSS variables exist but are untouched default shadcn values; once the light palette is set, calibrate the dark equivalents so dark mode feels intentionally designed, not auto-inverted
 
 ### 25b. Landing Page
 
@@ -222,35 +222,35 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ### 25c. Navigation & Portal Sidebar
 
 - [ ] **User identity in the sidebar footer** — replace `<p className="text-xs text-muted-foreground px-3">Shelter Portal</p>` with an avatar + display name + role pill pulled from the session, and a sign-out button as an icon; this is the most glaring missing affordance in both portals
-- [ ] **Sidebar active state redesign** — the current active state is `bg-accent` (same gray as muted) with no color differentiation; replace with a warm-tinted pill (`bg-primary/10 text-primary font-semibold`) plus a left-border accent bar so the active page is unmistakeable
-- [ ] **Sidebar brand lockup** — the `PawPrint` icon next to "Fostr Fix" in the sidebar header is the same size and color as the nav icons below it; make the brand treatment larger, give the paw a warm color, and separate it visually with more padding so it reads as a logo not a nav item
-- [ ] **Micro-transitions on nav items** — add `transition-all duration-150` with a subtle `translate-x-0.5` on hover so links feel interactive; currently only `transition-colors` is applied
-- [ ] **Unread badge pulse animation** — add a `animate-pulse` ring on the unread message badge when count > 0 to draw attention without being disruptive
+- [x] **Sidebar active state redesign** — the current active state is `bg-accent` (same gray as muted) with no color differentiation; replace with a warm-tinted pill (`bg-primary/10 text-primary font-semibold`) plus a left-border accent bar so the active page is unmistakeable
+- [x] **Sidebar brand lockup** — the `PawPrint` icon next to "Fostr Fix" in the sidebar header is the same size and color as the nav icons below it; make the brand treatment larger, give the paw a warm color, and separate it visually with more padding so it reads as a logo not a nav item
+- [x] **Micro-transitions on nav items** — add `transition-all duration-150` with a subtle `translate-x-0.5` on hover so links feel interactive; currently only `transition-colors` is applied
+- [x] **Unread badge pulse animation** — add a `animate-pulse` ring on the unread message badge when count > 0 to draw attention without being disruptive
 
 ### 25d. Dog Cards (Browse Grid)
 
-- [ ] **"No photo" placeholder redesign** — the current placeholder is a flat gray box with "No photo" text in the center; replace with a warm gradient fill + a centered illustrated dog silhouette SVG (or a `PawPrint` icon at larger size with opacity) so cards without photos still feel intentional
-- [ ] **Card hover state** — replace `hover:shadow-md transition-shadow` with a richer hover: `hover:shadow-lg hover:-translate-y-1 transition-all duration-200`; currently the shadow change is barely perceptible
-- [ ] **Photo aspect ratio + object-position** — the photo area is a fixed `h-52` div; use a `aspect-[4/3]` approach instead so cards are consistent regardless of uploaded image dimensions; add `object-position: center top` to favor the dog's face
-- [ ] **Badge styling** — the size/age/gender badges use `variant="secondary"` (light gray); replace with colored variants: warm amber for age, teal/sage for size, soft pink/blue for gender; add a small relevant icon inside each badge (e.g. `Ruler` for size, `Calendar` for age)
-- [ ] **"View Dog" button** — the full-width dark button at the bottom of every card is heavy; replace with a lighter `variant="ghost"` or outlined button with an arrow icon, or remove the button entirely and make the whole card a link with a visible arrow chevron on hover
+- [x] **"No photo" placeholder redesign** — the current placeholder is a flat gray box with "No photo" text in the center; replace with a warm gradient fill + a centered illustrated dog silhouette SVG (or a `PawPrint` icon at larger size with opacity) so cards without photos still feel intentional
+- [x] **Card hover state** — replace `hover:shadow-md transition-shadow` with a richer hover: `hover:shadow-lg hover:-translate-y-1 transition-all duration-200`; currently the shadow change is barely perceptible
+- [x] **Photo aspect ratio + object-position** — the photo area is a fixed `h-52` div; use a `aspect-[4/3]` approach instead so cards are consistent regardless of uploaded image dimensions; add `object-position: center top` to favor the dog's face
+- [x] **Badge styling** — the size/age/gender badges use `variant="secondary"` (light gray); replace with colored variants: warm amber for age, teal/sage for size, soft pink/blue for gender; add a small relevant icon inside each badge (e.g. `Ruler` for size, `Calendar` for age)
+- [x] **"View Dog" button** — the full-width dark button at the bottom of every card is heavy; replace with a lighter `variant="ghost"` or outlined button with an arrow icon, or remove the button entirely and make the whole card a link with a visible arrow chevron on hover
 - [ ] **Shelter name treatment on card** — the `MapPin` + shelter name is currently 3px of muted text; upgrade to show the shelter's logo avatar (tiny, 16px) inline next to the shelter name for recognisability
-- [ ] **Special needs indicator** — if `dog.special_needs` is set, surface a small "Special needs" badge or heart icon on the card photo corner (top-right overlay) so it's visible at a glance in the grid
+- [x] **Special needs indicator** — if `dog.special_needs` is set, surface a small "Special needs" badge or heart icon on the card photo corner (top-right overlay) so it's visible at a glance in the grid
 
 ### 25e. Browse Page Layout
 
-- [ ] **Sticky filter sidebar** — the filter sidebar scrolls away with the page; add `sticky top-6` so filters stay in view while browsing the grid
-- [ ] **Filter sidebar as floating card** — wrap the filter sidebar in a `Card` with `shadow-sm` and `rounded-xl` so it has visual weight and looks like a panel, not bare text on the page background
+- [x] **Sticky filter sidebar** — the filter sidebar scrolls away with the page; add `sticky top-6` so filters stay in view while browsing the grid
+- [x] **Filter sidebar as floating card** — wrap the filter sidebar in a `Card` with `shadow-sm` and `rounded-xl` so it has visual weight and looks like a panel, not bare text on the page background
 - [ ] **Filter chips / pill selectors** — replace the checkbox lists for Size and Age with horizontal pill/chip toggle buttons (outlined → filled on select) which are more mobile-friendly and visually legible; keep checkboxes only for the binary medical toggle
 - [ ] **Results count + active filter chips** — show a "12 dogs found" count above the grid with removable chips for each active filter so users can see and undo filters without scrolling back to the sidebar
 - [ ] **Mobile filter sheet** — on small screens the 64-width sidebar is hidden but there is no "Filter" button to access it; add a floating `Filter` pill button fixed to the bottom of the screen on mobile that opens a `Sheet` containing the filter sidebar
 
 ### 25f. Application & Status Cards
 
-- [ ] **Status badge color coding** — `StatusBadge` currently maps all statuses to generic variants; create a proper color scheme: `submitted` → blue, `reviewing` → amber, `accepted` → green, `declined` → red, `completed` → purple; add an icon per status (Clock, Eye, CheckCircle, XCircle, Award)
-- [ ] **Application card visual hierarchy** — the `ApplicationCard` shows avatar + name + dog name as flat text; add a right-side arrow chevron to indicate it's clickable, and use `font-semibold` for the dog's name to create clear hierarchy
+- [x] **Status badge color coding** — `StatusBadge` currently maps all statuses to generic variants; create a proper color scheme: `submitted` → blue, `reviewing` → amber, `accepted` → green, `declined` → red, `completed` → purple; add an icon per status (Clock, Eye, CheckCircle, XCircle, Award)
+- [x] **Application card visual hierarchy** — the `ApplicationCard` shows avatar + name + dog name as flat text; add a right-side arrow chevron to indicate it's clickable, and use `font-semibold` for the dog's name to create clear hierarchy
 - [ ] **Foster application status card** — add a progress-step indicator (submitted → reviewing → accepted/declined → completed) as a horizontal stepper on the foster's application detail view so they can visually track where their application is
-- [ ] **Accepted application highlight** — give accepted applications a green-tinted card border (`border-l-4 border-l-green-500`) on list views to make them immediately identifiable
+- [x] **Accepted application highlight** — give accepted applications a green-tinted card border (`border-l-4 border-l-green-500`) on list views to make them immediately identifiable
 
 ### 25g. Empty States
 
@@ -259,7 +259,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25h. Forms & Inputs
 
-- [ ] **Input focus ring** — the default focus ring uses `--ring` (same dark navy as the text); replace with a warm-colored focus ring (`ring-primary/50` or the new `--warm` token) so focused inputs are clearly highlighted
+- [x] **Input focus ring** — the default focus ring uses `--ring` (same dark navy as the text); replace with a warm-colored focus ring (`ring-primary/50` or the new `--warm` token) so focused inputs are clearly highlighted
 - [ ] **Section headers inside forms** — `CardTitle` headings like "Personal Info" and "Foster Preferences" are plain `font-semibold` text; add a colored left-border accent line or a small icon before each section title to create visual anchoring
 - [ ] **Avatar upload area redesign** — the current upload area is a `h-16 w-16` circle with an `Upload` icon; replace with a dashed-border drop zone (`border-2 border-dashed border-muted-foreground/30 hover:border-primary`) that shows a preview when a file is selected, and a subtle "Drag & drop or click to upload" label
 - [ ] **Inline field validation styling** — required fields have no visual indicator (no asterisk, no color); add a subtle red `*` after required labels and a green checkmark icon that appears inside the input when the field is valid
@@ -268,9 +268,9 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25i. Dashboard (Shelter)
 
-- [ ] **Stat card visual lift** — the three stat cards (`Active Listings`, `Pending Applications`, `Unread Messages`) are white cards with a large number and a tiny muted icon; add a colored icon background pill per stat (teal for dogs, amber for applications, blue for messages), a subtle trend indicator (arrow + % vs last week, even as placeholder), and increase the number to `text-4xl font-extrabold`
-- [ ] **Dashboard greeting** — add a personalised greeting at the top (`Good morning, Happy Paws 👋`) pulled from the shelter name and current time; small detail, large impact on warmth
-- [ ] **Recent applications section** — the list of `ApplicationCard` components has no visual "section card" wrapper; wrap it in a `Card` with a `CardHeader` that includes a "View all" link so the section feels intentional and contained
+- [x] **Stat card visual lift** — the three stat cards (`Active Listings`, `Pending Applications`, `Unread Messages`) are white cards with a large number and a tiny muted icon; add a colored icon background pill per stat (teal for dogs, amber for applications, blue for messages), a subtle trend indicator (arrow + % vs last week, even as placeholder), and increase the number to `text-4xl font-extrabold`
+- [x] **Dashboard greeting** — add a personalised greeting at the top (`Good morning, Happy Paws 👋`) pulled from the shelter name and current time; small detail, large impact on warmth
+- [x] **Recent applications section** — the list of `ApplicationCard` components has no visual "section card" wrapper; wrap it in a `Card` with a `CardHeader` that includes a "View all" link so the section feels intentional and contained
 
 ### 25j. Messaging
 
@@ -288,13 +288,13 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ### 25l. Micro-interactions & Motion
 
 - [ ] **Page transition** — add a subtle `opacity-0 → opacity-100` fade on route change using a layout-level animation wrapper so navigating between pages feels smooth rather than an instant flash
-- [ ] **Button loading state** — buttons in loading state currently just change label text; add an inline `Loader2` spinning icon (from lucide) before the label so the affordance is clearer
+- [x] **Button loading state** — buttons in loading state currently just change label text; add an inline `Loader2` spinning icon (from lucide) before the label so the affordance is clearer
 - [ ] **Card entrance animations** — dog browse cards, application cards, and dashboard stat cards should fade-and-slide-up on mount using `animate-fade-in` with staggered `animation-delay` based on index, so grids don't pop in all at once
-- [ ] **Toast redesign** — Sonner toasts are styled by default; customise with the brand palette — success toasts with a warm green + paw checkmark icon, error toasts with a muted red, info toasts with the brand warm color
+- [x] **Toast redesign** — Sonner toasts are styled by default; customise with the brand palette — success toasts with a warm green + paw checkmark icon, error toasts with a muted red, info toasts with the brand warm color
 
 ### 25m. Accessibility & Responsive Polish
 
-- [ ] **Keyboard focus visibility** — run through all interactive elements; many shadcn defaults have `focus-visible:ring-2` but the ring color (dark navy on white) has low contrast ratio; switch to a high-contrast ring using the new warm accent token
+- [x] **Keyboard focus visibility** — run through all interactive elements; many shadcn defaults have `focus-visible:ring-2` but the ring color (dark navy on white) has low contrast ratio; switch to a high-contrast ring using the new warm accent token
 - [ ] **Responsive browse layout** — on screens between `sm` and `md` the filter sidebar and grid are squeezed into a cramped two-column layout; add a collapsible sidebar toggle at the `md` breakpoint so the grid can use full width when filters are hidden
 - [ ] **Mobile form inputs** — all inputs are `h-10` (40px) which can be too small on touch devices; ensure inputs are at least `h-11` (44px) on mobile via responsive classes and that tap targets for checkboxes and radio buttons are at least 44×44px
 - [ ] **Print stylesheet** — `/shelter/applications/[id]` and foster profiles are the kind of pages shelter staff may want to print; add a `@media print` block that hides the nav, action buttons, and sidebar and formats the content as a clean single-column document

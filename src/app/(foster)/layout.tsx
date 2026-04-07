@@ -59,8 +59,8 @@ export default async function FosterLayout({ children }: { children: React.React
         <div className="flex min-h-screen">
           {/* ── Desktop sidebar ── */}
           <aside className="hidden md:flex w-60 flex-col border-r bg-background">
-            <div className="flex items-center gap-2 px-6 h-16 border-b font-bold text-lg">
-              <PawPrint className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2.5 px-6 h-16 border-b font-display font-bold text-lg">
+              <PawPrint className="h-6 w-6 text-warm" />
               Fostr Fix
             </div>
             <nav className="flex-1 py-4 px-3 space-y-1">
@@ -82,8 +82,8 @@ export default async function FosterLayout({ children }: { children: React.React
             {/* Mobile header (hamburger + wordmark) */}
             <header className="flex md:hidden items-center gap-3 px-4 h-14 border-b bg-background sticky top-0 z-50">
               <MobileNav portal="foster" portalLabel="Foster Portal" unreadMessages={unreadMessages} />
-              <div className="flex items-center gap-2 font-bold text-base">
-                <PawPrint className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-2 font-display font-bold text-base">
+                <PawPrint className="h-5 w-5 text-warm" />
                 Fostr Fix
               </div>
             </header>

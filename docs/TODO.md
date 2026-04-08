@@ -303,3 +303,11 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [ ] **Responsive browse layout** — on screens between `sm` and `md` the filter sidebar and grid are squeezed into a cramped two-column layout; add a collapsible sidebar toggle at the `md` breakpoint so the grid can use full width when filters are hidden
 - [x] **Mobile form inputs** — `Input` / `SelectTrigger` use `h-11 md:h-10`; `Textarea` has taller min-height + padding on mobile; browse filters use `min-h-[44px]` rows for checkbox/radio rows
 - [ ] **Print stylesheet** — `/shelter/applications/[id]` and foster profiles are the kind of pages shelter staff may want to print; add a `@media print` block that hides the nav, action buttons, and sidebar and formats the content as a clean single-column document
+
+### 25n. Main content width & alignment (portal pages)
+
+On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/` layouts) often leaves a large empty band on the right: **profile** forms read as a narrow left-aligned block, and **`EmptyState`** blocks (applications, messages, history, etc.) sit off-center relative to the full viewport. Populated lists may need different treatment, but the baseline should feel balanced.
+
+- [ ] **Center and constrain main content** — audit foster and shelter portal pages: wrap page body in a consistent container (e.g. `mx-auto w-full max-w-*` with horizontal padding, or `flex justify-center` for empty states) so primary content is visually centered in the main pane and uses width intentionally (not stuck to the left with excess negative space)
+- [ ] **Profile & long forms** — foster profile and similar multi-card forms: either widen the form column to a comfortable max (e.g. `max-w-4xl` centered) or use a two-column grid on `lg+` so fields use horizontal space without a huge empty margin
+- [ ] **Empty states in context** — ensure `EmptyState` (and equivalent “no data” layouts) is centered within the **main content area** (not only self-centered inside a narrow left-aligned wrapper); verify after layout changes on empty and populated pages

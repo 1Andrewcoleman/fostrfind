@@ -2,56 +2,13 @@ import { PawPrint } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { RoleGuard } from '@/components/role-guard'
 import { NavLinks, MobileNav } from '@/components/portal-nav'
-import { createClient } from '@/lib/supabase/server'
+import { PortalSidebarUser } from '@/components/portal-sidebar-user'
+import { getPortalLayoutData } from '@/lib/portal-layout-data'
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
-/**
- * Fetches the count of unread messages (sent by shelters) for the
- * authenticated foster parent. Returns 0 in DEV_MODE or on any error.
- */
-async function getUnreadMessageCount(): Promise<number> {
-  if (DEV_MODE) return 0
-
-  try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return 0
-
-    const { data: fosterRow } = await supabase
-      .from('foster_parents')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-    if (!fosterRow) return 0
-
-    // Collect accepted/completed application IDs belonging to this foster
-    const { data: apps } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('foster_id', fosterRow.id)
-      .in('status', ['accepted', 'completed'])
-
-    const applicationIds = (apps ?? []).map((a) => a.id)
-    if (applicationIds.length === 0) return 0
-
-    const { count } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .in('application_id', applicationIds)
-      .eq('sender_role', 'shelter')
-      .eq('read', false)
-
-    return count ?? 0
-  } catch {
-    return 0
-  }
-}
-
 export default async function FosterLayout({ children }: { children: React.ReactNode }) {
-  const unreadMessages = await getUnreadMessageCount()
+  const { unreadMessages, identity } = await getPortalLayoutData('foster')
 
   return (
     <AuthGuard>
@@ -66,9 +23,7 @@ export default async function FosterLayout({ children }: { children: React.React
             <nav className="flex-1 py-4 px-3 space-y-1">
               <NavLinks portal="foster" unreadMessages={unreadMessages} />
             </nav>
-            <div className="p-3 border-t">
-              <p className="text-xs text-muted-foreground px-3">Foster Portal</p>
-            </div>
+            <PortalSidebarUser identity={identity} />
           </aside>
 
           {/* ── Main content ── */}
@@ -81,7 +36,7 @@ export default async function FosterLayout({ children }: { children: React.React
 
             {/* Mobile header (hamburger + wordmark) */}
             <header className="flex md:hidden items-center gap-3 px-4 h-14 border-b bg-background sticky top-0 z-50">
-              <MobileNav portal="foster" portalLabel="Foster Portal" unreadMessages={unreadMessages} />
+              <MobileNav portal="foster" portalLabel="Foster Portal" unreadMessages={unreadMessages} identity={identity} />
               <div className="flex items-center gap-2 font-display font-bold text-base">
                 <PawPrint className="h-5 w-5 text-warm" />
                 Fostr Fix

@@ -25,19 +25,19 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-24 bg-gradient-to-b from-background to-muted">
-        <div className="mb-6 rounded-full bg-primary/10 p-4 inline-flex">
+        <div className="mb-6 rounded-full bg-primary/10 p-4 inline-flex animate-in fade-in slide-in-from-bottom-4 duration-500 [animation-fill-mode:both] motion-reduce:animate-none">
           <PawPrint className="h-10 w-10 text-primary" />
         </div>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150 [animation-fill-mode:both] motion-reduce:animate-none">
           Find a Foster.
           <br />
           <span className="text-primary">Save a Life.</span>
         </h1>
-        <p className="text-lg text-muted-foreground max-w-xl mb-8">
+        <p className="text-lg text-muted-foreground max-w-xl mb-8 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300 [animation-fill-mode:both] motion-reduce:animate-none">
           Fostr Fix connects animal shelters with compassionate foster parents — giving dogs
           the temporary homes they need while waiting for their forever family.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-500 [animation-fill-mode:both] motion-reduce:animate-none">
           <Button size="lg" asChild>
             <Link href="/signup?role=shelter">I&apos;m a Shelter</Link>
           </Button>
@@ -67,7 +67,7 @@ export default function LandingPage() {
               <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
                 <Search className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-semibold text-lg">2. Fosters Browse &amp; Apply</h3>
+              <h3 className="font-semibold text-lg">{'2. Fosters Browse & Apply'}</h3>
               <p className="text-sm text-muted-foreground">
                 Foster parents search by location, size, age, and temperament — then apply with a
                 personal note.

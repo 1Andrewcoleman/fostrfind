@@ -140,12 +140,14 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [ ] Production deployment (Vercel)
 - [ ] Database backups strategy
 - [ ] Seed script for development data
+- [ ] Automated tests — unit/integration coverage for helpers (`formatRelativeTime`, etc.), `portal-layout-data`, and critical API routes (no test runner wired yet)
+- [ ] **Layout data perf** — `getPortalLayoutData` still runs two parallel queries against `foster_parents` / `shelters` (unread count + identity); consider fetching the profile row once and reusing it for both paths
 
 ---
 
 ## 16. Auth — Critical Gaps
 
-- [ ] **Sign-out button** — no sign-out exists anywhere in either portal layout or nav; users cannot log out; add `supabase.auth.signOut()` + redirect to `/` in both sidebars and mobile sheets
+- [x] **Sign-out** — `PortalSidebarUser` + `supabase.auth.signOut()` + hard nav to `/login` in desktop sidebar and mobile nav sheet (see [`src/components/portal-sidebar-user.tsx`](../src/components/portal-sidebar-user.tsx))
 - [ ] **Forgot password / reset password flow** — login page has no "Forgot password?" link; implement `supabase.auth.resetPasswordForEmail()` + a `/auth/reset-password` callback route that handles the magic-link token and lets the user set a new password
 - [ ] **Email verification handling** — after `signUp()` Supabase sends a confirmation email but the app immediately redirects to `/onboarding` with no check on `email_confirmed_at`; add a `/auth/confirm` route handler and an "please verify your email" interstitial
 
@@ -199,9 +201,9 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 25. UI/UX Aesthetic Overhaul
 
-> **Current state:** A warm brand palette, Plus Jakarta Sans + Inter, `--warm` accent, larger radius, portal nav treatment, browse dog cards, sticky filter `Card` (desktop), `StatusBadge` icons, shelter dashboard greeting + stat pills, `Loader2` on async buttons, and Sonner toast styling are **shipped**. See [`CLAUDE.md`](../CLAUDE.md) **Design system & UI** for where tokens and key components live.
+> **Current state:** A warm brand palette, Plus Jakarta Sans + Inter, `--warm` accent, larger radius, portal nav treatment, browse dog cards (logos, colored badges, special needs overlay), sticky filter `Card` (desktop) + mobile filter sheet + results chips + FAB, `StatusBadge` icons, shelter dashboard greeting + stat pills, `Loader2` on async buttons, Sonner toast styling, portal identity sidebar (avatar + sign-out), onboarding step indicator + progress bar, message thread bubbles + thread list polish (`RelativeTime`, unread row tint), foster application stepper, and consolidated layout auth (`getPortalLayoutData`, single `getUser()` per request) are **shipped**. **Not yet shipped:** incoming sender avatars beside bubbles in `MessageThread` (see §25j). See [`CLAUDE.md`](../CLAUDE.md) **Design system & UI** for where tokens and key components live.
 >
-> Everything below remains aesthetic-first — the goal is to feel warm, trustworthy, and purpose-built for animal rescue. Open items are mostly **landing (25b)**, **sidebar user identity + sign-out (25c.1, overlaps §16)**, **browse chips + mobile filter sheet (25e)**, **messaging UI (25j)**, and other polish.
+> Everything below remains aesthetic-first — the goal is to feel warm, trustworthy, and purpose-built for animal rescue. Open items are mostly **forms (25h)**, **illustrated empty states (25g)**, **onboarding card redesign (25k)**, and other polish.
 
 ### 25a. Brand Identity & Design Tokens
 
@@ -215,7 +217,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 ### 25b. Landing Page
 
 - [ ] **Hero section redesign** — replace the centered icon-on-a-circle with a full-bleed asymmetric layout: large headline on the left, a real dog photography placeholder (or illustrated scene) on the right; add a warm gradient wash behind the headline instead of the flat `bg-gradient-to-b from-background to-muted`
-- [ ] **Animated headline or subtle entrance** — add a fade-up entrance animation on the hero headline and subtext using `tailwindcss-animate` (`animate-fade-in` with staggered delays) so the page feels alive on first load
+- [x] **Animated headline or subtle entrance** — fade/slide-in on hero icon, headline, subtext, and CTAs using `tailwindcss-animate` (`animate-in` + staggered delays); `motion-reduce:animate-none` for accessibility
 - [ ] **Social proof / stats bar** — add a row of trust signals below the CTA buttons (e.g. "2,400+ dogs fostered · 180+ partner shelters · ★ 4.9 avg foster rating") in a muted banner strip; even as placeholder copy it signals maturity
 - [ ] **"How It Works" step cards** — replace the three plain icon circles with illustrated or icon-rich cards that have a number badge, a more descriptive graphic, and a subtle background tint per step; give them a border and shadow-sm so they read as cards, not floating text
 - [ ] **Shelter logo marquee / "trusted by" row** — add a horizontally scrolling strip of placeholder shelter logos or silhouettes above the footer to convey legitimacy
@@ -223,7 +225,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25c. Navigation & Portal Sidebar
 
-- [ ] **User identity in the sidebar footer** — replace `<p className="text-xs text-muted-foreground px-3">Shelter Portal</p>` with an avatar + display name + role pill pulled from the session, and a sign-out button as an icon; this is the most glaring missing affordance in both portals
+- [x] **User identity in the sidebar footer** — `PortalSidebarUser` + `getPortalLayoutData` / `PortalIdentity`; avatar, display name, role badge, sign-out; mirrored in mobile nav sheet
 - [x] **Sidebar active state redesign** — the current active state is `bg-accent` (same gray as muted) with no color differentiation; replace with a warm-tinted pill (`bg-primary/10 text-primary font-semibold`) plus a left-border accent bar so the active page is unmistakeable
 - [x] **Sidebar brand lockup** — the `PawPrint` icon next to "Fostr Fix" in the sidebar header is the same size and color as the nav icons below it; make the brand treatment larger, give the paw a warm color, and separate it visually with more padding so it reads as a logo not a nav item
 - [x] **Micro-transitions on nav items** — add `transition-all duration-150` with a subtle `translate-x-0.5` on hover so links feel interactive; currently only `transition-colors` is applied
@@ -236,7 +238,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] **Photo aspect ratio + object-position** — the photo area is a fixed `h-52` div; use a `aspect-[4/3]` approach instead so cards are consistent regardless of uploaded image dimensions; add `object-position: center top` to favor the dog's face
 - [x] **Badge styling** — the size/age/gender badges use `variant="secondary"` (light gray); replace with colored variants: warm amber for age, teal/sage for size, soft pink/blue for gender; add a small relevant icon inside each badge (e.g. `Ruler` for size, `Calendar` for age)
 - [x] **"View Dog" button** — the full-width dark button at the bottom of every card is heavy; replace with a lighter `variant="ghost"` or outlined button with an arrow icon, or remove the button entirely and make the whole card a link with a visible arrow chevron on hover
-- [ ] **Shelter name treatment on card** — the `MapPin` + shelter name is currently 3px of muted text; upgrade to show the shelter's logo avatar (tiny, 16px) inline next to the shelter name for recognisability
+- [x] **Shelter name treatment on card** — the `MapPin` + shelter name is currently 3px of muted text; upgrade to show the shelter's logo avatar (tiny, 16px) inline next to the shelter name for recognisability
 - [x] **Special needs indicator** — if `dog.special_needs` is set, surface a small "Special needs" badge or heart icon on the card photo corner (top-right overlay) so it's visible at a glance in the grid
 
 ### 25e. Browse Page Layout
@@ -244,20 +246,20 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] **Sticky filter sidebar** — the filter sidebar scrolls away with the page; add `sticky top-6` so filters stay in view while browsing the grid
 - [x] **Filter sidebar as floating card** — wrap the filter sidebar in a `Card` with `shadow-sm` and `rounded-xl` so it has visual weight and looks like a panel, not bare text on the page background
 - [ ] **Filter chips / pill selectors** — replace the checkbox lists for Size and Age with horizontal pill/chip toggle buttons (outlined → filled on select) which are more mobile-friendly and visually legible; keep checkboxes only for the binary medical toggle
-- [ ] **Results count + active filter chips** — show a "12 dogs found" count above the grid with removable chips for each active filter so users can see and undo filters without scrolling back to the sidebar
-- [ ] **Mobile filter sheet** — on small screens the 64-width sidebar is hidden but there is no "Filter" button to access it; add a floating `Filter` pill button fixed to the bottom of the screen on mobile that opens a `Sheet` containing the filter sidebar
+- [x] **Results count + active filter chips** — show a "12 dogs found" count above the grid with removable chips for each active filter so users can see and undo filters without scrolling back to the sidebar
+- [x] **Mobile filter sheet** — on small screens the 64-width sidebar is hidden but there is no "Filter" button to access it; add a floating `Filter` pill button fixed to the bottom of the screen on mobile that opens a `Sheet` containing the filter sidebar
 
 ### 25f. Application & Status Cards
 
 - [x] **Status badge color coding** — `StatusBadge` currently maps all statuses to generic variants; create a proper color scheme: `submitted` → blue, `reviewing` → amber, `accepted` → green, `declined` → red, `completed` → purple; add an icon per status (Clock, Eye, CheckCircle, XCircle, Award)
 - [x] **Application card visual hierarchy** — the `ApplicationCard` shows avatar + name + dog name as flat text; add a right-side arrow chevron to indicate it's clickable, and use `font-semibold` for the dog's name to create clear hierarchy
-- [ ] **Foster application status card** — add a progress-step indicator (submitted → reviewing → accepted/declined → completed) as a horizontal stepper on the foster's application detail view so they can visually track where their application is
+- [x] **Foster application status card** — add a progress-step indicator (submitted → reviewing → accepted/declined → completed) as a horizontal stepper on the foster's application detail view so they can visually track where their application is
 - [x] **Accepted application highlight** — give accepted applications a green-tinted card border (`border-l-4 border-l-green-500`) on list views to make them immediately identifiable
 
 ### 25g. Empty States
 
 - [ ] **Illustrated empty states** — all empty states currently show plain text with no visual; add a unique SVG illustration or icon composition per context (e.g. a sleepy dog for "no applications", a magnifying glass with paw for "no dogs match filters", a speech bubble for "no messages")
-- [ ] **Empty state CTA buttons** — the `EmptyState` component already has an optional `action` prop; audit all usages and ensure every empty state has a relevant CTA with a primary button (e.g. "Browse Dogs" on the empty applications page, "Add your first dog" on the shelter dogs page)
+- [~] **Empty state CTA buttons** — `EmptyState` is a client component: use `href` from Server Components, `onClick` from Client Components; browse (clear filters), messages, shelter dashboard, and shelter applications list now wire CTAs — finish auditing any remaining empty views
 
 ### 25h. Forms & Inputs
 
@@ -276,15 +278,16 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25j. Messaging
 
-- [ ] **Message bubble styling** — outgoing and incoming messages are presumably rendered as flat text rows; style them as chat bubbles with background fills (primary-tinted for outgoing, muted for incoming), border-radius `rounded-2xl rounded-br-sm` for sent and `rounded-2xl rounded-bl-sm` for received, and sender avatar on incoming
-- [ ] **Thread list previews** — message thread list items should show a truncated last message body, a relative timestamp ("2 min ago"), and a bolder unread indicator (full background tint on unread rows, not just a badge)
-- [ ] **Typing indicator placeholder** — add a "..." animated bubble that can be wired to Realtime when that is implemented; even as a static decoration in the interim it signals the design intent
-- [ ] **Empty message thread state** — when a thread has no messages yet (just accepted), show a warm illustrated placeholder ("Say hello to get the conversation started") instead of a blank white area
+- [x] **Message bubble styling** — chat rows styled as bubbles (primary fill + tail for outgoing, muted + tail for incoming) in `MessageThread`
+- [ ] **Incoming sender avatar in thread** — show the other party’s avatar next to incoming bubbles in `MessageThread` (thread list polish and bubbles are done; avatar column not implemented yet)
+- [x] **Thread list previews** — message thread list items should show a truncated last message body, a relative timestamp ("2 min ago"), and a bolder unread indicator (full background tint on unread rows, not just a badge)
+- [x] **Typing indicator placeholder** — add a "..." animated bubble that can be wired to Realtime when that is implemented; even as a static decoration in the interim it signals the design intent
+- [x] **Empty message thread state** — when a thread has no messages yet (just accepted), show a warm illustrated placeholder ("Say hello to get the conversation started") instead of a blank white area
 
 ### 25k. Onboarding Flow
 
 - [ ] **Role selection cards redesign** — the two role cards ("I'm a Shelter" / "I'm a Foster Parent") are basic bordered cards; redesign with a full-bleed illustrated header image per role (shelter building vs. cosy home), bolder headline, bullet list of what you can do, and a bottom CTA; add a `hover:scale-[1.02]` transform and a heavier border on hover
-- [ ] **Multi-step progress indicator** — add a horizontal step indicator (Step 1 of 2: Choose Role → Step 2: Create Profile) above the form so users know how much onboarding is left
+- [x] **Multi-step progress indicator** — `StepIndicator` on role + profile steps: "Step N of M" label and progress bar (`TOTAL_STEPS` derived from `STEP_META`)
 - [ ] **Shelter form visual grouping** — the shelter onboarding form is one flat column of inputs; group them into visual clusters (Basic Info, Contact, Online Presence) with thin dividers and subsection labels
 
 ### 25l. Micro-interactions & Motion
@@ -298,5 +301,5 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **Keyboard focus visibility** — run through all interactive elements; many shadcn defaults have `focus-visible:ring-2` but the ring color (dark navy on white) has low contrast ratio; switch to a high-contrast ring using the new warm accent token
 - [ ] **Responsive browse layout** — on screens between `sm` and `md` the filter sidebar and grid are squeezed into a cramped two-column layout; add a collapsible sidebar toggle at the `md` breakpoint so the grid can use full width when filters are hidden
-- [ ] **Mobile form inputs** — all inputs are `h-10` (40px) which can be too small on touch devices; ensure inputs are at least `h-11` (44px) on mobile via responsive classes and that tap targets for checkboxes and radio buttons are at least 44×44px
+- [x] **Mobile form inputs** — `Input` / `SelectTrigger` use `h-11 md:h-10`; `Textarea` has taller min-height + padding on mobile; browse filters use `min-h-[44px]` rows for checkbox/radio rows
 - [ ] **Print stylesheet** — `/shelter/applications/[id]` and foster profiles are the kind of pages shelter staff may want to print; add a `@media print` block that hides the nav, action buttons, and sidebar and formats the content as a clean single-column document

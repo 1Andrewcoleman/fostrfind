@@ -159,6 +159,11 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
             <EmptyState
               title="No applications yet"
               description="Applications will appear here once fosters apply to your dogs."
+              action={
+                stats.activeDogs === 0
+                  ? { label: 'Add your first dog', href: '/shelter/dogs/new' }
+                  : { label: 'View applications', href: '/shelter/applications' }
+              }
             />
           ) : (
             <div className="space-y-3">

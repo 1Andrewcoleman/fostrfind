@@ -23,12 +23,17 @@ export const DEFAULT_FILTERS: FilterState = {
   medicalOk: false,
 }
 
-interface FilterSidebarProps {
+// ---------------------------------------------------------------------------
+// Reusable filter form — rendered in both the desktop Card and mobile Sheet
+// ---------------------------------------------------------------------------
+
+interface BrowseFilterFormProps {
   filters: FilterState
   onFilterChange: (filters: FilterState) => void
+  idPrefix: string
 }
 
-export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
+export function BrowseFilterForm({ filters, onFilterChange, idPrefix }: BrowseFilterFormProps) {
   const updateFilters = useCallback(
     (updates: Partial<FilterState>) => {
       onFilterChange({ ...filters, ...updates })
@@ -40,35 +45,34 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
     return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
   }
 
-  function clearAll() {
-    onFilterChange(DEFAULT_FILTERS)
-  }
-
   return (
-    <aside className="w-64 flex-shrink-0 hidden md:block sticky top-6 self-start">
-      <Card className="p-5 shadow-sm space-y-5">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display font-semibold">Filters</h2>
-        <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs h-auto py-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onFilterChange(DEFAULT_FILTERS)}
+          className="text-xs h-auto py-1"
+        >
           Clear all
         </Button>
       </div>
 
       <Separator />
 
-      {/* Size */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Size</h3>
         {DOG_SIZES.map((size) => (
-          <div key={size} className="flex items-center gap-2">
+          <div key={size} className="flex items-center gap-2 min-h-[44px]">
             <Checkbox
-              id={`size-${size}`}
+              id={`${idPrefix}size-${size}`}
               checked={filters.sizes.includes(size)}
               onCheckedChange={() =>
                 updateFilters({ sizes: toggleArray(filters.sizes, size) })
               }
             />
-            <Label htmlFor={`size-${size}`} className="font-normal cursor-pointer">
+            <Label htmlFor={`${idPrefix}size-${size}`} className="font-normal cursor-pointer">
               {DOG_SIZE_LABELS[size]}
             </Label>
           </div>
@@ -77,19 +81,18 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
 
       <Separator />
 
-      {/* Age */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Age</h3>
         {DOG_AGES.map((age) => (
-          <div key={age} className="flex items-center gap-2">
+          <div key={age} className="flex items-center gap-2 min-h-[44px]">
             <Checkbox
-              id={`age-${age}`}
+              id={`${idPrefix}age-${age}`}
               checked={filters.ages.includes(age)}
               onCheckedChange={() =>
                 updateFilters({ ages: toggleArray(filters.ages, age) })
               }
             />
-            <Label htmlFor={`age-${age}`} className="font-normal cursor-pointer">
+            <Label htmlFor={`${idPrefix}age-${age}`} className="font-normal cursor-pointer">
               {DOG_AGE_LABELS[age]}
             </Label>
           </div>
@@ -98,7 +101,6 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
 
       <Separator />
 
-      {/* Gender */}
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Gender</h3>
         <RadioGroup
@@ -106,9 +108,9 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
           onValueChange={(v) => updateFilters({ gender: v === 'any' ? null : v })}
         >
           {['any', 'male', 'female'].map((g) => (
-            <div key={g} className="flex items-center gap-2">
-              <RadioGroupItem value={g} id={`gender-${g}`} />
-              <Label htmlFor={`gender-${g}`} className="font-normal cursor-pointer capitalize">
+            <div key={g} className="flex items-center gap-2 min-h-[44px]">
+              <RadioGroupItem value={g} id={`${idPrefix}gender-${g}`} />
+              <Label htmlFor={`${idPrefix}gender-${g}`} className="font-normal cursor-pointer capitalize">
                 {g}
               </Label>
             </div>
@@ -118,19 +120,40 @@ export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
 
       <Separator />
 
-      {/* Medical */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-h-[44px]">
         <Checkbox
-          id="medical"
+          id={`${idPrefix}medical`}
           checked={filters.medicalOk}
           onCheckedChange={(checked) =>
             updateFilters({ medicalOk: checked === true })
           }
         />
-        <Label htmlFor="medical" className="font-normal cursor-pointer text-sm">
+        <Label htmlFor={`${idPrefix}medical`} className="font-normal cursor-pointer text-sm">
           Open to medical needs
         </Label>
       </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Desktop sidebar wrapper (hidden on small screens)
+// ---------------------------------------------------------------------------
+
+interface FilterSidebarProps {
+  filters: FilterState
+  onFilterChange: (filters: FilterState) => void
+}
+
+export function FilterSidebar({ filters, onFilterChange }: FilterSidebarProps) {
+  return (
+    <aside className="w-64 flex-shrink-0 hidden md:block sticky top-6 self-start">
+      <Card className="p-5 shadow-sm">
+        <BrowseFilterForm
+          filters={filters}
+          onFilterChange={onFilterChange}
+          idPrefix="desktop-"
+        />
       </Card>
     </aside>
   )

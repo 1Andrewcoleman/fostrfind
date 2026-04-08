@@ -4,6 +4,7 @@ import { MessageCircle, History } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
+import { ApplicationStepper } from '@/components/foster/application-stepper'
 import { formatDate } from '@/lib/helpers'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -41,6 +42,10 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
           <p className="text-xs text-muted-foreground mt-1">
             Applied {formatDate(application.created_at)}
           </p>
+
+          <div className="mt-3">
+            <ApplicationStepper status={application.status} />
+          </div>
 
           <div className="flex gap-2 mt-3">
             {application.status === 'accepted' && (

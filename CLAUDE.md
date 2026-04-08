@@ -38,9 +38,11 @@ The app uses a **warm rescue-oriented** palette (not the default shadcn slate-na
 | **Tailwind** | [`tailwind.config.ts`](tailwind.config.ts) — `fontFamily.sans` / `display`, `colors.warm`, shared `borderRadius` from `--radius`. |
 | **Toasts** | [`src/components/ui/sonner.tsx`](src/components/ui/sonner.tsx) — typed toast classNames (success green tint, error red, etc.). |
 
-Notable surfaces: [`src/components/portal-nav.tsx`](src/components/portal-nav.tsx) (warm active nav pill + left border, unread badge), [`src/components/foster/browse-dog-card.tsx`](src/components/foster/browse-dog-card.tsx), [`src/components/foster/filter-sidebar.tsx`](src/components/foster/filter-sidebar.tsx) (filter panel as `Card`, sticky on `md+`; **filters hidden on small screens** until a mobile filter flow ships — see [`docs/TODO.md`](docs/TODO.md) §25e), [`src/components/status-badge.tsx`](src/components/status-badge.tsx), shelter [`src/app/(shelter)/shelter/dashboard/page.tsx`](src/app/(shelter)/shelter/dashboard/page.tsx) (greeting + stat icon pills). Async buttons use **`Loader2`** from lucide where loading state is shown.
+Notable surfaces: [`src/components/portal-nav.tsx`](src/components/portal-nav.tsx) (warm active nav pill + left border, unread badge), [`src/components/portal-sidebar-user.tsx`](src/components/portal-sidebar-user.tsx) (avatar, role pill, sign-out; also in mobile sheet via `MobileNav`), [`src/components/foster/browse-dog-card.tsx`](src/components/foster/browse-dog-card.tsx) (shelter logo inline, special-needs overlay), [`src/components/foster/filter-sidebar.tsx`](src/components/foster/filter-sidebar.tsx) (`BrowseFilterForm` reused in desktop `Card` + mobile `Sheet`; sticky on `md+`), [`src/app/(foster)/foster/browse/page.tsx`](src/app/(foster)/foster/browse/page.tsx) (results count, removable filter chips, floating Filters FAB + bottom padding on small screens), [`src/components/status-badge.tsx`](src/components/status-badge.tsx), [`src/components/foster/application-stepper.tsx`](src/components/foster/application-stepper.tsx), shelter [`src/app/(shelter)/shelter/dashboard/page.tsx`](src/app/(shelter)/shelter/dashboard/page.tsx) (greeting + stat icon pills). Async buttons use **`Loader2`** from lucide where loading state is shown.
 
-Remaining UI polish is tracked in [`docs/TODO.md`](docs/TODO.md) **§25** (landing, messaging bubbles, mobile filters, sign-out in sidebar, etc.).
+**Portal layouts** ([`(foster)/layout.tsx`](src/app/(foster)/layout.tsx), [`(shelter)/layout.tsx`](src/app/(shelter)/layout.tsx)): [`src/lib/portal-layout-data.ts`](src/lib/portal-layout-data.ts) `getPortalLayoutData()` runs **`createClient()` + `getUser()` once**, then loads unread count + sidebar identity in parallel (avoids duplicate `getUser()`). [`src/lib/portal-identity.ts`](src/lib/portal-identity.ts) `getPortalIdentity()` is a thin wrapper for standalone callers.
+
+Further UI polish is tracked in [`docs/TODO.md`](docs/TODO.md) **§25** (landing hero redesign, filter pill selectors, incoming message avatars, etc.).
 
 ### Auth / Dev Mode
 
@@ -88,7 +90,7 @@ All cross-table RLS policies (`applications`, `foster_parents` "shelters can rea
 | Accept/Decline/Complete | API routes with auth + ownership + idempotency guards; dog status transitions (pending/placed) |
 | Dashboard | Server-fetches real counts (active dogs, pending apps, unread messages) + recent applications |
 | Foster History | Server-fetches completed applications + ratings; wires `FosterHistoryCard` + stats |
-| Messaging | Thread list + thread view (foster/shelter): server-fetched threads, `MessageThread` client sends inserts; mark-as-read on thread open (server `UPDATE`); nav + list unread badges. **No Supabase Realtime** yet — refresh to see new messages from the other party. |
+| Messaging | Thread list + thread view (foster/shelter): server-fetched threads, `MessageThread` client sends inserts; mark-as-read on thread open (server `UPDATE`); nav + list unread badges; thread list uses [`RelativeTime`](src/components/relative-time.tsx) (stable SSR + client relative string). **No Supabase Realtime** yet — refresh to see new messages from the other party. Incoming-row avatars in the thread view are not implemented (see [`docs/TODO.md`](docs/TODO.md) §25j). |
 | Shelter ratings | After placement complete, `RatingDialog` + `POST /api/ratings` (auth, shelter ownership, idempotency); "Rate Foster" available on completed applications until a rating exists. |
 | Dog delete | `DELETE /api/dogs/[id]` + `DogDeleteButton` on edit dog page; blocks delete when active applications exist (409). |
 | Portal nav | `portal-nav.tsx`: warm-tinted active state, desktop `NavLinks`, mobile `Sheet` menu, unread badge on Messages (pulse when unread count is positive). |
@@ -101,11 +103,17 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 |------|---------|
 | `src/types/database.ts` | TS interfaces for all 6 DB tables + composite types |
 | `src/lib/constants.ts` | Enums/labels for statuses, sizes, ages, etc. |
-| `src/lib/helpers.ts` | `formatDate`, `getInitials`, `slugify`, `calculateAverageRating` |
+| `src/lib/helpers.ts` | `formatDate`, `formatDateShort`, `formatRelativeTime`, `getInitials`, `slugify`, `calculateAverageRating` |
+| `src/lib/portal-layout-data.ts` | `getPortalLayoutData()`, `getPortalIdentityForUser()` — single-auth fetch for shelter/foster layouts |
+| `src/lib/portal-identity.ts` | `getPortalIdentity()` — standalone identity when layout helper is not used |
+| `src/types/portal.ts` | `PortalIdentity` for sidebar / mobile nav |
 | `src/lib/auth-routing.ts` | `getPostAuthDestination()` — role-based redirect after auth |
 | `src/components/auth-guard.tsx` | Server component: redirects if no session |
 | `src/components/role-guard.tsx` | Server component: wrong role → other portal; no profile → onboarding |
-| `src/components/foster/filter-sidebar.tsx` | Client: controlled filter sidebar; parent owns state via `filters` + `onFilterChange` props |
+| `src/components/foster/filter-sidebar.tsx` | Client: `BrowseFilterForm` + `FilterSidebar` wrapper; `idPrefix` for duplicate desktop/mobile instances |
+| `src/components/empty-state.tsx` | Client: optional CTA via `href` (Server Components) or `onClick` (Client Components only) |
+| `src/components/relative-time.tsx` | Client: thread-list timestamps; stable initial render, then `formatRelativeTime` + 60s tick |
+| `src/components/portal-sidebar-user.tsx` | Client: sidebar footer identity + sign-out |
 | `src/components/foster/foster-profile-form.tsx` | Client form: upserts `foster_parents` row |
 | `src/components/shelter/shelter-settings-form.tsx` | Client form: updates `shelters` row |
 | `src/components/shelter/applications-list.tsx` | Client component: tab-filtered shelter applications |

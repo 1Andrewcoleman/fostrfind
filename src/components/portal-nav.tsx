@@ -31,6 +31,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { PortalSidebarUser } from '@/components/portal-sidebar-user'
+import type { PortalIdentity } from '@/types/portal'
 
 // ---------------------------------------------------------------------------
 // Nav item definitions (one source of truth per portal)
@@ -136,9 +138,10 @@ interface MobileNavProps {
   portal: Portal
   portalLabel: string
   unreadMessages?: number
+  identity?: PortalIdentity
 }
 
-export function MobileNav({ portal, portalLabel, unreadMessages = 0 }: MobileNavProps) {
+export function MobileNav({ portal, portalLabel, unreadMessages = 0, identity }: MobileNavProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const items = portal === 'shelter' ? SHELTER_NAV : FOSTER_NAV
@@ -169,9 +172,13 @@ export function MobileNav({ portal, portalLabel, unreadMessages = 0 }: MobileNav
           ))}
         </nav>
 
-        <div className="p-3 border-t shrink-0">
-          <p className="text-xs text-muted-foreground px-3">{portalLabel}</p>
-        </div>
+        {identity ? (
+          <PortalSidebarUser identity={identity} />
+        ) : (
+          <div className="p-3 border-t shrink-0">
+            <p className="text-xs text-muted-foreground px-3">{portalLabel}</p>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
   )

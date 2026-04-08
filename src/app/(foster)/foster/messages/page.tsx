@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/server'
-import { formatDate } from '@/lib/helpers'
+import { RelativeTime } from '@/components/relative-time'
 import type { Message } from '@/types/database'
 
 const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
@@ -25,6 +25,7 @@ interface ThreadSummary {
   status: string
   lastMessageBody: string | null
   lastMessageAt: string | null
+  lastMessageSenderRole: 'shelter' | 'foster' | null
   unreadCount: number
 }
 
@@ -43,6 +44,7 @@ function toThreadSummary(app: RawApplicationRow): ThreadSummary {
     status: app.status,
     lastMessageBody: last?.body ?? null,
     lastMessageAt: last?.created_at ?? null,
+    lastMessageSenderRole: last?.sender_role ?? null,
     unreadCount,
   }
 }
@@ -98,6 +100,7 @@ export default async function FosterMessagesPage() {
         <EmptyState
           title="No messages yet"
           description="Once a shelter accepts your application, you'll be able to message them here."
+          action={{ label: 'View applications', href: '/foster/applications' }}
         />
       ) : (
         <div className="space-y-2">
@@ -107,17 +110,24 @@ export default async function FosterMessagesPage() {
               href={`/foster/messages/${thread.applicationId}`}
               className="block"
             >
-              <Card className="hover:shadow-sm transition-shadow">
+              <Card className={`transition-shadow hover:shadow-sm ${thread.unreadCount > 0 ? 'bg-primary/5 border-primary/20' : ''}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <MessageCircle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+                      <MessageCircle className={`h-5 w-5 mt-0.5 shrink-0 ${thread.unreadCount > 0 ? 'text-primary' : 'text-muted-foreground'}`} />
                       <div className="min-w-0">
-                        <p className="font-medium truncate">
+                        <p className={`truncate ${thread.unreadCount > 0 ? 'font-semibold' : 'font-medium'}`}>
                           {thread.dogName} · {thread.shelterName}
                         </p>
                         <p className="text-sm text-muted-foreground truncate">
-                          {thread.lastMessageBody ?? (
+                          {thread.lastMessageBody ? (
+                            <>
+                              {thread.lastMessageSenderRole === 'foster' && (
+                                <span className="text-muted-foreground/70">You: </span>
+                              )}
+                              {thread.lastMessageBody}
+                            </>
+                          ) : (
                             <span className="italic">No messages yet — start the conversation</span>
                           )}
                         </p>
@@ -126,9 +136,10 @@ export default async function FosterMessagesPage() {
 
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {thread.lastMessageAt && (
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(thread.lastMessageAt)}
-                        </span>
+                        <RelativeTime
+                          dateString={thread.lastMessageAt}
+                          className="text-xs text-muted-foreground"
+                        />
                       )}
                       {thread.unreadCount > 0 && (
                         <Badge className="text-[10px] h-5 px-1.5">

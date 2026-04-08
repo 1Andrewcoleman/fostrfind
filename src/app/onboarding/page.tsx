@@ -24,6 +24,31 @@ const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
 
+const STEP_META: Record<Step, { index: number; label: string }> = {
+  'role':         { index: 1, label: 'Choose your role' },
+  'shelter-form': { index: 2, label: 'Create your profile' },
+  'foster-form':  { index: 2, label: 'Create your profile' },
+}
+
+const TOTAL_STEPS = Math.max(...Object.values(STEP_META).map((s) => s.index))
+
+function StepIndicator({ step }: { step: Step }) {
+  const { index, label } = STEP_META[step]
+  return (
+    <div className="w-full max-w-lg mb-6 space-y-2">
+      <p className="text-sm text-muted-foreground text-center">
+        Step {index} of {TOTAL_STEPS} — {label}
+      </p>
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{ width: `${(index / TOTAL_STEPS) * 100}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
 export default function OnboardingPage() {
   const [step, setStep] = useState<Step>('role')
   const [loading, setLoading] = useState(false)
@@ -155,6 +180,7 @@ export default function OnboardingPage() {
           <PawPrint className="h-7 w-7 text-primary" />
           Fostr Fix
         </div>
+        <StepIndicator step={step} />
         <h1 className="text-2xl font-bold mb-2 text-center">How will you use Fostr Fix?</h1>
         <p className="text-muted-foreground mb-8 text-center">Choose your role to get started</p>
 
@@ -189,7 +215,8 @@ export default function OnboardingPage() {
 
   if (step === 'shelter-form') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-muted/30">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted/30">
+        <StepIndicator step={step} />
         <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Tell us about your shelter</CardTitle>
@@ -288,7 +315,8 @@ export default function OnboardingPage() {
 
   // Foster form
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-muted/30">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted/30">
+      <StepIndicator step={step} />
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Tell us about yourself</CardTitle>

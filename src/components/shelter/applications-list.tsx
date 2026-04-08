@@ -47,6 +47,11 @@ export function ShelterApplicationsList({ applications }: ShelterApplicationsLis
               ? 'Foster parents will apply here once you list some dogs.'
               : `No ${activeTab} applications found.`
           }
+          action={
+            activeTab === 'all'
+              ? { label: 'Add a dog', href: '/shelter/dogs/new' }
+              : undefined
+          }
         />
       ) : (
         <div className="space-y-3">

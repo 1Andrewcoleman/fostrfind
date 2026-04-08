@@ -12,12 +12,33 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { Send } from 'lucide-react'
+import { MessageCircle, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
 import type { Message } from '@/types/database'
+
+// ---------------------------------------------------------------------------
+// Typing indicator — three animated dots in an incoming-style bubble.
+// Rendered when `showTypingIndicator` is true (wired to Realtime later).
+// ---------------------------------------------------------------------------
+
+function TypingIndicator() {
+  return (
+    <div className="flex justify-start">
+      <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+            style={{ animationDelay: `${i * 150}ms`, animationDuration: '0.8s' }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 interface MessageThreadProps {
   applicationId: string
@@ -28,6 +49,8 @@ interface MessageThreadProps {
   initialMessages: Message[]
   dogName: string
   otherPartyName: string
+  /** Show animated typing indicator (wire to Realtime presence later). */
+  showTypingIndicator?: boolean
 }
 
 export function MessageThread({
@@ -37,6 +60,7 @@ export function MessageThread({
   initialMessages,
   dogName,
   otherPartyName,
+  showTypingIndicator = false,
 }: MessageThreadProps) {
   const supabase = createClient()
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -122,9 +146,15 @@ export function MessageThread({
         aria-label="Message history"
       >
         {messages.length === 0 && (
-          <p className="text-sm text-center text-muted-foreground py-8">
-            No messages yet. Say hello!
-          </p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 rounded-full bg-primary/10 p-4">
+              <MessageCircle className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="mb-1 text-lg font-semibold">Start the conversation</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              Send a message to {otherPartyName} about {dogName}.
+            </p>
+          </div>
         )}
 
         {messages.map((msg) => {
@@ -160,6 +190,8 @@ export function MessageThread({
             </div>
           )
         })}
+
+        {showTypingIndicator && <TypingIndicator />}
       </div>
 
       {/* Send form */}

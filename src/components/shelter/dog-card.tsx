@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { FileText } from 'lucide-react'
+import { FileText, Heart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'
 import type { Dog } from '@/types/database'
@@ -8,9 +8,14 @@ import type { Dog } from '@/types/database'
 interface DogCardProps {
   dog: Dog
   applicationCount?: number
+  /**
+   * When set, replaces the application-count footer with a "Fostered by …"
+   * label. Used on the Placed tab of the shelter dogs list.
+   */
+  fosteredBy?: string
 }
 
-export function DogCard({ dog, applicationCount = 0 }: DogCardProps) {
+export function DogCard({ dog, applicationCount = 0, fosteredBy }: DogCardProps) {
   return (
     <Link href={`/shelter/dogs/${dog.id}`}>
       <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
@@ -36,10 +41,19 @@ export function DogCard({ dog, applicationCount = 0 }: DogCardProps) {
           <p className="text-sm text-muted-foreground">
             {[dog.breed, dog.age, dog.size].filter(Boolean).join(' · ')}
           </p>
-          <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span>{applicationCount} application{applicationCount !== 1 ? 's' : ''}</span>
-          </div>
+          {fosteredBy ? (
+            <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
+              <Heart className="h-4 w-4" />
+              <span>Fostered by {fosteredBy}</span>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              <span>
+                {applicationCount} application{applicationCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

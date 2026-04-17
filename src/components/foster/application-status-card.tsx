@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { ApplicationStepper } from '@/components/foster/application-stepper'
+import { WithdrawApplicationButton } from '@/components/foster/withdraw-application-button'
 import { formatDate } from '@/lib/helpers'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -47,7 +48,7 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
             <ApplicationStepper status={application.status} />
           </div>
 
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             {application.status === 'accepted' && (
               <Button size="sm" variant="outline" asChild>
                 <Link href={`/foster/messages/${application.id}`}>
@@ -63,6 +64,13 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
                   View History
                 </Link>
               </Button>
+            )}
+            {(application.status === 'submitted' ||
+              application.status === 'reviewing') && (
+              <WithdrawApplicationButton
+                applicationId={application.id}
+                dogName={application.dog.name}
+              />
             )}
           </div>
         </div>

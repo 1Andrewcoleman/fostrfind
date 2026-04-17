@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle, XCircle, Flag, Star, Loader2 } from 'lucide-react'
+import { CheckCircle, XCircle, Eye, Flag, Star, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +31,7 @@ interface AcceptDeclineButtonsProps {
   hasExistingRating?: boolean
 }
 
-type ActionKind = 'accept' | 'decline' | 'complete'
+type ActionKind = 'accept' | 'decline' | 'complete' | 'review'
 
 export function AcceptDeclineButtons({
   applicationId,
@@ -65,6 +65,7 @@ export function AcceptDeclineButtons({
         accept: 'Application accepted',
         decline: 'Application declined',
         complete: 'Foster placement completed',
+        review: 'Marked as reviewing',
       }
 
       toast.success(labels[action])
@@ -164,9 +165,25 @@ export function AcceptDeclineButtons({
     )
   }
 
-  // Submitted / reviewing — can accept or decline
+  // Submitted / reviewing — can accept or decline; submitted can also be marked as reviewing
   return (
-    <div className="flex gap-3">
+    <div className="flex flex-wrap gap-3">
+      {/* Mark as Reviewing — only when still submitted */}
+      {currentStatus === 'submitted' && (
+        <Button
+          variant="outline"
+          disabled={!!loading}
+          onClick={() => handleAction('review')}
+        >
+          {loading === 'review' ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Eye className="mr-2 h-4 w-4" />
+          )}
+          {loading === 'review' ? 'Marking…' : 'Mark as Reviewing'}
+        </Button>
+      )}
+
       {/* Accept */}
       <AlertDialog>
         <AlertDialogTrigger asChild>

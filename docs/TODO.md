@@ -311,3 +311,31 @@ On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/
 - [ ] **Center and constrain main content** — audit foster and shelter portal pages: wrap page body in a consistent container (e.g. `mx-auto w-full max-w-*` with horizontal padding, or `flex justify-center` for empty states) so primary content is visually centered in the main pane and uses width intentionally (not stuck to the left with excess negative space)
 - [ ] **Profile & long forms** — foster profile and similar multi-card forms: either widen the form column to a comfortable max (e.g. `max-w-4xl` centered) or use a two-column grid on `lg+` so fields use horizontal space without a huge empty margin
 - [ ] **Empty states in context** — ensure `EmptyState` (and equivalent “no data” layouts) is centered within the **main content area** (not only self-centered inside a narrow left-aligned wrapper); verify after layout changes on empty and populated pages
+
+---
+
+## 26. Pre-Launch Hardening
+
+> Gaps found during codebase audit that any production MVP should address. Grouped by severity.
+
+### RED — must fix before real users
+
+- [ ] **Database indexes** — add indexes on `dogs(status, shelter_id)`, `applications(foster_id, shelter_id, dog_id, status)`, `messages(application_id, read)`, `shelters(user_id)`, `foster_parents(user_id)` (new migration)
+- [ ] **Atomic status transitions** — replace separate UPDATE calls in accept/complete API routes with Postgres functions or `supabase.rpc()` calls that run both updates in a single transaction; current code can leave app `accepted` but dog still `available` if second query fails
+- [ ] **Unique constraints** — add `UNIQUE(dog_id, foster_id)` on `applications` and `UNIQUE(application_id)` on `ratings` to enforce idempotency at the DB level (current guards are UI/API-only, concurrent requests can bypass)
+- [ ] **RLS: block applications to non-available dogs** — add INSERT policy check `dog_id IN (SELECT id FROM dogs WHERE status = 'available')` so fosters cannot apply to pending/placed dogs at the DB level
+- [ ] **`getUser()` error handling** — audit all ~20 call sites (`auth-guard`, `role-guard`, `auth-routing`, server pages); check `error` field and handle gracefully instead of treating network/token errors as “no user” → redirect to login
+- [ ] **Server page error handling** — wrap Supabase queries in try-catch on all server-rendered pages (dashboard, applications, messages, history); show inline error states instead of crashing to generic `error.tsx`
+
+### ORANGE — should fix before launch
+
+- [ ] **Message thread query-level auth** — add `.eq('foster_id', ...)` / `.eq('shelter_id', ...)` to thread page queries as defense-in-depth alongside RLS (currently fetch by `applicationId` only, then check ownership after)
+- [ ] **Profile form validation** — add Zod schemas to `foster-profile-form.tsx` and `shelter-settings-form.tsx` matching the approach in `dog-form.tsx`; enforce required fields, length limits, format checks
+- [ ] **Sanitize error messages** — replace raw `error.message` displays (which can leak RLS policy names) with generic user-facing messages; log originals server-side
+- [ ] **Image domain config** — add `images.remotePatterns` for Supabase Storage hostname to `next.config.mjs` (required before photo upload works)
+- [ ] **Centralize `DEV_MODE`** — export from `src/lib/constants.ts`, replace ~24 inline definitions of `const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')`
+
+### YELLOW — good practice
+
+- [ ] **Page metadata** — add `metadata` exports to portal layout files and key pages (browse, dashboard, applications, messages) for SEO
+- [ ] **Remove unused `pg` dependency** from `package.json`

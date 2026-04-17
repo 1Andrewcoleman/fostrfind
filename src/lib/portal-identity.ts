@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getPortalIdentityForUser } from '@/lib/portal-layout-data'
+import { DEV_MODE } from '@/lib/constants'
 import type { PortalIdentity } from '@/types/portal'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 /**
  * Standalone convenience wrapper — creates its own Supabase client and

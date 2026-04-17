@@ -42,3 +42,5 @@ export const DOG_STATUS_LABELS: Record<string, string> = {
   placed: 'Placed',
   adopted: 'Adopted',
 }
+
+export const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')

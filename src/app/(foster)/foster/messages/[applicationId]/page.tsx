@@ -3,9 +3,8 @@ import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { MessageThread } from '@/components/messages/message-thread'
 import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
 import type { Message } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 interface FosterMessageThreadPageProps {
   params: { applicationId: string }

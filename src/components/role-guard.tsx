@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
 
 interface RoleGuardProps {
   children: React.ReactNode
   allowedRole: 'shelter' | 'foster'
 }
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export async function RoleGuard({ children, allowedRole }: RoleGuardProps) {
   if (DEV_MODE) return <>{children}</>

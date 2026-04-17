@@ -4,9 +4,8 @@ import { notFound } from 'next/navigation'
 import { DogForm } from '@/components/shelter/dog-form'
 import { DogDeleteButton } from '@/components/shelter/dog-delete-button'
 import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
 import type { Dog } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 interface EditDogPageProps {
   params: { id: string }

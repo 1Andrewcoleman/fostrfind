@@ -16,11 +16,9 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
+import { DEV_MODE, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/client'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 interface DogDetailPageProps {
   params: { id: string }

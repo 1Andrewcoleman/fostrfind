@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Dog } from '@/types/database'
-import { DOG_AGES, DOG_SIZES, DOG_GENDERS } from '@/lib/constants'
+import { DEV_MODE, DOG_AGES, DOG_SIZES, DOG_GENDERS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 
 const dogSchema = z.object({
@@ -48,8 +48,6 @@ interface DogFormProps {
   dogId?: string
   initialData?: Partial<Dog>
 }
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export function DogForm({ mode, dogId, initialData }: DogFormProps) {
   const router = useRouter()

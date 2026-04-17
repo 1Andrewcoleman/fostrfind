@@ -10,8 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { getPostAuthDestination } from '@/lib/auth-routing'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+import { DEV_MODE } from '@/lib/constants'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')

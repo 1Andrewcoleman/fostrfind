@@ -16,11 +16,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
+import { DEV_MODE, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/helpers'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
 

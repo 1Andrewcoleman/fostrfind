@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
 import type { PortalIdentity } from '@/types/portal'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 type AuthUser = { id: string; email?: string }
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 const DEV_IDENTITY: Record<'shelter' | 'foster', PortalIdentity> = {
   shelter: { displayName: 'Happy Paws Rescue', avatarUrl: null, roleLabel: 'Shelter' },

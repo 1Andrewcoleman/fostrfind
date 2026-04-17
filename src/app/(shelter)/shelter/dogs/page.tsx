@@ -5,9 +5,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/empty-state'
 import { DogCard } from '@/components/shelter/dog-card'
 import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
 import type { Dog } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export default async function ShelterDogsPage() {
   let dogs: Dog[] = []

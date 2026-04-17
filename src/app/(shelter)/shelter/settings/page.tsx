@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterSettingsForm } from '@/components/shelter/shelter-settings-form'
+import { DEV_MODE } from '@/lib/constants'
 import type { Shelter } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 /** Placeholder used when no Supabase connection is configured. */
 const DEV_SHELTER: Shelter = {

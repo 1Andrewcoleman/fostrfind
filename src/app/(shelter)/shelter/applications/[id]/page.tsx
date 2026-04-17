@@ -8,9 +8,8 @@ import { AcceptDeclineButtons } from '@/components/shelter/accept-decline-button
 import { ShelterNoteEditor } from '@/components/shelter/shelter-note-editor'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/helpers'
+import { DEV_MODE } from '@/lib/constants'
 import type { ApplicationWithDetails, Rating } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 interface ApplicationDetailPageProps {
   params: { id: string }

@@ -21,10 +21,8 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
-import { DOG_SIZE_LABELS, DOG_AGE_LABELS } from '@/lib/constants'
+import { DEV_MODE, DOG_SIZE_LABELS, DOG_AGE_LABELS } from '@/lib/constants'
 import type { DogWithShelter } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 const PLACEHOLDER_DOGS: DogWithShelter[] = [
   {

@@ -4,8 +4,7 @@ import { RoleGuard } from '@/components/role-guard'
 import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+import { DEV_MODE } from '@/lib/constants'
 
 export default async function FosterLayout({ children }: { children: React.ReactNode }) {
   const { unreadMessages, identity } = await getPortalLayoutData('foster')

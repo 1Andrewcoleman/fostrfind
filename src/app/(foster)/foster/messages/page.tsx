@@ -6,9 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/server'
 import { RelativeTime } from '@/components/relative-time'
+import { DEV_MODE } from '@/lib/constants'
 import type { Message } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 interface RawApplicationRow {
   id: string

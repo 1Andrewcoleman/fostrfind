@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FosterProfileForm } from '@/components/foster/foster-profile-form'
+import { DEV_MODE } from '@/lib/constants'
 import type { FosterParent } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export default async function FosterProfilePage(): Promise<React.JSX.Element> {
   let fosterData: FosterParent | null = null

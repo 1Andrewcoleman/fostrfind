@@ -3,9 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/empty-state'
 import { FosterHistoryCard } from '@/components/foster/foster-history-card'
 import { calculateAverageRating } from '@/lib/helpers'
+import { DEV_MODE } from '@/lib/constants'
 import type { ApplicationWithDetails, Rating } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
   let placements: ApplicationWithDetails[] = []

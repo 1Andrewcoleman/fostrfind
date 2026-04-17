@@ -1,9 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterApplicationsList } from '@/components/shelter/applications-list'
+import { DEV_MODE } from '@/lib/constants'
 import type { ApplicationWithDetails } from '@/types/database'
-
-const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 export default async function ShelterApplicationsPage(): Promise<React.JSX.Element> {
   let applications: ApplicationWithDetails[] = []

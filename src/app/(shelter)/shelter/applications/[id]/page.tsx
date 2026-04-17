@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, MessageCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'
 import { FosterProfileView } from '@/components/shelter/foster-profile-view'
@@ -80,12 +81,20 @@ export default async function ApplicationDetailPage({
         Back to Applications
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold">Application Detail</h1>
         <StatusBadge status={app.status} />
         <span className="text-sm text-muted-foreground ml-auto">
           {formatDate(app.created_at)}
         </span>
+        {(app.status === 'accepted' || app.status === 'completed') && (
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/shelter/messages/${app.id}`}>
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Message Foster
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Dog being applied for */}

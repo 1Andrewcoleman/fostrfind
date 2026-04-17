@@ -49,7 +49,7 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
           </div>
 
           <div className="flex flex-wrap gap-2 mt-3">
-            {application.status === 'accepted' && (
+            {(application.status === 'accepted' || application.status === 'completed') && (
               <Button size="sm" variant="outline" asChild>
                 <Link href={`/foster/messages/${application.id}`}>
                   <MessageCircle className="mr-1 h-3 w-3" />

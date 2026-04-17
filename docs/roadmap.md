@@ -2061,7 +2061,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (3/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (4/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

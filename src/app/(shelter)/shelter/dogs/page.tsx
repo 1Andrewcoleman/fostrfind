@@ -12,8 +12,8 @@ import type { Dog } from '@/types/database'
 
 interface CompletedAppRow {
   dog_id: string
-  // Supabase returns nested selects as arrays even when the FK is one-to-one.
-  foster: { first_name: string | null; last_name: string | null }[] | null
+  // Single object for applications.foster_id → foster_parents (one-to-one FK).
+  foster: { first_name: string | null; last_name: string | null } | null
 }
 
 export default async function ShelterDogsPage() {
@@ -61,11 +61,15 @@ export default async function ShelterDogsPage() {
             .in('dog_id', placedIds)
             .eq('status', 'completed')
 
+          // Supabase TS codegen models nested FK selects as arrays, but
+          // PostgREST returns a single object for one-to-one FKs like
+          // applications.foster_id → foster_parents.id. Double-cast to
+          // reconcile the two views.
           const fosterByDog = new Map<string, string>()
-          for (const row of (completedAppsData ?? []) as CompletedAppRow[]) {
-            const foster = row.foster?.[0]
-            if (!foster) continue
-            const name = `${foster.first_name ?? ''} ${foster.last_name ?? ''}`.trim()
+          const rows = (completedAppsData ?? []) as unknown as CompletedAppRow[]
+          for (const row of rows) {
+            if (!row.foster) continue
+            const name = `${row.foster.first_name ?? ''} ${row.foster.last_name ?? ''}`.trim()
             if (name && !fosterByDog.has(row.dog_id)) {
               fosterByDog.set(row.dog_id, name)
             }

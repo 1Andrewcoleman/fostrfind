@@ -14,15 +14,22 @@ interface ApplicationStatusCardProps {
 }
 
 export function ApplicationStatusCard({ application }: ApplicationStatusCardProps) {
+  // Nested rows (dog / shelter) may come back null when RLS policies block a
+  // join, e.g. fosters reading shelters they applied to if shelter read
+  // isn't granted. Handle gracefully instead of crashing the entire page.
+  const dogName = application.dog?.name ?? 'Unknown dog'
+  const dogPhoto = application.dog?.photos?.[0] ?? null
+  const shelterName = application.shelter?.name ?? 'Unknown shelter'
+
   return (
     <Card>
       <CardContent className="p-4 flex gap-4">
         {/* Dog thumbnail */}
         <div className="relative h-20 w-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-          {application.dog.photos[0] ? (
+          {dogPhoto ? (
             <Image
-              src={application.dog.photos[0]}
-              alt={application.dog.name}
+              src={dogPhoto}
+              alt={dogName}
               fill
               className="object-cover"
             />
@@ -36,10 +43,10 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold">{application.dog.name}</h3>
+            <h3 className="font-semibold">{dogName}</h3>
             <StatusBadge status={application.status} />
           </div>
-          <p className="text-sm text-muted-foreground">{application.shelter.name}</p>
+          <p className="text-sm text-muted-foreground">{shelterName}</p>
           <p className="text-xs text-muted-foreground mt-1">
             Applied {formatDate(application.created_at)}
           </p>
@@ -69,7 +76,7 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
               application.status === 'reviewing') && (
               <WithdrawApplicationButton
                 applicationId={application.id}
-                dogName={application.dog.name}
+                dogName={dogName}
               />
             )}
           </div>

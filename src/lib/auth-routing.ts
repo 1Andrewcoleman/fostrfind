@@ -14,6 +14,6 @@ export async function getPostAuthDestination(
   ])
 
   if (shelter) return '/shelter/dashboard'
-  if (foster) return '/foster/browse'
+  if (foster) return '/foster/dashboard'
   return '/onboarding'
 }

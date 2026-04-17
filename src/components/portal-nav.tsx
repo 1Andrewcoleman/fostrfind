@@ -55,6 +55,7 @@ const SHELTER_NAV: NavItem[] = [
 ]
 
 const FOSTER_NAV: NavItem[] = [
+  { href: '/foster/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/foster/browse', label: 'Browse Dogs', icon: Search },
   { href: '/foster/applications', label: 'My Applications', icon: FileText },
   { href: '/foster/messages', label: 'Messages', icon: MessageCircle, showUnreadBadge: true },

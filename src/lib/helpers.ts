@@ -55,3 +55,10 @@ export function calculateAverageRating(ratings: Rating[]): number {
 export function pluralize(count: number, singular: string, plural?: string): string {
   return count === 1 ? `${count} ${singular}` : `${count} ${plural ?? singular + 's'}`
 }
+
+export function getGreeting(date: Date = new Date()): string {
+  const hour = date.getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}

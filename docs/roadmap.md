@@ -1671,11 +1671,15 @@ Modify both thread pages to filter by ownership in the query:
 .eq('shelter_id', shelterRow.id)
 ```
 
-**2. Profile form Zod validation:**
+**2. Profile + auth form Zod validation:**
 
 Add Zod schemas to:
 - `src/components/foster/foster-profile-form.tsx` — validate name, email, phone, location, bio lengths
 - `src/components/shelter/shelter-settings-form.tsx` — validate name, email, phone, EIN format, website URL
+- `src/app/login/page.tsx` — validate email format, password required (added-scope from Step 6 deferral)
+- `src/app/signup/page.tsx` — validate email format, password min length, confirm match (added-scope from Step 6 deferral)
+- `src/app/auth/forgot-password/page.tsx` — validate email format (added-scope from Step 6 deferral)
+- `src/app/auth/reset-password/page.tsx` — validate new password min 8 chars + confirmation match via Zod instead of inline check (added-scope from Step 6 deferral)
 
 **Pattern (follow `dog-form.tsx`):**
 ```ts
@@ -1728,6 +1732,13 @@ console.error('Operation failed:', error.message)
 toast.error('Something went wrong. Please try again.')
 ```
 
+**Additional call-sites introduced since the original scope (audit these too):**
+- `src/app/auth/forgot-password/page.tsx` — contains `console.error('[forgot-password] resetPasswordForEmail error:', error.message)`. Structured log is fine, but verify the real Supabase error object doesn't contain privileged details we're echoing to the browser console in production.
+- `src/app/auth/reset-password/page.tsx` — contains `console.error('[reset-password] updateUser error:', error.message)`. Same audit.
+- `src/app/(shelter)/shelter/dogs/page.tsx` — `console.error` calls introduced during Step 5 refactor; review.
+- `src/components/foster/withdraw-application-button.tsx` — `toast.error(body.error ?? '…')` renders the API's `error` field directly. Confirm those API-route strings are user-safe (they are today, but this pattern propagates).
+- `src/components/shelter/dog-relist-button.tsx` — same pattern as withdraw button.
+
 **2. Image domain config** (already done in Step 8 if followed in order — verify):
 
 Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
@@ -1749,8 +1760,19 @@ Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
 - `src/lib/rate-limit.ts` — simple in-memory rate limiter for API routes
 
 **Files to modify:**
-- All API routes under `src/app/api/` — add rate limiting
+- All API routes under `src/app/api/` — add rate limiting. The current roster (keep in sync as new routes land):
+  - `POST   /api/applications/[id]/accept`   (Step's pre-existing)
+  - `POST   /api/applications/[id]/decline`  (pre-existing)
+  - `POST   /api/applications/[id]/complete` (pre-existing)
+  - `POST   /api/applications/[id]/review`   (added in Phase 1 Step 3)
+  - `POST   /api/applications/[id]/withdraw` (added in Phase 1 Step 3)
+  - `DELETE /api/dogs/[id]`                  (pre-existing)
+  - `PATCH  /api/dogs/[id]/status`           (added in Phase 1 Step 5)
+  - `POST   /api/ratings`                    (pre-existing)
+  - `POST   /api/notifications/send`         (stub — wired in Phase 1 Step 12)
+  - `POST   /api/upload/photo`               (stub — wired in Phase 1 Step 8)
 - Forms that submit user text — add sanitization
+- `src/app/auth/forgot-password/page.tsx` — although this page calls Supabase directly (no custom API route of ours), an authenticated or client-side rate limit is still worth adding. Supabase enforces ~3 reset emails per hour per user at their edge, but a determined attacker could still spam the endpoint with varied emails, triggering DB-side load. Consider a client-side cooldown (disable the button for N seconds after submit) plus, if later wired through a custom route, server-side limiting too. (Added-scope from Step 6 deferral.)
 
 **Rate limiter (simple approach for MVP):**
 ```ts
@@ -2054,6 +2076,31 @@ These are larger features that can be tackled after the above phases, in any ord
 | Analytics | [§15](./TODO.md#15-infrastructure) | PostHog/Mixpanel integration |
 | Session expiry handling | [§13](./TODO.md#13-security--edge-cases) | Graceful refresh/redirect |
 | CSRF protection | [§13](./TODO.md#13-security--edge-cases) | Evaluate necessity with Supabase auth |
+| Application audit trail / soft-delete | [§18](./TODO.md#18-application-workflow-gaps) | Phase 1 Step 3 implements foster withdrawal as a hard `DELETE` on the applications row — no record survives. For dispute handling, fraud detection, or product analytics we may want a soft-delete (add `withdrawn_at` + `withdrawal_reason` columns; swap the API route's `.delete()` for `.update()`) or a separate `application_events` audit table. Flagged during the Step 6 follow-up audit. |
+
+---
+
+## Deferred Follow-ups Log
+
+> Rolling chronological log of items I explicitly deferred while implementing an earlier step, so a future agent can audit what debt a given step left behind. Each entry points at the step where the concern surfaced and the hardening step or Remaining-Items row that will address it. When a target step picks up one of these items, the step's scope section above should already include the specific files/routes — this log is the "why this is on the list" paper trail.
+
+**How this works when I complete a feature step:**
+1. In the step's commit message, I call out what I deferred.
+2. I append the specific files/routes to the scope list of the receiving hardening step (above).
+3. I add a row here with the date, source step, and target step.
+
+---
+
+| Date | From | Deferred item | To | Notes |
+|---|---|---|---|---|
+| 2026-04-17 | Step 2 (Foster Dashboard) | Server-page error handling on `/foster/dashboard` | §27 | Already listed in §27's scope when Step 2 shipped; no retroactive addition needed. |
+| 2026-04-17 | Step 3 (Reviewing + Withdraw) | Rate limiting on `POST /api/applications/[id]/review` and `POST /api/applications/[id]/withdraw` | §30 | Added to §30's explicit route list. |
+| 2026-04-17 | Step 3 (Foster Withdrawal) | Application audit trail — hard-DELETE loses history | Remaining Items | New row added to the Remaining Items table, suggesting soft-delete columns or a separate `application_events` table. Needs product call before scheduling. |
+| 2026-04-17 | Step 5 (Dog Status Override + Placed Tab) | Rate limiting on `PATCH /api/dogs/[id]/status` | §30 | Added to §30's explicit route list. |
+| 2026-04-17 | Step 5 | Server-page error handling on `/shelter/dogs` (expanded fetch + placed-apps join) | §27 | `shelter/dogs/page.tsx` already in §27's list; expanded fetch still covered. |
+| 2026-04-17 | Step 6 (Forgot/Reset Password) | Rate limiting on `/auth/forgot-password` submit | §30 | Added a dedicated bullet to §30 covering client-side cooldown + server-side limit if the flow later routes through a custom API route. |
+| 2026-04-17 | Step 6 | Sanitize `console.error` leak risk in the two new auth pages | §29 | Added explicit call-sites (`forgot-password`, `reset-password`, and incidentally `shelter/dogs/page.tsx` + withdraw/relist buttons) to §29's audit list. |
+| 2026-04-17 | Step 6 | Zod validation on auth forms (login, signup, forgot-password, reset-password) | §28 | Added four new files to §28's scope list. §28 was previously scoped to only the profile forms. |
 
 ---
 

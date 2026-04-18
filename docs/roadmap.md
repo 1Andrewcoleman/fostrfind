@@ -1778,7 +1778,7 @@ Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
   - `DELETE /api/dogs/[id]`                  (pre-existing)
   - `PATCH  /api/dogs/[id]/status`           (added in Phase 1 Step 5)
   - `POST   /api/ratings`                    (pre-existing)
-  - `POST   /api/notifications/send`         (stub — wired in Phase 1 Step 12)
+  - `POST   /api/notifications/send`         (wired in Phase 1 Step 11 — auth-gated, dispatches to one of 5 email templates via Resend or console-log fallback)
   - `POST   /api/upload/photo`               (wired in Phase 1 Step 8 — multipart, auth-required, bucket+mime+size validation)
 - Forms that submit user text — add sanitization
 - `src/app/auth/forgot-password/page.tsx` — although this page calls Supabase directly (no custom API route of ours), an authenticated or client-side rate limit is still worth adding. Supabase enforces ~3 reset emails per hour per user at their edge, but a determined attacker could still spam the endpoint with varied emails, triggering DB-side load. Consider a client-side cooldown (disable the button for N seconds after submit) plus, if later wired through a custom route, server-side limiting too. (Added-scope from Step 6 deferral.)
@@ -2124,6 +2124,10 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-18 | Step 10 (Avatar + Logo Upload) | Missing UNIQUE constraints on `foster_parents.user_id` and `shelters.user_id` | §25 | Discovered during Step 10 foster-avatar verification — `.upsert({...}, { onConflict: 'user_id' })` was silently failing with "no unique or exclusion constraint matching the ON CONFLICT specification". Worked around by switching the foster form to `.update()` (onboarding guarantees the row exists). §25 scope updated with two new `ADD CONSTRAINT ... UNIQUE (user_id)` statements. |
 | 2026-04-18 | Step 10 | Shelter logo / foster avatar in the portal sidebar doesn't refresh until next full page load | unscheduled | `PortalSidebarUser` reads `avatarUrl` from the layout-rendered `PortalIdentity`, which is only fetched on server-side render. `router.refresh()` after save re-fetches server data but the layout's cached identity may linger a tick. Acceptable for MVP; if we ever move the sidebar avatar to a client-side subscription it'd feel snappier. |
 | 2026-04-18 | Step 10 | `console.error('[storage] …')` surfaces in `AvatarLogoField` flush path (upload + remove old) | §29 | Both call-sites go through `src/lib/storage.ts` / `src/lib/client-image.ts` which already have logged error strings. §29 audit will cover both. |
+| 2026-04-18 | Step 11 (Email Infra) | Real Resend API key + verified sending domain | unscheduled — ops task | `.env.local` currently has `RESEND_API_KEY=your_resend_api_key_here`, so `sendEmail()` falls back to console logs. When a real `re_…` key lands, `RESEND_FROM` should be set to a verified-domain address too (the default `onboarding@resend.dev` sandbox only delivers to the Resend account owner's inbox). Not a code change — just an ops/deploy step. |
+| 2026-04-18 | Step 11 | Rate-limit `POST /api/notifications/send` | §30 | The route is already in §30's roster. Extra callout because this endpoint lets any authenticated user trigger an outbound email to an arbitrary `to` address — a natural spam/abuse vector if Resend keys go live without app-layer limiting. Consider restricting `to` to addresses resolvable from the caller's own shelter/foster/application context before raising real send rates. |
+| 2026-04-18 | Step 11 | `console.error('[email] send failed:', …)` leak surface | §29 | Supabase (via Resend's library) may include provider-level detail in `error.message`. Audit during §29 sanitization. |
+| 2026-04-18 | Step 11 | Email templates visual QA across major clients (Gmail web, Outlook, iOS Mail) | unscheduled | Inline-style email HTML renders well in our static testing but the only way to catch clipping / dark-mode / RTL bugs is to actually preview in each client. Best done with Resend's preview tools once a real key is in place. |
 
 ---
 
@@ -2131,7 +2135,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (10/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (11/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

@@ -1773,6 +1773,7 @@ Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
   - `POST   /api/upload/photo`               (stub — wired in Phase 1 Step 8)
 - Forms that submit user text — add sanitization
 - `src/app/auth/forgot-password/page.tsx` — although this page calls Supabase directly (no custom API route of ours), an authenticated or client-side rate limit is still worth adding. Supabase enforces ~3 reset emails per hour per user at their edge, but a determined attacker could still spam the endpoint with varied emails, triggering DB-side load. Consider a client-side cooldown (disable the button for N seconds after submit) plus, if later wired through a custom route, server-side limiting too. (Added-scope from Step 6 deferral.)
+- `src/app/auth/verify-email/page.tsx` — client-side 60s cooldown already shipped (`RESEND_COOLDOWN_SECONDS` constant on the page), which covers 95% of the abuse surface. Supabase rate-limits its `auth.resend` endpoint at the edge. When a server-side app-layer limiter lands here, apply the same `user.id`-keyed limit as the API routes. (Added-scope from Step 7 deferral.)
 
 **Rate limiter (simple approach for MVP):**
 ```ts
@@ -2101,6 +2102,10 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-17 | Step 6 (Forgot/Reset Password) | Rate limiting on `/auth/forgot-password` submit | §30 | Added a dedicated bullet to §30 covering client-side cooldown + server-side limit if the flow later routes through a custom API route. |
 | 2026-04-17 | Step 6 | Sanitize `console.error` leak risk in the two new auth pages | §29 | Added explicit call-sites (`forgot-password`, `reset-password`, and incidentally `shelter/dogs/page.tsx` + withdraw/relist buttons) to §29's audit list. |
 | 2026-04-17 | Step 6 | Zod validation on auth forms (login, signup, forgot-password, reset-password) | §28 | Added four new files to §28's scope list. §28 was previously scoped to only the profile forms. |
+| 2026-04-17 | Step 7 (Verify Email Interstitial) | Rate-limit the `supabase.auth.resend` call on `/auth/verify-email` | §30 | Client-side 60s cooldown shipped in the page itself. Supabase edge limits ~1 resend/min. Appending an explicit bullet to §30's list so app-layer limiting (when we add it) is applied here too. |
+| 2026-04-17 | Step 7 | Zod validation on `/auth/verify-email` | n/a | The page has no user-input field — the email is read from the session and the resend call takes no params from the user. No schema needed. Logged for completeness. |
+| 2026-04-17 | Step 7 | Sanitize `console.error('[verify-email] resend error:', …)` if Supabase error messages leak internals | §29 | Appended to §29's additional call-sites list. |
+| 2026-04-17 | Step 7 | Onboarding email-confirmation gate is **client-side** (useEffect) not server-side | §27 or later | The roadmap's pitfall suggested a server-side `redirect('/auth/verify-email')` but onboarding is a client component. Our useEffect check adds a ~200ms spinner flash. If onboarding is ever refactored to a server component (out of scope now), move the gate there. |
 
 ---
 
@@ -2108,7 +2113,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (6/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (7/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

@@ -55,7 +55,11 @@ function SignUpForm() {
       return
     }
 
-    window.location.href = '/onboarding'
+    // Supabase sends a confirmation email automatically on signUp; route
+    // the user to the interstitial so they can't poke at /onboarding until
+    // their email is verified. (OAuth path stays direct — providers return
+    // pre-confirmed emails.)
+    window.location.href = '/auth/verify-email'
   }
 
   async function handleGoogleSignUp() {

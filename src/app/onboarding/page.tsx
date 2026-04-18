@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PawPrint, Building2, Heart, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,27 @@ function StepIndicator({ step }: { step: Step }) {
 }
 
 export default function OnboardingPage() {
+  // Gate: unconfirmed-email users are bounced to /auth/verify-email, so
+  // they can't create profile rows with an email they don't control.
+  // DEV_MODE bypasses the check entirely — no real auth to gate against.
+  const [authChecking, setAuthChecking] = useState(!DEV_MODE)
+
+  useEffect(() => {
+    if (DEV_MODE) return
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) {
+        window.location.href = '/login'
+        return
+      }
+      if (!user.email_confirmed_at) {
+        window.location.href = '/auth/verify-email'
+        return
+      }
+      setAuthChecking(false)
+    })
+  }, [])
+
   const [step, setStep] = useState<Step>('role')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -169,6 +190,14 @@ export default function OnboardingPage() {
       toast.error('Something went wrong. Please try again.')
       setLoading(false)
     }
+  }
+
+  if (authChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   if (step === 'role') {

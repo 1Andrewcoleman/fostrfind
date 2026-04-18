@@ -1,3 +1,5 @@
+import type { StorageBucket } from '@/lib/constants'
+
 /**
  * Client-only image utilities. Do not import from server components.
  *
@@ -62,4 +64,44 @@ export async function resizeImageForUpload(file: File): Promise<File> {
   } finally {
     bitmap.close()
   }
+}
+
+/**
+ * Resize + upload a single image through `/api/upload/photo`. Shared
+ * between single-image fields (avatar, logo) and the multi-image
+ * DogForm uploader. Throws on upload failure; callers surface the
+ * message to the user.
+ */
+export async function uploadSingleImage(
+  file: File,
+  bucket: StorageBucket,
+): Promise<string> {
+  const prepared = await resizeImageForUpload(file)
+  const fd = new FormData()
+  fd.append('file', prepared)
+  fd.append('bucket', bucket)
+  const res = await fetch('/api/upload/photo', { method: 'POST', body: fd })
+  const body = await res.json().catch(() => ({ error: 'Upload failed' }))
+  if (!res.ok) {
+    throw new Error(typeof body?.error === 'string' ? body.error : 'Upload failed')
+  }
+  return body.url as string
+}
+
+/**
+ * Pull the storage object path out of a Supabase public URL:
+ *   https://{project}.supabase.co/storage/v1/object/public/{bucket}/{path}
+ *                                                                  ^^^^^^ returned
+ *
+ * Returns null if the URL doesn't match the expected shape for the
+ * given bucket (foreign URL, malformed, etc.). Used by "replace an
+ * existing image" flows to remove the old object after a successful
+ * re-upload.
+ */
+export function storagePathFromPublicUrl(url: string, bucket: StorageBucket): string | null {
+  const marker = `/public/${bucket}/`
+  const i = url.indexOf(marker)
+  if (i === -1) return null
+  const path = url.slice(i + marker.length)
+  return path.length > 0 ? path : null
 }

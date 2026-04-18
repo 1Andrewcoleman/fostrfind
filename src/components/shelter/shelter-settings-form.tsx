@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,7 +11,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import {
+  AvatarLogoField,
+  type AvatarLogoFieldHandle,
+} from '@/components/avatar-logo-field'
 import { createClient } from '@/lib/supabase/client'
+import { STORAGE_BUCKETS } from '@/lib/constants'
 import type { Shelter } from '@/types/database'
 
 interface ShelterSettingsFormProps {
@@ -21,6 +26,7 @@ interface ShelterSettingsFormProps {
 export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const logoFieldRef = useRef<AvatarLogoFieldHandle>(null)
   const [shelter, setShelter] = useState({
     name: initialData.name,
     slug: initialData.slug,
@@ -37,6 +43,19 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
     setLoading(true)
 
     try {
+      // Upload pending logo (if any) + clean up the old one before
+      // writing the shelter row. Abort save on upload failure so the
+      // DB doesn't point at a URL that was never created.
+      let logoUrl: string | null = initialData.logo_url ?? null
+      try {
+        const flushed = await logoFieldRef.current?.flush()
+        logoUrl = flushed ?? null
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Logo upload failed.'
+        toast.error(message)
+        return
+      }
+
       const supabase = createClient()
 
       const { error } = await supabase
@@ -50,6 +69,7 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
           bio: shelter.bio || null,
           website: shelter.website || null,
           instagram: shelter.instagram || null,
+          logo_url: logoUrl,
         })
         .eq('id', initialData.id)
 
@@ -80,18 +100,14 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSave} className="space-y-4">
-              {/* Logo placeholder — upload not yet wired */}
-              <div className="space-y-2">
-                <Label>Logo</Label>
-                <div className="flex items-center gap-4">
-                  <div className="h-16 w-16 rounded-lg bg-muted border flex items-center justify-center">
-                    <Upload className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <Button type="button" variant="outline" size="sm" disabled>
-                    Upload Logo
-                  </Button>
-                </div>
-              </div>
+              <AvatarLogoField
+                ref={logoFieldRef}
+                initialUrl={initialData.logo_url ?? null}
+                bucket={STORAGE_BUCKETS.SHELTER_LOGOS}
+                shape="square"
+                label="Logo"
+                helperText="JPEG, PNG, or WebP up to 10 MB. Shown on your dog listings and the public shelter profile."
+              />
 
               <Separator />
 

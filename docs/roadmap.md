@@ -1519,6 +1519,15 @@ ALTER TABLE public.applications
 ALTER TABLE public.ratings
   ADD CONSTRAINT ratings_application_unique UNIQUE (application_id);
 
+-- One profile row per user (added-scope from Step 10 deferral — foster
+-- profile upsert was silently failing in the form because onConflict:
+-- 'user_id' has no matching constraint. Also applies to shelters; same
+-- reasoning even though no bug surfaced there yet).
+ALTER TABLE public.foster_parents
+  ADD CONSTRAINT foster_parents_user_id_unique UNIQUE (user_id);
+ALTER TABLE public.shelters
+  ADD CONSTRAINT shelters_user_id_unique UNIQUE (user_id);
+
 -- Prevent applying to non-available dogs
 CREATE POLICY "can only apply to available dogs"
   ON public.applications FOR INSERT
@@ -2112,6 +2121,9 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-18 | Step 9 (Dog Photo Upload) | Orphaned storage objects when a user removes a previously-saved photo from `DogForm` | TODO.md §12 | Removing an existing photo in the form only updates `dogs.photos` on save; the storage object stays behind. TODO.md §12 already lists "Delete old photos on replacement". When that item is picked up, extend to cover removal-without-replacement too. |
 | 2026-04-18 | Step 9 | Drag-and-drop + reorder on `DogForm` thumbnails | TODO.md §2 (photo preview/reorder) | Currently thumbnails render in insertion order; the first one is what browse cards display. No reordering UI. Already logged as an open item in TODO.md §2 — no new row needed there. |
 | 2026-04-18 | Step 9 | Supabase error-message surfaces in upload helper (`toast.error(message)` where `message` comes from the upload route's `body.error`) | §29 | The route already returns safe user-friendly strings (e.g. "File is too large. Maximum size is 10 MB."), but worth auditing during §29 pass to confirm no Supabase internals leak via the client-facing messages. |
+| 2026-04-18 | Step 10 (Avatar + Logo Upload) | Missing UNIQUE constraints on `foster_parents.user_id` and `shelters.user_id` | §25 | Discovered during Step 10 foster-avatar verification — `.upsert({...}, { onConflict: 'user_id' })` was silently failing with "no unique or exclusion constraint matching the ON CONFLICT specification". Worked around by switching the foster form to `.update()` (onboarding guarantees the row exists). §25 scope updated with two new `ADD CONSTRAINT ... UNIQUE (user_id)` statements. |
+| 2026-04-18 | Step 10 | Shelter logo / foster avatar in the portal sidebar doesn't refresh until next full page load | unscheduled | `PortalSidebarUser` reads `avatarUrl` from the layout-rendered `PortalIdentity`, which is only fetched on server-side render. `router.refresh()` after save re-fetches server data but the layout's cached identity may linger a tick. Acceptable for MVP; if we ever move the sidebar avatar to a client-side subscription it'd feel snappier. |
+| 2026-04-18 | Step 10 | `console.error('[storage] …')` surfaces in `AvatarLogoField` flush path (upload + remove old) | §29 | Both call-sites go through `src/lib/storage.ts` / `src/lib/client-image.ts` which already have logged error strings. §29 audit will cover both. |
 
 ---
 
@@ -2119,7 +2131,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (9/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (10/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

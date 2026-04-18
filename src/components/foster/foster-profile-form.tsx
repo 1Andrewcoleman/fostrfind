@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,10 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import {
+  AvatarLogoField,
+  type AvatarLogoFieldHandle,
+} from '@/components/avatar-logo-field'
 import { ProfileCompleteness } from '@/components/foster/profile-completeness'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -27,6 +31,7 @@ import {
   EXPERIENCE_LEVELS,
   DOG_SIZE_LABELS,
   DOG_AGE_LABELS,
+  STORAGE_BUCKETS,
 } from '@/lib/constants'
 import type { FosterParent } from '@/types/database'
 
@@ -37,6 +42,7 @@ interface FosterProfileFormProps {
 export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const avatarFieldRef = useRef<AvatarLogoFieldHandle>(null)
   const [foster, setFoster] = useState<Partial<FosterParent>>(
     initialData ?? {
       first_name: '',
@@ -81,8 +87,20 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         return
       }
 
+      // Upload any pending avatar (and clean up the old one) before
+      // writing the row. A failed upload aborts the save so the DB
+      // doesn't end up pointing at a URL that doesn't exist yet.
+      let avatarUrl: string | null = foster.avatar_url ?? null
+      try {
+        const flushed = await avatarFieldRef.current?.flush()
+        avatarUrl = flushed ?? null
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Avatar upload failed.'
+        toast.error(message)
+        return
+      }
+
       const payload = {
-        user_id: user.id,
         first_name: foster.first_name ?? '',
         last_name: foster.last_name ?? '',
         email: foster.email || user.email || '',
@@ -96,16 +114,22 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         children_info: foster.children_info ?? null,
         experience: foster.experience ?? null,
         bio: foster.bio || null,
-        avatar_url: foster.avatar_url ?? null,
+        avatar_url: avatarUrl,
         pref_size: foster.pref_size ?? [],
         pref_age: foster.pref_age ?? [],
         pref_medical: foster.pref_medical ?? false,
         max_distance: foster.max_distance ?? 25,
       }
 
+      // The foster profile row is always pre-created by the onboarding
+      // flow, so we .update rather than .upsert here. An earlier
+      // .upsert(..., { onConflict: 'user_id' }) silently failed because
+      // foster_parents has no UNIQUE(user_id) constraint — logged under
+      // roadmap §25 for a proper DB-level fix.
       const { error } = await supabase
         .from('foster_parents')
-        .upsert(payload, { onConflict: 'user_id' })
+        .update(payload)
+        .eq('user_id', user.id)
 
       if (error) {
         toast.error('Failed to save profile. Please try again.')
@@ -129,15 +153,14 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
             <CardTitle>Personal Info</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Avatar placeholder — upload not yet wired */}
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-muted border flex items-center justify-center">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <Button type="button" variant="outline" size="sm" disabled>
-                Upload Photo
-              </Button>
-            </div>
+            <AvatarLogoField
+              ref={avatarFieldRef}
+              initialUrl={initialData?.avatar_url ?? null}
+              bucket={STORAGE_BUCKETS.FOSTER_AVATARS}
+              shape="circle"
+              label="Profile photo"
+              helperText="JPEG, PNG, or WebP up to 10 MB. Shown on your applications and in messages with shelters."
+            />
 
             <Separator />
 

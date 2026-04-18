@@ -112,6 +112,37 @@ If you encounter something the step description doesn't cover:
 3. **Don't add scope.** If you notice something that "should also be fixed" but isn't part of this step, note it in the commit message or flag it — don't silently add it. Scope creep causes bugs because the extra work wasn't planned or reviewed.
 4. **Prefer boring code.** If there's a clever one-liner and a clear five-liner that do the same thing, write the five-liner. The next agent (or human) reading this code shouldn't need to puzzle over what it does.
 
+### 6. Session Start + End — Handoff Discipline
+
+Every agent session leaves behind a handoff document at `docs/AgentHandoff_{YYYY-MM-DD}.md`. These capture *new* info that isn't already in the roadmap, TODO, or CLAUDE.md: environment quirks, codebase patterns the docs don't spell out, tooling assets introduced, preview-verification gotchas, decisions locked in by the user, and explicit do-not-touch notes. They are short, surgical, and high-signal — they are NOT a session log or diff digest.
+
+**At session START:**
+1. `ls docs/AgentHandoff_*.md` — look for existing handoffs.
+2. Read the **most recent** handoff in full before you write any code or propose a plan. The roadmap tells you what to build; the handoff tells you how the codebase *actually behaves* when you start touching it.
+3. Skim older handoffs only if you're picking up work that spans sessions (e.g., continuing a half-finished step).
+
+**At session END** (any session that edits code, docs, or tooling):
+1. Create a new handoff at `docs/AgentHandoff_{today}.md` — today being the calendar date. Use `docs/AgentHandoff_2026-04-18.md` as a format reference.
+2. Populate with **new** information only. Do not re-state what's in the roadmap, TODO.md, CLAUDE.md, or a previous handoff. If nothing substantive was learned, a short handoff (20–30 lines) is fine.
+3. Commit the handoff with the final commit of the session (or as its own `docs:` commit if you're handing off mid-work).
+
+**Categories that belong in a handoff:**
+
+- **Environment quirks** — oddities about the worktree, `.env.local`, Supabase project settings, Node version, tooling, symlinks, etc. that surfaced during the session.
+- **Codebase patterns not in docs** — runtime behaviors that contradict or extend the docs (Supabase nested-join type mismatches, RLS gotchas, client-vs-server component constraints). Include prior-art file references.
+- **Dev tooling assets introduced** — new scripts, migrations, env vars, with idempotency notes and safety guards.
+- **Preview verification patterns** — what works, what doesn't, workarounds for automation flakiness.
+- **Workflow conventions adopted** — especially if the user has explicitly asked for them (e.g., Deferred Follow-ups Log discipline).
+- **Decisions locked in** — Resend key strategy, image resize location, email template dependencies, etc. The next agent should not re-litigate these.
+- **What NOT to touch** — ignored dirs, flaky-but-known features the user doesn't want fixed, applied migrations that would error on reapply.
+
+**Categories that do NOT belong:**
+
+- Recaps of step-by-step work already in git history.
+- Information present in roadmap.md, TODO.md, CLAUDE.md, or a previous AgentHandoff file.
+- Future-work suggestions — those belong in the Deferred Follow-ups Log or as Remaining Items rows.
+- Opinions about code quality that aren't actionable.
+
 ---
 
 ## Phase 1: Core Feature Gaps

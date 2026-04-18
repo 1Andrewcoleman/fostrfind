@@ -2109,6 +2109,9 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-18 | Step 8 (Storage Infrastructure) | Rate-limit `POST /api/upload/photo` | §30 | Route already listed in §30's roster; explicitly called out because upload endpoints are common abuse targets (bandwidth + storage fill). 10 MB cap and mime-type gate already applied server-side. |
 | 2026-04-18 | Step 8 | Server-side image resize / EXIF strip | unscheduled | Per the Step 8 pitfalls, resize is NOT in scope — clients that wire uploads (Steps 9, 10) should do Canvas-based resize to ≤1200px wide before POSTing. If we later need defense-in-depth server resize, `sharp` adds ~6 MB to the serverless bundle; document the tradeoff and schedule as its own item rather than baking into §30. |
 | 2026-04-18 | Step 8 | `console.error('[storage] …')` log sites in `src/lib/storage.ts` | §29 | Two call-sites (`upload failed`, `delete failed`). Supabase error messages may contain bucket/path internals — audit during §29 sanitization pass. |
+| 2026-04-18 | Step 9 (Dog Photo Upload) | Orphaned storage objects when a user removes a previously-saved photo from `DogForm` | TODO.md §12 | Removing an existing photo in the form only updates `dogs.photos` on save; the storage object stays behind. TODO.md §12 already lists "Delete old photos on replacement". When that item is picked up, extend to cover removal-without-replacement too. |
+| 2026-04-18 | Step 9 | Drag-and-drop + reorder on `DogForm` thumbnails | TODO.md §2 (photo preview/reorder) | Currently thumbnails render in insertion order; the first one is what browse cards display. No reordering UI. Already logged as an open item in TODO.md §2 — no new row needed there. |
+| 2026-04-18 | Step 9 | Supabase error-message surfaces in upload helper (`toast.error(message)` where `message` comes from the upload route's `body.error`) | §29 | The route already returns safe user-friendly strings (e.g. "File is too large. Maximum size is 10 MB."), but worth auditing during §29 pass to confirm no Supabase internals leak via the client-facing messages. |
 
 ---
 
@@ -2116,7 +2119,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (8/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (9/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

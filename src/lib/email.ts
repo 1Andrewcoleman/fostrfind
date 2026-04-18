@@ -27,6 +27,21 @@ export type SendResult =
 
 const FROM_ADDRESS = process.env.RESEND_FROM ?? 'Fostr Fix <onboarding@resend.dev>'
 
+/**
+ * Base URL used to build absolute links inside email templates. Trigger
+ * points pass `${getAppUrl()}/foster/messages/…` etc. Reads
+ * NEXT_PUBLIC_APP_URL from .env so prod and dev point at the right
+ * origin. Falls back to localhost so dev runs work out of the box even
+ * if the env var is missing.
+ */
+export function getAppUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL
+  if (url && url.startsWith('http')) {
+    return url.replace(/\/$/, '')
+  }
+  return 'http://localhost:3000'
+}
+
 function hasRealKey(): boolean {
   const key = process.env.RESEND_API_KEY
   // Resend keys are of the form `re_xxxxxxxx…`. The `.env.example`

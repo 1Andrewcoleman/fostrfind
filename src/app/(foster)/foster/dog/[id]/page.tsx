@@ -34,7 +34,11 @@ const PLACEHOLDER_DOG = {
   photos: [] as string[],
 }
 
-const PLACEHOLDER_SHELTER = { name: 'Happy Paws Rescue', location: 'Austin, TX' }
+const PLACEHOLDER_SHELTER: {
+  name: string
+  location: string
+  email: string | null
+} = { name: 'Happy Paws Rescue', location: 'Austin, TX', email: null }
 
 export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
   const [note, setNote] = useState('')
@@ -46,6 +50,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
   const [dog, setDog] = useState(DEV_MODE ? PLACEHOLDER_DOG : null)
   const [shelter, setShelter] = useState(DEV_MODE ? PLACEHOLDER_SHELTER : null)
+  const [fosterName, setFosterName] = useState('')
 
   useEffect(() => {
     if (DEV_MODE) return
@@ -54,7 +59,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
       const { data } = await supabase
         .from('dogs')
-        .select('*, shelter:shelters(name, location)')
+        .select('*, shelter:shelters(name, location, email)')
         .eq('id', params.id)
         .maybeSingle()
 
@@ -64,7 +69,9 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
         return
       }
 
-      const shelterData = data.shelter as { name: string; location: string } | null
+      const shelterData = data.shelter as
+        | { name: string; location: string; email: string | null }
+        | null
       setDog(data as typeof PLACEHOLDER_DOG)
       setShelter(shelterData ?? PLACEHOLDER_SHELTER)
 
@@ -73,11 +80,15 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       if (user) {
         const { data: fosterRow } = await supabase
           .from('foster_parents')
-          .select('id')
+          .select('id, first_name, last_name')
           .eq('user_id', user.id)
           .maybeSingle()
 
         if (fosterRow) {
+          setFosterName(
+            `${fosterRow.first_name ?? ''} ${fosterRow.last_name ?? ''}`.trim(),
+          )
+
           const { data: existingApp } = await supabase
             .from('applications')
             .select('id')
@@ -118,18 +129,46 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       .maybeSingle()
     if (!fosterRow) { setApplyError('Complete your foster profile first.'); setApplying(false); return }
 
-    const { error } = await supabase.from('applications').insert({
-      dog_id: params.id,
-      foster_id: fosterRow.id,
-      shelter_id: dog!.shelter_id,
-      status: 'submitted',
-      note: note || null,
-    })
+    const { data: inserted, error } = await supabase
+      .from('applications')
+      .insert({
+        dog_id: params.id,
+        foster_id: fosterRow.id,
+        shelter_id: dog!.shelter_id,
+        status: 'submitted',
+        note: note || null,
+      })
+      .select('id')
+      .single()
 
-    if (error) {
-      setApplyError(error.message)
+    if (error || !inserted) {
+      setApplyError(error?.message ?? 'Could not submit application.')
       setApplying(false)
       return
+    }
+
+    // Fire-and-forget: notify the shelter that a new application landed.
+    // Uses the client-side /api/notifications/send route because the
+    // Resend SDK can't be imported into a 'use client' bundle. Silently
+    // swallows failure — a slow mailer should never block the user's
+    // "I applied!" confirmation.
+    if (shelter?.email && dog) {
+      void fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'application-submitted',
+          to: shelter.email,
+          data: {
+            shelterName: shelter.name,
+            dogName: dog.name,
+            fosterName: fosterName || 'A foster parent',
+            applicationUrl: `${window.location.origin}/shelter/applications/${inserted.id}`,
+          },
+        }),
+      }).catch(() => {
+        // Notification outage must not affect the apply UX.
+      })
     }
 
     setApplied(true)

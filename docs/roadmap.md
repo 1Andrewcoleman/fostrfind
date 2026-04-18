@@ -2128,6 +2128,10 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-18 | Step 11 | Rate-limit `POST /api/notifications/send` | §30 | The route is already in §30's roster. Extra callout because this endpoint lets any authenticated user trigger an outbound email to an arbitrary `to` address — a natural spam/abuse vector if Resend keys go live without app-layer limiting. Consider restricting `to` to addresses resolvable from the caller's own shelter/foster/application context before raising real send rates. |
 | 2026-04-18 | Step 11 | `console.error('[email] send failed:', …)` leak surface | §29 | Supabase (via Resend's library) may include provider-level detail in `error.message`. Audit during §29 sanitization. |
 | 2026-04-18 | Step 11 | Email templates visual QA across major clients (Gmail web, Outlook, iOS Mail) | unscheduled | Inline-style email HTML renders well in our static testing but the only way to catch clipping / dark-mode / RTL bugs is to actually preview in each client. Best done with Resend's preview tools once a real key is in place. |
+| 2026-04-18 | Step 12 (Wire Trigger Points) | **New-message email trigger** deliberately skipped for MVP | unscheduled | Roadmap Step 12 pitfall recommends skipping per-message emails until debouncing exists (otherwise a 5-message back-and-forth sends 5 emails). Template + route dispatch already exist; wiring deferred. Re-evaluate when §30 rate limiting lands — a per-user/per-thread "max 1 email per 15 min" rule is the cleanest debouncer. |
+| 2026-04-18 | Step 12 | **Foster-to-shelter rating URL** on the placement-completed email points at the thread, not a real rating page | Phase 2 Step 20 | The shelter's email points at `/shelter/applications/[id]` which DOES have the Rate Foster button. The foster's email points at `/foster/messages/[id]` as a best-effort landing spot because no foster→shelter rating flow exists yet. When Step 20 (two-way trust) lands it will also own swapping this URL. |
+| 2026-04-18 | Step 12 | **Dog-owner (shelter) email per application-submitted** trusts the shelter's `email` column, not `auth.users.email` | unscheduled — data-hygiene | If a shelter changes their login email but never updates `shelters.email`, the notification goes to the stale address. Minor — worth flagging during the Step 18 (account settings / change email) work so the two stay in sync. |
+| 2026-04-18 | Step 12 | Trigger-point emails silently no-op when a joined row has a null email | unscheduled — data-hygiene | All four trigger points check `if (recipient?.email)` before firing. Missing emails happen in practice when an OAuth user hasn't filled out their profile's email field. Consider backfilling from `auth.users.email` during Step 16 (public shelter profile) or as a small hardening item. |
 
 ---
 
@@ -2135,7 +2139,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (11/12) |
+| **Phase 1: Core Features** | Steps 1–12 | **Complete (12/12)** ✅ |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

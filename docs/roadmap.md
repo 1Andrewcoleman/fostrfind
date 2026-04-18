@@ -1770,7 +1770,7 @@ Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
   - `PATCH  /api/dogs/[id]/status`           (added in Phase 1 Step 5)
   - `POST   /api/ratings`                    (pre-existing)
   - `POST   /api/notifications/send`         (stub — wired in Phase 1 Step 12)
-  - `POST   /api/upload/photo`               (stub — wired in Phase 1 Step 8)
+  - `POST   /api/upload/photo`               (wired in Phase 1 Step 8 — multipart, auth-required, bucket+mime+size validation)
 - Forms that submit user text — add sanitization
 - `src/app/auth/forgot-password/page.tsx` — although this page calls Supabase directly (no custom API route of ours), an authenticated or client-side rate limit is still worth adding. Supabase enforces ~3 reset emails per hour per user at their edge, but a determined attacker could still spam the endpoint with varied emails, triggering DB-side load. Consider a client-side cooldown (disable the button for N seconds after submit) plus, if later wired through a custom route, server-side limiting too. (Added-scope from Step 6 deferral.)
 - `src/app/auth/verify-email/page.tsx` — client-side 60s cooldown already shipped (`RESEND_COOLDOWN_SECONDS` constant on the page), which covers 95% of the abuse surface. Supabase rate-limits its `auth.resend` endpoint at the edge. When a server-side app-layer limiter lands here, apply the same `user.id`-keyed limit as the API routes. (Added-scope from Step 7 deferral.)
@@ -2106,6 +2106,9 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-17 | Step 7 | Zod validation on `/auth/verify-email` | n/a | The page has no user-input field — the email is read from the session and the resend call takes no params from the user. No schema needed. Logged for completeness. |
 | 2026-04-17 | Step 7 | Sanitize `console.error('[verify-email] resend error:', …)` if Supabase error messages leak internals | §29 | Appended to §29's additional call-sites list. |
 | 2026-04-17 | Step 7 | Onboarding email-confirmation gate is **client-side** (useEffect) not server-side | §27 or later | The roadmap's pitfall suggested a server-side `redirect('/auth/verify-email')` but onboarding is a client component. Our useEffect check adds a ~200ms spinner flash. If onboarding is ever refactored to a server component (out of scope now), move the gate there. |
+| 2026-04-18 | Step 8 (Storage Infrastructure) | Rate-limit `POST /api/upload/photo` | §30 | Route already listed in §30's roster; explicitly called out because upload endpoints are common abuse targets (bandwidth + storage fill). 10 MB cap and mime-type gate already applied server-side. |
+| 2026-04-18 | Step 8 | Server-side image resize / EXIF strip | unscheduled | Per the Step 8 pitfalls, resize is NOT in scope — clients that wire uploads (Steps 9, 10) should do Canvas-based resize to ≤1200px wide before POSTing. If we later need defense-in-depth server resize, `sharp` adds ~6 MB to the serverless bundle; document the tradeoff and schedule as its own item rather than baking into §30. |
+| 2026-04-18 | Step 8 | `console.error('[storage] …')` log sites in `src/lib/storage.ts` | §29 | Two call-sites (`upload failed`, `delete failed`). Supabase error messages may contain bucket/path internals — audit during §29 sanitization pass. |
 
 ---
 
@@ -2113,7 +2116,7 @@ These are larger features that can be tackled after the above phases, in any ord
 
 | Phase | Steps | Status |
 |-------|-------|--------|
-| **Phase 1: Core Features** | Steps 1–12 | In progress (7/12) |
+| **Phase 1: Core Features** | Steps 1–12 | In progress (8/12) |
 | **Phase 2: Extended Features** | Steps 13–22 | Not started |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |

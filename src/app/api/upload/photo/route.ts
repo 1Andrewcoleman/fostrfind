@@ -1,37 +1,91 @@
-// import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { STORAGE_BUCKETS } from '@/lib/constants'
+import { createClient } from '@/lib/supabase/server'
+import { DEV_MODE } from '@/lib/constants'
+import {
+  buildUploadPath,
+  uploadImage,
+  validateBucketName,
+  validateImageFile,
+} from '@/lib/storage'
 
-export async function POST(_request: Request) {
-  // TODO: 1. Authenticate user
-  // const supabase = await createClient()
-  // const { data: { user } } = await supabase.auth.getUser()
-  // if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+/**
+ * POST /api/upload/photo
+ *
+ * Multipart body:
+ *   - file      : File (required, jpg/png/webp ≤ 10 MB)
+ *   - bucket    : string (required, one of STORAGE_BUCKET_VALUES)
+ *
+ * Returns: { url, path } on success.
+ *
+ * Auth: any signed-in user can upload to any of the three public
+ * buckets. The storage path is forced to `{userId}/{uuid}.{ext}` so
+ * the "owner can delete" RLS policy works correctly — callers cannot
+ * specify a path or overwrite someone else's file.
+ */
+export async function POST(request: Request): Promise<NextResponse> {
+  if (DEV_MODE) {
+    // No real Supabase to talk to — return a placeholder that keeps
+    // form submissions usable for UI work, but cannot be actually
+    // rendered (invalid hostname). Document this behavior in the stub.
+    return NextResponse.json(
+      { url: 'https://placeholder.supabase.co/dev-mode-upload.jpg', path: 'dev/placeholder.jpg' },
+      { status: 200 },
+    )
+  }
 
-  // TODO: 2. Parse FormData
-  // const formData = await _request.formData()
-  // const file = formData.get('file') as File
-  // const shelterIdOrFosterId = formData.get('entityId') as string
-  // const dogId = formData.get('dogId') as string | null
-  // const uploadType = formData.get('type') as 'dog-photo' | 'shelter-logo' | 'foster-avatar'
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  // TODO: 3. Client-side resize is preferred (browser canvas, max 1200px wide)
-  //         but as a fallback, could use sharp here:
-  //         import sharp from 'sharp'
-  //         const buffer = await file.arrayBuffer()
-  //         const resized = await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).toBuffer()
+  let formData: FormData
+  try {
+    formData = await request.formData()
+  } catch {
+    return NextResponse.json({ error: 'Invalid multipart body' }, { status: 400 })
+  }
 
-  // TODO: 4. Determine upload path and bucket
-  // const bucket = STORAGE_BUCKETS.DOG_PHOTOS
-  // const path = `${shelterIdOrFosterId}/${dogId}/${Date.now()}-${file.name}`
+  const file = formData.get('file')
+  const bucketRaw = formData.get('bucket')
 
-  // TODO: 5. Upload to Supabase Storage
-  // const { data, error } = await supabase.storage.from(bucket).upload(path, file)
-  // if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  // const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: 'Missing file' }, { status: 400 })
+  }
 
-  // Stub response
-  return NextResponse.json({
-    url: `https://placeholder.supabase.co/storage/v1/object/public/${STORAGE_BUCKETS.DOG_PHOTOS}/stub.jpg`,
-  })
+  const bucketResult = validateBucketName(typeof bucketRaw === 'string' ? bucketRaw : null)
+  if (!bucketResult.ok) {
+    return NextResponse.json(
+      { error: `Invalid bucket "${bucketResult.received ?? ''}"` },
+      { status: 400 },
+    )
+  }
+
+  const fileError = validateImageFile(file)
+  if (fileError) {
+    if (fileError.kind === 'too-large') {
+      return NextResponse.json(
+        { error: 'File is too large. Maximum size is 10 MB.' },
+        { status: 413 },
+      )
+    }
+    if (fileError.kind === 'invalid-type') {
+      return NextResponse.json(
+        { error: 'Unsupported file type. Use JPEG, PNG, or WebP.' },
+        { status: 415 },
+      )
+    }
+    return NextResponse.json({ error: 'Empty file' }, { status: 400 })
+  }
+
+  const path = buildUploadPath(user.id, file)
+  const result = await uploadImage(supabase, bucketResult.bucket, path, file)
+
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
+  }
+
+  return NextResponse.json({ url: result.url, path: result.path })
 }

@@ -12,7 +12,21 @@ export const STORAGE_BUCKETS = {
   FOSTER_AVATARS: 'foster-avatars',
 } as const
 
+export const STORAGE_BUCKET_VALUES = Object.values(STORAGE_BUCKETS)
+export type StorageBucket = (typeof STORAGE_BUCKET_VALUES)[number]
+
 export const MAX_DOG_PHOTOS = 5
+
+/** 10 MB — generous for phone-camera images while still rejecting abuse. */
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+
+export const ALLOWED_IMAGE_EXTENSIONS: Record<(typeof ALLOWED_IMAGE_TYPES)[number], string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
 
 export const DOG_SIZE_LABELS: Record<string, string> = {
   small: 'Small',

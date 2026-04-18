@@ -2,10 +2,12 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      // Dev-only: seeded demo dog photos come from Unsplash. Real user uploads
-      // will go through Supabase Storage (Roadmap Phase 1 Step 8), at which
-      // point *.supabase.co will also need whitelisting here.
+      // Dev-only: seeded demo dog photos come from Unsplash.
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Real user uploads (dog photos, shelter logos, foster avatars) live
+      // in Supabase Storage. `*.supabase.co` covers projects in all regions.
+      { protocol: 'https', hostname: '*.supabase.co' },
+      { protocol: 'https', hostname: '*.supabase.in' },
     ],
   },
 };

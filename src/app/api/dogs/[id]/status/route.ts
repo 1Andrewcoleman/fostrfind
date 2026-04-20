@@ -83,29 +83,18 @@ export async function PATCH(
     )
   }
 
-  // 6. Decline any accepted application(s) for this dog, so the lifecycle
-  //    stays consistent. Placement fell through → foster is no longer accepted.
-  const { error: declineError } = await supabase
-    .from('applications')
-    .update({ status: 'declined' })
-    .eq('dog_id', params.id)
-    .eq('status', 'accepted')
+  // 6. Atomically decline any accepted application for this dog AND set
+  //    the dog back to available. The RPC wraps both UPDATEs in one
+  //    Postgres function body so the placement-falls-through lifecycle
+  //    stays consistent even if the second UPDATE would have failed
+  //    under the old sequential model. See migration
+  //    20240110000000_atomic_transitions.sql.
+  const { error: rpcError } = await supabase.rpc('relist_dog', {
+    dog_id: params.id,
+  })
 
-  if (declineError) {
-    return NextResponse.json(
-      { error: 'Failed to clean up associated application' },
-      { status: 500 },
-    )
-  }
-
-  // 7. Update dog status to available
-  const { error: updateError } = await supabase
-    .from('dogs')
-    .update({ status: 'available' })
-    .eq('id', params.id)
-
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to re-list dog' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true, dogId: params.id })

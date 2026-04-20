@@ -51,24 +51,16 @@ export async function POST(
     )
   }
 
-  // 4. Update application status to completed
-  const { error: updateError } = await supabase
-    .from('applications')
-    .update({ status: 'completed' })
-    .eq('id', params.id)
+  // 4. Atomically flip application -> completed AND dog -> placed.
+  //    The RPC wraps both UPDATEs in one Postgres function body so they
+  //    either both commit or both roll back. See migration
+  //    20240110000000_atomic_transitions.sql.
+  const { error: rpcError } = await supabase.rpc('complete_application', {
+    app_id: params.id,
+  })
 
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
-  }
-
-  // 5. Set the dog's status to placed
-  const { error: dogError } = await supabase
-    .from('dogs')
-    .update({ status: 'placed' })
-    .eq('id', application.dog_id)
-
-  if (dogError) {
-    return NextResponse.json({ error: 'Application completed but failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to complete application' }, { status: 500 })
   }
 
   // 6. Fire-and-forget: notify BOTH parties. Copy is identical; the

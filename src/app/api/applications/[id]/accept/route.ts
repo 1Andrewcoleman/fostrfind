@@ -54,24 +54,18 @@ export async function POST(
     )
   }
 
-  // 4. Update application status to accepted
-  const { error: updateError } = await supabase
-    .from('applications')
-    .update({ status: 'accepted' })
-    .eq('id', params.id)
+  // 4. Atomically flip application -> accepted AND dog -> pending.
+  //    The RPC wraps both UPDATEs in one Postgres function body so they
+  //    either both commit or both roll back. See migration
+  //    20240110000000_atomic_transitions.sql. The function is
+  //    SECURITY DEFINER, so auth + ownership + idempotency above are
+  //    still the authorization boundary.
+  const { error: rpcError } = await supabase.rpc('accept_application', {
+    app_id: params.id,
+  })
 
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
-  }
-
-  // 5. Set the dog's status to pending
-  const { error: dogError } = await supabase
-    .from('dogs')
-    .update({ status: 'pending' })
-    .eq('id', application.dog_id)
-
-  if (dogError) {
-    return NextResponse.json({ error: 'Application accepted but failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to accept application' }, { status: 500 })
   }
 
   // 6. Fire-and-forget: notify the foster that they were accepted.

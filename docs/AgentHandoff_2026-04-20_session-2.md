@@ -1,4 +1,4 @@
-# Agent Handoff · 2026-04-21
+# Agent Handoff · 2026-04-20 (2nd Session)
 
 Written for the next agent picking up this project. **Read this before doing anything else** — the roadmap and `CLAUDE.md` tell you *what* to build next; this tells you *what I learned while building Phase 4* that those files don't spell out.
 
@@ -11,7 +11,7 @@ Written for the next agent picking up this project. **Read this before doing any
 
 | Step | Commit | Ship |
 |------|--------|------|
-| 31 | `7586f9c` | `src/lib/env.ts` — runtime validation of env vars, split `BACKEND_VARS` (Supabase URL + anon key, required outside DEV_MODE) vs `PROD_VARS` (service role, Resend key/from, app URL, required in production). Throws in prod, warns in dev. Called once from `src/app/layout.tsx`. |
+| 31 | `7586f9c` (+ follow-up tier split) | `src/lib/env.ts` — runtime validation split into three tiers: `BACKEND_VARS` (Supabase URL + anon key, required outside DEV_MODE), `PROD_HARD_VARS` (service role + Resend key, throw in prod), `PROD_SOFT_VARS` (`RESEND_FROM`, `NEXT_PUBLIC_APP_URL` — warn only, because `src/lib/email.ts` + app-URL helper fall back to safe defaults). Called once from `src/app/layout.tsx`. The soft tier was added so `next build` can run locally without a final sender / public URL decision. |
 | 32 | `d541c8f` | `scripts/seed.ts` — multi-shelter dev seed (3 shelters, 5 fosters, 10 dogs, 15 applications spanning all 5 statuses, 30 messages, 5 ratings) via Supabase admin client, gated behind `SEED_I_UNDERSTAND=1`, `seed-` prefix on every email/slug so `--reset` can only touch seeded rows. Replaces old `scripts/seed-demo-data.mjs`. `tsx` dep + `npm run seed` script. |
 | 33 | `99440f3` | `vitest.config.ts` (node env, `@/*` alias, `oxc.jsx.runtime: 'automatic'`), `src/lib/__tests__/helpers.test.ts` (9 helpers, 83 assertions total), `src/lib/__tests__/auth-routing.test.ts` (every `getPostAuthDestination` branch). `npm test` + `npm run test:watch`. |
 | 34 | `05acc4c` | API route tests for `/api/applications/[id]/{accept,decline,complete}`, `/api/ratings`, `DELETE /api/dogs/[id]` — every branch (auth 503, unauthorized 401, rate-limit 429, not-found 404, forbidden 403, idempotency 409, DB failure 500, happy-path 200, email-send omission when recipient null). Shared `src/lib/__tests__/supabase-mock.ts`. |

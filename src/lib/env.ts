@@ -13,10 +13,13 @@ import { DEV_MODE } from '@/lib/constants'
  *     that would cause every auth call to silently fail; we'd rather fail
  *     loud at boot.
  *   - In **production** (NODE_ENV === 'production'), additional server-only
- *     vars become required: SUPABASE_SERVICE_ROLE_KEY (account delete),
- *     RESEND_API_KEY + RESEND_FROM (notification emails), and
- *     NEXT_PUBLIC_APP_URL (used as the base for email deep-links in
- *     src/lib/email.ts::getAppUrl).
+ *     vars become required: SUPABASE_SERVICE_ROLE_KEY (account delete) and
+ *     RESEND_API_KEY (notification emails). RESEND_FROM and
+ *     NEXT_PUBLIC_APP_URL have safe code-level fallbacks
+ *     (`src/lib/email.ts` uses `onboarding@resend.dev` sandbox + localhost),
+ *     so we warn rather than throw when they're missing — surfacing a bad
+ *     config without blocking `next build` in a dev environment where the
+ *     address and URL haven't been decided yet.
  *
  * Security: never log values, only key names. Throwing with a var name
  * is fine; throwing with a value would risk leaking secrets into logs.
@@ -28,10 +31,24 @@ const BACKEND_VARS = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
 ] as const
 
-/** Required only when NODE_ENV === 'production'. */
-const PROD_VARS = [
+/**
+ * Hard-required in production. Missing any of these will throw during
+ * boot / build — the app can't degrade gracefully without them.
+ */
+const PROD_HARD_VARS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'RESEND_API_KEY',
+] as const
+
+/**
+ * Soft-required in production. Missing any of these logs a loud warning
+ * but does not throw, because `src/lib/email.ts` and the app-URL helper
+ * fall back to known-safe defaults (Resend's sandbox sender and
+ * localhost respectively). Fix them before public launch — email
+ * deep-links will point at the wrong host and outbound email will only
+ * reach the Resend account owner's inbox until they're set.
+ */
+const PROD_SOFT_VARS = [
   'RESEND_FROM',
   'NEXT_PUBLIC_APP_URL',
 ] as const
@@ -64,17 +81,23 @@ export function validateEnv(): void {
   }
 
   if (isProd) {
-    const missingProd = missing(PROD_VARS)
-    if (missingProd.length > 0) {
+    const missingHard = missing(PROD_HARD_VARS)
+    if (missingHard.length > 0) {
       throw new Error(
-        `[env] Missing required production env vars: ${missingProd.join(', ')}. These are required when NODE_ENV=production.`,
+        `[env] Missing required production env vars: ${missingHard.join(', ')}. These are required when NODE_ENV=production.`,
+      )
+    }
+    const missingSoft = missing(PROD_SOFT_VARS)
+    if (missingSoft.length > 0) {
+      console.warn(
+        `[env] Missing production env vars with safe fallbacks: ${missingSoft.join(', ')}. Email deep-links and sender address will use defaults until these are set.`,
       )
     }
   } else {
-    const missingProd = missing(PROD_VARS)
-    if (missingProd.length > 0) {
+    const missingAll = missing([...PROD_HARD_VARS, ...PROD_SOFT_VARS])
+    if (missingAll.length > 0) {
       console.warn(
-        `[env] Missing optional env vars (dev): ${missingProd.join(', ')}. Account deletion and email sends will be degraded until these are set.`,
+        `[env] Missing optional env vars (dev): ${missingAll.join(', ')}. Account deletion and email sends will be degraded until these are set.`,
       )
     }
   }

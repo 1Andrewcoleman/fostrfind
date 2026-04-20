@@ -1918,7 +1918,7 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 
 **Commit:** `chore: add environment variable validation on startup (§15)`
 
-**Status:** ✅ Complete (2026-04-20) — `7586f9c`. `src/lib/env.ts` splits required vars into `BACKEND_VARS` (Supabase URL + anon key, always required outside DEV_MODE) and `PROD_VARS` (service role, Resend key/from, app URL — only required in production). Throws in production, warns in dev. Called once at module scope in `src/app/layout.tsx`.
+**Status:** ✅ Complete (2026-04-20) — `7586f9c` (tightened in a follow-up during Phase 4 build validation). `src/lib/env.ts` splits vars into three tiers: `BACKEND_VARS` (Supabase URL + anon key — always required outside DEV_MODE, throws in prod / warns in dev), `PROD_HARD_VARS` (`SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY` — throw in prod, warn in dev), and `PROD_SOFT_VARS` (`RESEND_FROM`, `NEXT_PUBLIC_APP_URL` — warn in both because `src/lib/email.ts` and the app-URL helper fall back to known-safe defaults). The soft tier exists so `next build` can run locally without needing a final decision on sender address / public URL. Called once at module scope in `src/app/layout.tsx`.
 
 ---
 

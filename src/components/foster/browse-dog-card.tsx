@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Calendar, Ruler, PawPrint, Heart, ArrowRight } from 'lucide-react'
+import { MapPin, Calendar, Ruler, PawPrint, Heart, ArrowRight, Star } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +81,24 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
           ) : (
             <MapPin className="h-3 w-3 shrink-0" />
           )}
-          <span className="truncate">{dog.shelter_name}</span>
+          {dog.shelter_slug ? (
+            <Link
+              href={`/shelters/${dog.shelter_slug}`}
+              className="truncate hover:text-primary hover:underline underline-offset-2"
+            >
+              {dog.shelter_name}
+            </Link>
+          ) : (
+            <span className="truncate">{dog.shelter_name}</span>
+          )}
+          {dog.shelter_avg_rating !== undefined && dog.shelter_avg_rating !== null && (
+            <span className="flex items-center gap-0.5 shrink-0">
+              <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+              <span className="font-medium text-foreground">
+                {dog.shelter_avg_rating.toFixed(1)}
+              </span>
+            </span>
+          )}
           {dog.distance_miles !== undefined && (
             <span className="ml-auto shrink-0">· {Math.round(dog.distance_miles)} mi away</span>
           )}

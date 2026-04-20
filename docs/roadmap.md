@@ -954,6 +954,7 @@ void sendEmail({
 ---
 
 ### Step 13: Browse — Text/Keyword Search
+**Status:** ✅ Shipped 2026-04-19 — `0cccf83`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (first item)
 **Estimated time:** 1–1.5 hours
 
@@ -1003,6 +1004,7 @@ void sendEmail({
 ---
 
 ### Step 14: Browse — Pre-populate Filters from Foster Preferences
+**Status:** ✅ Shipped 2026-04-19 — `f6ccd98`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (second item)
 **Estimated time:** 45 minutes–1 hour
 
@@ -1054,6 +1056,7 @@ void sendEmail({
 ---
 
 ### Step 15: Browse — Pagination
+**Status:** ✅ Shipped 2026-04-19 — `757a6ee`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (fourth item), [§3 item 4](./TODO.md#3-browse--search-foster-side)
 **Estimated time:** 1.5–2 hours
 
@@ -1090,6 +1093,7 @@ void sendEmail({
 ---
 
 ### Step 16: Public Shelter Profile Page
+**Status:** ✅ Shipped 2026-04-19 — `3954c35` (URL deviated to `/shelters/[slug]`, plural; see Deferred Log)
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (third item)
 **Estimated time:** 1.5–2 hours
 
@@ -1131,6 +1135,7 @@ void sendEmail({
 ---
 
 ### Step 17: Realtime Messaging
+**Status:** ✅ Shipped 2026-04-19 — `b13e0bf`
 **TODO ref:** [§6 — Messaging](./TODO.md#6-messaging) (fifth item)
 **Estimated time:** 2–2.5 hours
 
@@ -1196,6 +1201,7 @@ void sendEmail({
 ---
 
 ### Step 18: Account Settings — Password + Email Change
+**Status:** ✅ Shipped 2026-04-19 — `06aebd4`
 **TODO ref:** [§21 — Account Settings](./TODO.md#21-account-settings) (first two items)
 **Estimated time:** 1.5–2 hours
 
@@ -1233,6 +1239,7 @@ Two sections:
 ---
 
 ### Step 19: Account Deletion
+**Status:** ✅ Shipped 2026-04-19 — `4263873` (note: commit message tags §21; it implements §19)
 **TODO ref:** [§21 — Account Settings](./TODO.md#21-account-settings) (third item)
 **Estimated time:** 1.5–2 hours
 
@@ -1274,6 +1281,7 @@ Two sections:
 ---
 
 ### Step 20: Two-Way Trust — Foster-to-Shelter Ratings
+**Status:** ✅ Shipped 2026-04-19 — `7df342d`
 **TODO ref:** [§22 — Two-Way Trust & Ratings](./TODO.md#22-two-way-trust--ratings) (first item)
 **Estimated time:** 2–2.5 hours
 
@@ -1338,6 +1346,7 @@ On completed applications in the foster applications list, show "Rate Shelter" b
 ---
 
 ### Step 21: Legal Pages + Terms Acceptance
+**Status:** ✅ Shipped 2026-04-19 — `5c415ea`
 **TODO ref:** [§24 — Legal & Compliance](./TODO.md#24-legal--compliance)
 **Estimated time:** 1–1.5 hours
 
@@ -1373,6 +1382,7 @@ On completed applications in the foster applications list, show "Rate Shelter" b
 ---
 
 ### Step 22: Distance-Based Search
+**Status:** ✅ Shipped 2026-04-19 — `7ff7bb8`
 **TODO ref:** [§3 item 3](./TODO.md#3-browse--search-foster-side), [§20](./TODO.md#20-browse--discovery-gaps)
 **Estimated time:** 2–2.5 hours
 
@@ -2163,6 +2173,31 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-18 | Step 12 | **Foster-to-shelter rating URL** on the placement-completed email points at the thread, not a real rating page | Phase 2 Step 20 | The shelter's email points at `/shelter/applications/[id]` which DOES have the Rate Foster button. The foster's email points at `/foster/messages/[id]` as a best-effort landing spot because no foster→shelter rating flow exists yet. When Step 20 (two-way trust) lands it will also own swapping this URL. |
 | 2026-04-18 | Step 12 | **Dog-owner (shelter) email per application-submitted** trusts the shelter's `email` column, not `auth.users.email` | unscheduled — data-hygiene | If a shelter changes their login email but never updates `shelters.email`, the notification goes to the stale address. Minor — worth flagging during the Step 18 (account settings / change email) work so the two stay in sync. |
 | 2026-04-18 | Step 12 | Trigger-point emails silently no-op when a joined row has a null email | unscheduled — data-hygiene | All four trigger points check `if (recipient?.email)` before firing. Missing emails happen in practice when an OAuth user hasn't filled out their profile's email field. Consider backfilling from `auth.users.email` during Step 16 (public shelter profile) or as a small hardening item. |
+| 2026-04-19 | Step 16 (Public Shelter Profile) | URL deviated from `/shelter/[slug]` to `/shelters/[slug]` (plural) | n/a | Singular `/shelter/...` is already owned by the `(shelter)` route group's portal pages (`/shelter/dashboard`, `/shelter/dogs`, etc.). A sibling `app/shelter/[slug]` would claim the same URL prefix and collide. Plural `/shelters/[slug]` sidesteps the conflict and is also the cleaner REST-style convention. All internal links go via `dog.shelter_slug` so the path is centralised. |
+| 2026-04-19 | Step 16 | Server-page error handling on `/shelters/[slug]` (shelter + dogs fetches) | §27 | Both Supabase queries are un-try/catch'd. A transient network failure renders a generic `error.tsx`. Added to §27's scope roster. |
+| 2026-04-19 | Step 16 | Average shelter rating not yet surfaced on the public profile | Phase 2 Step 20 | Placeholder section: the profile card today shows verified badge + bio, but no rating summary. Step 20 (foster→shelter ratings) introduces the rating data and will extend this page plus browse cards / dog detail. |
+| 2026-04-19 | Step 17 (Realtime Messaging) | Client-side mark-as-read `UPDATE` in the Realtime callback is fire-and-forget — no error surface | §29 | The `.update({ read: true }).eq('id', …)` call is `void`-prefixed and ignores failures (the next server-side page load's mark-as-read will catch up). No `console.error` leak today, but added to §29's audit list in case a failure path ever needs logging. |
+| 2026-04-19 | Step 17 | Typing / presence indicator still stubbed — the `TypingIndicator` component renders only when the prop is true, and nothing wires it | Phase 2 / TODO.md §6 | Realtime presence (`supabase.channel().track()`) would be the cheapest path. Left out of Step 17 scope to keep the publication-migration + INSERT channel changes atomic. |
+| 2026-04-19 | Step 17 | Realtime publication enablement is a one-time Supabase-project setting in addition to the SQL migration | ops | Supabase's dashboard Database → Publications page must show `messages` in `supabase_realtime`. The migration adds it via `alter publication`, but if Realtime is disabled at the project level no events fire regardless. Document in ops handoff. |
+| 2026-04-19 | Step 18 (Account Settings) | Zod schema for email + password change forms | §28 | `AccountSettingsForm` validates inline (length + confirm match) but no shared schema exists. Added to §28 scope. |
+| 2026-04-19 | Step 18 | `toast.error(error.message)` directly surfaces Supabase auth errors (e.g. "A user with this email already exists") | §29 | Messages are mostly user-friendly from supabase-js, but a §29 sanitization pass should audit for any internal-state leaks. |
+| 2026-04-19 | Step 18 | Rate-limit `auth.updateUser` calls | §30 (client-side only today) | No API route exists yet — the form calls `supabase.auth.updateUser()` directly from the browser. Supabase's own auth endpoints enforce their own limits, but if we ever proxy through our own route we should apply app-layer throttling too. Listed in §30's client-side bullet. |
+| 2026-04-19 | Step 18 | OAuth provider detection uses `user.app_metadata.provider` only | acceptable | This is the primary provider. Multi-identity users (email + google) are rare for us; if we support them later, iterate `user.identities[]` and show password UI only when an 'email' identity is present. |
+| 2026-04-19 | Step 18 | `shelters.email` / `foster_parents.email` do **not** auto-sync when `auth.users.email` changes via this form | unscheduled — data-hygiene | Matches the note logged against Step 12: shelter/foster rows carry their own `email` column used for outbound notifications. A real fix is either a DB trigger on `auth.users` or a post-confirm webhook. For now, editing the profile email field in ShelterSettingsForm / FosterProfileForm remains the source of truth for notifications. |
+| 2026-04-19 | Step 19 (Account Deletion) | Rate-limit `POST /api/account/delete` | §30 | Added to §30's explicit route list. A malicious authenticated user could otherwise spam the service-role `deleteUser` endpoint. |
+| 2026-04-19 | Step 19 | Sanitize `error.message` returned from `/api/account/delete` | §29 | Supabase admin errors can include internal column / constraint info. Current route returns a generic string ("Failed to delete account. Please contact support.") but the 400/500 path should be audited during §29 sanitization. |
+| 2026-04-19 | Step 19 | Zod schema on `/api/account/delete` body — already shipped (`z.literal('DELETE')`) | §28 | Logged for completeness; the route is already validated. §28's schema audit will cover whether the literal should be replaced with a stricter discriminated union when we later gate deletion by additional flags (e.g. re-enter password). |
+| 2026-04-19 | Step 19 | Orphaned dogs when a shelter deletes their account | unscheduled — data-hygiene | `shelters` ON DELETE CASCADE removes dogs automatically, but any actively-fostered dog (`status = 'pending'`) is dropped on the floor. Fostering fosters will see their application turn into a broken join. For MVP that's acceptable because Step 19 cancels pending applications first, but a richer flow would transfer placed dogs to a system-owned shelter or require the user to hand them off before deleting. |
+| 2026-04-19 | Step 19 | Storage orphans: avatar / logo / dog photos remain in the bucket | unscheduled — storage-hygiene | Deleting `auth.users` cascades to DB rows but not to storage objects. A cleanup job (or explicit `storage.from().remove()` pass in the API route) is needed if storage costs matter. Out of scope for MVP; logged for later. |
+| 2026-04-19 | Step 20 (Shelter Ratings) | `shelter_ratings` RLS does not explicitly require `application.status = 'completed'` — only the API route checks it | §27 | The policy requires `foster_id in (select get_my_foster_ids())` + unique-per-application, but a foster could technically insert for a non-completed application if they bypass the API. Acceptable for MVP (no one bypasses the dialog today) but worth tightening to a subquery-joined RLS in Phase 3 hardening. |
+| 2026-04-19 | Step 20 | Shelter rating comments are plain text with no moderation | Phase 3 / §26 | The API caps length at 500 chars but does not filter slurs, doxxing, or shelter names masquerading as fosters. Added to §26's moderation roster. |
+| 2026-04-19 | Step 20 | Browse-card rating stars are an N+1-ish 2nd query per page | acceptable at PAGE_SIZE=24 | Page-scoped so it stays cheap, but once browse moves to server-side filtering the rating aggregate should be a `shelters.avg_rating` materialized column or a join-lateral subquery. Logged so it's on the radar the next time we touch the browse query. |
+| 2026-04-19 | Step 20 | Placement-completed email points at `/foster/history` (rating entry) but not at the specific placement | UX polish | The history page lists all placements; the foster has to find the right one. A deep link (`/foster/history#placement-<id>` with scroll-into-view) would shave a step. Low priority — there's usually only one recent completion to find. |
+| 2026-04-19 | Step 21 (Legal Pages) | TOS / Privacy consent is not persisted | Phase 3 / §28 | The signup checkbox gates form submission but we never record `terms_accepted_at` anywhere. A future migration should add a `terms_accepted_at timestamptz` column to both `foster_parents` and `shelters` (or a consolidated `user_profiles` table) and stamp it at signup. Matters for legal defensibility more than functionality. |
+| 2026-04-19 | Step 21 | Policy pages are hand-rolled, not drafted or reviewed by counsel | out-of-scope for code | The TOS/Privacy text is a reasonable starting draft but should be reviewed by a lawyer before any real launch. Logged as an ops/legal follow-up. |
+| 2026-04-19 | Step 22 (Distance Filter) | Filter is client-side and operates only over currently-loaded dogs | Phase 3 / §27 | Same shape as Step 13's text search — a foster who wants "within 10 miles" with only 24 dogs loaded might see 0 matches even though matches exist further in the feed. The SQL `distance_miles()` function ships alongside to unblock a future server-side filter move. |
+| 2026-04-19 | Step 22 | Permissive distance filter lets unknown-distance dogs through | intentional | If a foster or shelter has no geocode, every dog for that pair has `distance_miles = undefined` and passes the slider. This is the right call for MVP (better false-positives than silent hides), but once geocoding is a required onboarding step the filter can tighten to reject unknown. Captured so the design intent isn't lost. |
+| 2026-04-19 | Step 22 | No live geocoding pipeline for addresses | Phase 3 / §31 infrastructure | `foster_parents.latitude/longitude` and `shelters.latitude/longitude` have to be populated manually today; onboarding captures location text but doesn't geocode it. The distance slider works fine for demo data with seeded coords, but launch needs an onboarding-side Mapbox/Google geocoding call (or a Supabase Edge Function trigger). |
 
 ---
 
@@ -2171,9 +2206,9 @@ These are larger features that can be tackled after the above phases, in any ord
 | Phase | Steps | Status |
 |-------|-------|--------|
 | **Phase 1: Core Features** | Steps 1–12 | **Complete (12/12)** ✅ |
-| **Phase 2: Extended Features** | Steps 13–22 | Not started |
+| **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |
 | **Phase 5: Polish** | Steps 37–45 | Not started |
 
-**Last updated:** 2026-04-17
+**Last updated:** 2026-04-19

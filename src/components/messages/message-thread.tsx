@@ -4,14 +4,13 @@
  * MessageThread — interactive message list + send form.
  *
  * This is a pure client component. The parent server page handles initial
- * data fetching and mark-as-read; this component manages the send interaction
- * and optimistically appends new messages to the local list.
- *
- * Realtime subscription is intentionally omitted. Users see new messages on
- * page refresh or navigation.
+ * data fetching and a one-shot mark-as-read on the initial render; this
+ * component manages sending, optimistic updates, and a Supabase Realtime
+ * subscription that pushes new messages from the other party into the
+ * list without a page refresh.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircle, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -62,7 +61,9 @@ export function MessageThread({
   otherPartyName,
   showTypingIndicator = false,
 }: MessageThreadProps) {
-  const supabase = createClient()
+  // Single browser Supabase client per mount — creating it inside render would
+  // re-instantiate the websocket on every state change.
+  const supabase = useMemo(() => createClient(), [])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const [messages, setMessages] = useState<Message[]>(initialMessages)
@@ -73,6 +74,60 @@ export function MessageThread({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // Realtime: subscribe to INSERTs on `public.messages` for this application.
+  // Own-sends arrive as Realtime events too, so we dedupe against the state
+  // list (optimistic and confirmed rows both carry the same row id once the
+  // server replies). Incoming messages from the other party are immediately
+  // marked as read via a client-side UPDATE — RLS (20240104) lets the receiver
+  // flip `read` to true on rows where `sender_id != auth.uid()`.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`messages:${applicationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `application_id=eq.${applicationId}`,
+        },
+        (payload) => {
+          const incoming = payload.new as Message
+          const isMine = incoming.sender_id === myUserId
+
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === incoming.id)) return prev
+            if (isMine) {
+              // Replace any still-pending optimistic row for this sender.
+              const optimisticIdx = prev.findIndex((m) =>
+                m.id.startsWith('optimistic-') && m.sender_id === myUserId,
+              )
+              if (optimisticIdx !== -1) {
+                const next = prev.slice()
+                next[optimisticIdx] = incoming
+                return next
+              }
+            }
+            return [...prev, incoming]
+          })
+
+          if (!isMine) {
+            // Best-effort read receipt. Failures are harmless — the parent
+            // server page's mark-as-read on next load will sweep the row up.
+            void supabase
+              .from('messages')
+              .update({ read: true })
+              .eq('id', incoming.id)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [applicationId, myUserId, supabase])
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()

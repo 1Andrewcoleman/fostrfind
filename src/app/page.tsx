@@ -89,8 +89,18 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} Fostr Fix. Built with love for dogs.
+      <footer className="border-t py-6 text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span>&copy; {new Date().getFullYear()} Fostr Fix. Built with love for dogs.</span>
+          <div className="flex items-center gap-4">
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+          </div>
+        </div>
       </footer>
     </div>
   )

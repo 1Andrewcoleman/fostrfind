@@ -46,7 +46,7 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function calculateAverageRating(ratings: Rating[]): number {
+export function calculateAverageRating(ratings: Pick<Rating, 'score'>[]): number {
   if (ratings.length === 0) return 0
   const sum = ratings.reduce((acc, r) => acc + r.score, 0)
   return Math.round((sum / ratings.length) * 10) / 10
@@ -61,4 +61,34 @@ export function getGreeting(date: Date = new Date()): string {
   if (hour < 12) return 'Good morning'
   if (hour < 17) return 'Good afternoon'
   return 'Good evening'
+}
+
+/**
+ * Haversine distance between two lat/lng pairs, in miles. Returns null if any
+ * input is missing, so callers can cleanly fall back to "unknown distance".
+ *
+ * Accuracy: ~0.5% error over typical within-country distances; more than good
+ * enough for a "within N miles" foster match filter, and crucially runs
+ * client-side without a PostGIS dependency. A server-side SQL mirror lives
+ * in `supabase/migrations/20240108000000_distance_miles.sql` so we can move
+ * this to a `.rpc()` call later without re-designing the UI.
+ */
+export function haversineMiles(
+  a: { latitude: number | null; longitude: number | null } | null | undefined,
+  b: { latitude: number | null; longitude: number | null } | null | undefined,
+): number | null {
+  if (!a || !b) return null
+  if (a.latitude == null || a.longitude == null) return null
+  if (b.latitude == null || b.longitude == null) return null
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const earthRadiusMiles = 3958.8
+  const dLat = toRad(b.latitude - a.latitude)
+  const dLon = toRad(b.longitude - a.longitude)
+  const lat1 = toRad(a.latitude)
+  const lat2 = toRad(b.latitude)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+  return earthRadiusMiles * c
 }

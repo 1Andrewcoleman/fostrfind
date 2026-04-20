@@ -86,6 +86,19 @@ export interface Rating {
   comment: string | null
 }
 
+// Foster's rating of a shelter after a completed placement. Mirrors
+// `Rating` but the direction is reversed — foster is the author.
+export interface ShelterRating {
+  id: string
+  created_at: string
+  application_id: string
+  shelter_id: string
+  foster_id: string
+  dog_id: string
+  score: number // 1-5
+  comment: string | null
+}
+
 export interface Message {
   id: string
   created_at: string
@@ -101,6 +114,15 @@ export interface Message {
 export interface DogWithShelter extends Dog {
   shelter_name: string
   shelter_logo_url: string | null
+  shelter_slug: string | null
+  /** Average rating of the dog's shelter (1-5), or null if no ratings yet. */
+  shelter_avg_rating?: number | null
+  /** Number of ratings that produced `shelter_avg_rating`. */
+  shelter_rating_count?: number
+  /** Shelter coordinates, pulled through the browse join, so the client can
+   *  recompute distance when the foster's coords update without refetching. */
+  shelter_latitude?: number | null
+  shelter_longitude?: number | null
   distance_miles?: number
 }
 

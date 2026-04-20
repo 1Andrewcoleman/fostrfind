@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Globe, Phone, Mail, BadgeCheck, AtSign, ArrowLeft } from 'lucide-react'
+import { MapPin, Globe, Phone, Mail, BadgeCheck, AtSign, ArrowLeft, Star } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { BrowseDogCard } from '@/components/foster/browse-dog-card'
 import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
-import { getInitials } from '@/lib/helpers'
+import { calculateAverageRating, getInitials } from '@/lib/helpers'
 import type { Dog, DogWithShelter, Shelter } from '@/types/database'
 
 interface PageProps {
@@ -61,11 +61,13 @@ const PLACEHOLDER_SHELTERS: Record<string, Shelter> = {
 async function loadShelterBySlug(slug: string): Promise<{
   shelter: Shelter
   dogs: DogWithShelter[]
+  avgRating: number | null
+  ratingCount: number
 } | null> {
   if (DEV_MODE) {
     const shelter = PLACEHOLDER_SHELTERS[slug]
     if (!shelter) return null
-    return { shelter, dogs: [] }
+    return { shelter, dogs: [], avgRating: null, ratingCount: 0 }
   }
 
   const supabase = await createClient()
@@ -77,21 +79,31 @@ async function loadShelterBySlug(slug: string): Promise<{
 
   if (!shelter) return null
 
-  const { data: dogRows } = await supabase
-    .from('dogs')
-    .select('*')
-    .eq('shelter_id', shelter.id)
-    .eq('status', 'available')
-    .order('created_at', { ascending: false })
+  const [dogsRes, ratingsRes] = await Promise.all([
+    supabase
+      .from('dogs')
+      .select('*')
+      .eq('shelter_id', shelter.id)
+      .eq('status', 'available')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('shelter_ratings')
+      .select('score')
+      .eq('shelter_id', shelter.id),
+  ])
 
-  const dogs: DogWithShelter[] = ((dogRows ?? []) as Dog[]).map((dog) => ({
+  const dogs: DogWithShelter[] = ((dogsRes.data ?? []) as Dog[]).map((dog) => ({
     ...dog,
     shelter_name: shelter.name,
     shelter_logo_url: shelter.logo_url,
     shelter_slug: shelter.slug,
   }))
 
-  return { shelter, dogs }
+  const scores = (ratingsRes.data ?? []).map((r) => ({ score: r.score as number }))
+  const avgRating = scores.length > 0 ? calculateAverageRating(scores) : null
+  const ratingCount = scores.length
+
+  return { shelter, dogs, avgRating, ratingCount }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -121,7 +133,7 @@ function normalizeWebsiteUrl(raw: string): string {
 export default async function ShelterProfilePage({ params }: PageProps): Promise<React.JSX.Element> {
   const payload = await loadShelterBySlug(params.slug)
   if (!payload) notFound()
-  const { shelter, dogs } = payload
+  const { shelter, dogs, avgRating, ratingCount } = payload
 
   const instagramHandle = shelter.instagram ? normalizeInstagramHandle(shelter.instagram) : null
 
@@ -161,9 +173,20 @@ export default async function ShelterProfilePage({ params }: PageProps): Promise
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>{shelter.location}</span>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {shelter.location}
+                  </span>
+                  {avgRating !== null && (
+                    <span className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                      <span className="font-medium text-foreground">{avgRating.toFixed(1)}</span>
+                      <span>
+                        ({ratingCount} {ratingCount === 1 ? 'review' : 'reviews'})
+                      </span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

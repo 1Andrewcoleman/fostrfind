@@ -98,7 +98,7 @@ export async function POST(
           // available destination; the email template labels this as
           // "leave a rating for the shelter" but clicking it just
           // deep-links into the completed thread for now.
-          rateUrl: `${appUrl}/foster/messages/${params.id}`,
+          rateUrl: `${appUrl}/foster/history`,
         }),
       })
     }

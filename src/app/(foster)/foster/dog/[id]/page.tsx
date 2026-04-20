@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, MapPin } from 'lucide-react'
+import { ChevronLeft, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,7 +38,8 @@ const PLACEHOLDER_SHELTER: {
   name: string
   location: string
   email: string | null
-} = { name: 'Happy Paws Rescue', location: 'Austin, TX', email: null }
+  slug: string | null
+} = { name: 'Happy Paws Rescue', location: 'Austin, TX', email: null, slug: 'happy-paws-rescue' }
 
 export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
   const [note, setNote] = useState('')
@@ -50,6 +51,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
   const [dog, setDog] = useState(DEV_MODE ? PLACEHOLDER_DOG : null)
   const [shelter, setShelter] = useState(DEV_MODE ? PLACEHOLDER_SHELTER : null)
+  const [shelterRating, setShelterRating] = useState<{ avg: number; count: number } | null>(null)
   const [fosterName, setFosterName] = useState('')
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
       const { data } = await supabase
         .from('dogs')
-        .select('*, shelter:shelters(name, location, email)')
+        .select('*, shelter:shelters(id, name, location, email, slug)')
         .eq('id', params.id)
         .maybeSingle()
 
@@ -70,10 +72,33 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       }
 
       const shelterData = data.shelter as
-        | { name: string; location: string; email: string | null }
+        | { id: string; name: string; location: string; email: string | null; slug: string | null }
         | null
       setDog(data as typeof PLACEHOLDER_DOG)
-      setShelter(shelterData ?? PLACEHOLDER_SHELTER)
+      setShelter(
+        shelterData
+          ? {
+              name: shelterData.name,
+              location: shelterData.location,
+              email: shelterData.email,
+              slug: shelterData.slug,
+            }
+          : PLACEHOLDER_SHELTER,
+      )
+
+      // Fetch shelter rating aggregate; silently ignored if the table is
+      // empty or RLS blocks (unlikely — shelter_ratings has public select).
+      if (shelterData?.id) {
+        const { data: ratingRows } = await supabase
+          .from('shelter_ratings')
+          .select('score')
+          .eq('shelter_id', shelterData.id)
+        if (ratingRows && ratingRows.length > 0) {
+          const scores = ratingRows.map((r) => r.score as number)
+          const sum = scores.reduce((a, b) => a + b, 0)
+          setShelterRating({ avg: sum / scores.length, count: scores.length })
+        }
+      }
 
       // Check whether the current foster has already applied to this dog
       const { data: { user } } = await supabase.auth.getUser()
@@ -318,7 +343,27 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       {/* Shelter info */}
       <div className="rounded-lg border p-4">
         <h2 className="font-semibold mb-2">About the Shelter</h2>
-        <p className="font-medium">{shelter.name}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {shelter.slug ? (
+            <Link
+              href={`/shelters/${shelter.slug}`}
+              className="font-medium hover:text-primary hover:underline underline-offset-2"
+            >
+              {shelter.name}
+            </Link>
+          ) : (
+            <p className="font-medium">{shelter.name}</p>
+          )}
+          {shelterRating && (
+            <span className="flex items-center gap-1 text-sm">
+              <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+              <span className="font-medium">{shelterRating.avg.toFixed(1)}</span>
+              <span className="text-muted-foreground">
+                ({shelterRating.count} {shelterRating.count === 1 ? 'review' : 'reviews'})
+              </span>
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
           <MapPin className="h-3 w-3" />
           <span>{shelter.location}</span>

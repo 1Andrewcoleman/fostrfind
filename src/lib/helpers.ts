@@ -46,7 +46,7 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function calculateAverageRating(ratings: Rating[]): number {
+export function calculateAverageRating(ratings: Pick<Rating, 'score'>[]): number {
   if (ratings.length === 0) return 0
   const sum = ratings.reduce((acc, r) => acc + r.score, 0)
   return Math.round((sum / ratings.length) * 10) / 10

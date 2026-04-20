@@ -160,17 +160,52 @@ export default function BrowsePage() {
       .range(from, to)
 
     const rows = data ?? []
+
+    // Collect unique shelter IDs, then fetch their ratings in a single query
+    // and compute per-shelter averages. Page-scoped (max 24 shelters), so
+    // this is cheap and keeps the browse-card surface in sync with the
+    // public profile without a join on every row.
+    const shelterIds = Array.from(
+      new Set(
+        rows
+          .map((r: Record<string, unknown>) => r.shelter_id as string | undefined)
+          .filter((id): id is string => !!id),
+      ),
+    )
+    const ratingsMap = new Map<string, { avg: number; count: number }>()
+    if (shelterIds.length > 0) {
+      const { data: ratingRows } = await supabase
+        .from('shelter_ratings')
+        .select('shelter_id, score')
+        .in('shelter_id', shelterIds)
+      const bucket: Record<string, number[]> = {}
+      for (const r of ratingRows ?? []) {
+        const id = r.shelter_id as string
+        const score = r.score as number
+        ;(bucket[id] ??= []).push(score)
+      }
+      for (const id of Object.keys(bucket)) {
+        const scores = bucket[id]
+        const sum = scores.reduce((a: number, b: number) => a + b, 0)
+        ratingsMap.set(id, { avg: sum / scores.length, count: scores.length })
+      }
+    }
+
     const mapped: DogWithShelter[] = rows.map((row: Record<string, unknown>) => {
       const shelter = row.shelter as {
         name: string
         logo_url: string | null
         slug: string | null
       } | null
+      const shelterId = row.shelter_id as string | undefined
+      const rating = shelterId ? ratingsMap.get(shelterId) : undefined
       return {
         ...(row as unknown as DogWithShelter),
         shelter_name: shelter?.name ?? 'Unknown Shelter',
         shelter_logo_url: shelter?.logo_url ?? null,
         shelter_slug: shelter?.slug ?? null,
+        shelter_avg_rating: rating ? rating.avg : null,
+        shelter_rating_count: rating ? rating.count : 0,
       }
     })
     return { rows: mapped, reachedEnd: rows.length < PAGE_SIZE }

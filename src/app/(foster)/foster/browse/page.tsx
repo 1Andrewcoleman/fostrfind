@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { X, SlidersHorizontal } from 'lucide-react'
 import {
@@ -104,16 +104,34 @@ export default function BrowsePage() {
   const searchParams = useSearchParams()
   const router = useRouter()
 
+  const initialFilters = useMemo(
+    () => parseFiltersFromParams(searchParams),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+  const initialHadParams = useMemo(
+    () =>
+      initialFilters.sizes.length > 0 ||
+      initialFilters.ages.length > 0 ||
+      !!initialFilters.gender ||
+      initialFilters.medicalOk ||
+      initialFilters.search.trim().length > 0,
+    [initialFilters],
+  )
+
   const [dogs, setDogs] = useState<DogWithShelter[]>(DEV_MODE ? PLACEHOLDER_DOGS : [])
   const [loadingDogs, setLoadingDogs] = useState(!DEV_MODE)
-  const [filters, setFilters] = useState<FilterState>(() =>
-    parseFiltersFromParams(searchParams),
-  )
+  const [filters, setFilters] = useState<FilterState>(initialFilters)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  // Track whether the user (or the prefs seed) has ever pushed filters to the
+  // URL. Once true, we never re-seed from preferences — an explicit "Clear all"
+  // must be honored.
+  const hasInitializedRef = useRef(initialHadParams)
 
   // Keep URL in sync whenever filters change
   const handleFilterChange = useCallback(
     (next: FilterState) => {
+      hasInitializedRef.current = true
       setFilters(next)
       const qs = filtersToParams(next)
       router.replace(qs ? `/foster/browse?${qs}` : '/foster/browse', {
@@ -146,6 +164,44 @@ export default function BrowsePage() {
     }
     fetchDogs()
   }, [])
+
+  // Pre-populate filters from the foster's saved preferences on first visit.
+  // Only seeds when the URL had zero filter params AND we haven't already
+  // seeded/initialized this session. DEV_MODE skips entirely (no auth/user).
+  useEffect(() => {
+    if (DEV_MODE) return
+    if (hasInitializedRef.current) return
+    let cancelled = false
+    async function seedFromPreferences() {
+      const supabase = createClient()
+      const { data: userData } = await supabase.auth.getUser()
+      const userId = userData.user?.id
+      if (!userId) return
+      const { data: foster } = await supabase
+        .from('foster_parents')
+        .select('pref_size, pref_age, pref_medical')
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (cancelled) return
+      if (!foster) return
+      const prefSize = Array.isArray(foster.pref_size) ? foster.pref_size : []
+      const prefAge = Array.isArray(foster.pref_age) ? foster.pref_age : []
+      const prefMedical = !!foster.pref_medical
+      if (prefSize.length === 0 && prefAge.length === 0 && !prefMedical) return
+      // Race guard: if the user changed filters before this resolved, bail.
+      if (hasInitializedRef.current) return
+      handleFilterChange({
+        ...DEFAULT_FILTERS,
+        sizes: prefSize,
+        ages: prefAge,
+        medicalOk: prefMedical,
+      })
+    }
+    seedFromPreferences()
+    return () => {
+      cancelled = true
+    }
+  }, [handleFilterChange])
 
   const filteredDogs = useMemo(() => {
     const q = filters.search.trim().toLowerCase()

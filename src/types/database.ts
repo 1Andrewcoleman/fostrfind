@@ -101,6 +101,7 @@ export interface Message {
 export interface DogWithShelter extends Dog {
   shelter_name: string
   shelter_logo_url: string | null
+  shelter_slug: string | null
   distance_miles?: number
 }
 

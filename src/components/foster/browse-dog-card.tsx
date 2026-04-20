@@ -81,7 +81,16 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
           ) : (
             <MapPin className="h-3 w-3 shrink-0" />
           )}
-          <span className="truncate">{dog.shelter_name}</span>
+          {dog.shelter_slug ? (
+            <Link
+              href={`/shelters/${dog.shelter_slug}`}
+              className="truncate hover:text-primary hover:underline underline-offset-2"
+            >
+              {dog.shelter_name}
+            </Link>
+          ) : (
+            <span className="truncate">{dog.shelter_name}</span>
+          )}
           {dog.distance_miles !== undefined && (
             <span className="ml-auto shrink-0">· {Math.round(dog.distance_miles)} mi away</span>
           )}

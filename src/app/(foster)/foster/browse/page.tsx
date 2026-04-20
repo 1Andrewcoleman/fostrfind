@@ -33,7 +33,7 @@ const PLACEHOLDER_DOGS: DogWithShelter[] = [
     gender: 'male', temperament: 'Friendly and playful', medical_status: 'Vaccinated',
     special_needs: null, description: 'A sweet boy who loves walks.',
     photos: [], status: 'available', shelter_name: 'Happy Paws Rescue',
-    shelter_logo_url: null, distance_miles: 5,
+    shelter_logo_url: null, shelter_slug: 'happy-paws-rescue', distance_miles: 5,
   },
   {
     id: '2', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -41,7 +41,7 @@ const PLACEHOLDER_DOGS: DogWithShelter[] = [
     gender: 'female', temperament: 'Energetic and curious', medical_status: 'Vaccinated, spayed',
     special_needs: null, description: 'Luna loves to play and explore.',
     photos: [], status: 'available', shelter_name: 'Austin Animal Rescue',
-    shelter_logo_url: null, distance_miles: 12,
+    shelter_logo_url: null, shelter_slug: 'austin-animal-rescue', distance_miles: 12,
   },
   {
     id: '3', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
@@ -49,7 +49,7 @@ const PLACEHOLDER_DOGS: DogWithShelter[] = [
     gender: 'male', temperament: 'Calm and gentle', medical_status: 'On daily medication',
     special_needs: 'Needs medication twice daily', description: 'Max is a calm senior dog.',
     photos: [], status: 'available', shelter_name: 'Happy Paws Rescue',
-    shelter_logo_url: null, distance_miles: 5,
+    shelter_logo_url: null, shelter_slug: 'happy-paws-rescue', distance_miles: 5,
   },
 ]
 
@@ -154,18 +154,23 @@ export default function BrowsePage() {
     const to = from + PAGE_SIZE - 1
     const { data } = await supabase
       .from('dogs')
-      .select('*, shelter:shelters(name, logo_url)')
+      .select('*, shelter:shelters(name, logo_url, slug)')
       .eq('status', 'available')
       .order('created_at', { ascending: false })
       .range(from, to)
 
     const rows = data ?? []
     const mapped: DogWithShelter[] = rows.map((row: Record<string, unknown>) => {
-      const shelter = row.shelter as { name: string; logo_url: string | null } | null
+      const shelter = row.shelter as {
+        name: string
+        logo_url: string | null
+        slug: string | null
+      } | null
       return {
         ...(row as unknown as DogWithShelter),
         shelter_name: shelter?.name ?? 'Unknown Shelter',
         shelter_logo_url: shelter?.logo_url ?? null,
+        shelter_slug: shelter?.slug ?? null,
       }
     })
     return { rows: mapped, reachedEnd: rows.length < PAGE_SIZE }

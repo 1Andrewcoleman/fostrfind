@@ -3,52 +3,60 @@
 @tailwind utilities;
 
 /*
- * Design tokens — OKLCH tri-pastel palette.
+ * Design tokens — OKLCH tri-pastel palette (cherry-blossom set).
  *
  * See `.impeccable.md` for the full rationale. Short version:
- * --primary      = butter-yellow   (brand / foster-side / primary CTA)
- * --warm         = sage            (success / placements / verified)
- * --accent-peach = peach           (shelter-side / pending states)
+ * --background   = dust-grey      #dedbd2   (warm beige-grey ground)
+ * --foreground   = iron-grey      #4a5759   (soft dark slate text)
+ * --primary      = cherry-blossom #edafb8   (brand / foster-side / primary CTA)
+ * --warm         = ash-grey       #b0c4b1   (success / placements / verified)
+ * --accent-peach = powder-petal   #f7e1d7   (shelter-side / pending states)
+ *
+ * The product-meaning contract did not change — sage on --warm means
+ * "placement succeeded / shelter is verified" across every call site,
+ * peach on --accent-peach means "shelter surface / pending state",
+ * and the brand accent still lives on --primary. Only the colors moved.
  *
  * Tokens are stored as OKLCH component triples (lightness, chroma, hue)
  * and composed via oklch(var(--token) / <alpha-value>) in tailwind.config.
  * Public pages are light-only. Dark mode is deferred to the portals
- * redesign (Phase 5-b Commit 6).
+ * redesign (Phase 5-b Commit 6); the `.dark` block below predates this
+ * palette and will be re-derived when dark-mode actually ships.
  */
 
 @layer base {
   :root {
-    /* Surfaces */
-    --background:             97.5% 0.010 80;   /* bone */
-    --foreground:             26%   0.025 250;  /* soft ink-navy */
-    --card:                   99%   0.006 80;
-    --card-foreground:        26%   0.025 250;
-    --popover:                99%   0.006 80;
-    --popover-foreground:     26%   0.025 250;
+    /* Surfaces — dust-grey ground, card lifted a few lightness points. */
+    --background:             89.1% 0.013 92;   /* dust-grey  #dedbd2 */
+    --foreground:             44.6% 0.017 208;  /* iron-grey  #4a5759 */
+    --card:                   93%   0.010 92;
+    --card-foreground:        44.6% 0.017 208;
+    --popover:                93%   0.010 92;
+    --popover-foreground:     44.6% 0.017 208;
 
-    /* Neutrals */
-    --muted:                  95%   0.010 80;
-    --muted-foreground:       55%   0.020 250;
-    --border:                 90%   0.008 80;
-    --input:                  90%   0.008 80;
-    --secondary:              95%   0.010 80;
-    --secondary-foreground:   26%   0.025 250;
-    --accent:                 93%   0.015 80;
-    --accent-foreground:      26%   0.025 250;
+    /* Neutrals — same dust-grey hue family (~92°). */
+    --muted:                  85%   0.012 92;
+    --muted-foreground:       55%   0.017 208;
+    --border:                 82%   0.010 92;
+    --input:                  82%   0.010 92;
+    --secondary:              85%   0.012 92;
+    --secondary-foreground:   44.6% 0.017 208;
+    --accent:                 88%   0.020 46;   /* leans toward powder-petal */
+    --accent-foreground:      44.6% 0.017 208;
 
     /* Three pastels — each has a fixed product meaning. */
-    --primary:                85%   0.070 85;   /* butter-yellow  */
-    --primary-foreground:     26%   0.025 250;
-    --warm:                   82%   0.050 155;  /* sage */
-    --warm-foreground:        26%   0.025 250;
-    --accent-peach:           84%   0.060 35;   /* peach */
-    --accent-peach-foreground: 26%  0.025 250;
+    --primary:                81.4% 0.073 9;    /* cherry-blossom #edafb8 */
+    --primary-foreground:     44.6% 0.017 208;
+    --warm:                   80%   0.034 147;  /* ash-grey       #b0c4b1 */
+    --warm-foreground:        44.6% 0.017 208;
+    --accent-peach:           92.5% 0.028 46;   /* powder-petal   #f7e1d7 */
+    --accent-peach-foreground: 44.6% 0.017 208;
 
-    /* Status */
+    /* Status — red is not in the 5-color palette; kept and left calm. */
     --destructive:            62%   0.140 25;
     --destructive-foreground: 99%   0.006 80;
 
-    --ring:                   85%   0.070 85;   /* matches primary */
+    --ring:                   81.4% 0.073 9;    /* matches --primary */
     --radius:                 0.625rem;
   }
 

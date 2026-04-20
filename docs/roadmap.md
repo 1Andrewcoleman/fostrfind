@@ -2017,6 +2017,14 @@ export const metadata: Metadata = {
 ## Phase 5: UI/UX Polish
 
 > Aesthetic improvements and remaining UI TODO items.
+>
+> **⚠ Superseded in part by Phase 5-b (2026-04-20, session 3).** Steps 37–38
+> shipped under the original "warm-honey / amber" direction and have since
+> been restyled under the [`/impeccable teach`](../.impeccable.md) design
+> direction — visual details from those two steps no longer describe the
+> production state. Steps 39–45 were folded into Phase 5-b Commit 6 and
+> should be read through that lens. See **Phase 5-b Summary** further down
+> this file for what actually shipped.
 
 ---
 
@@ -2033,6 +2041,8 @@ export const metadata: Metadata = {
 
 **Status:** ✅ Shipped 2026-04-20 (session 3) — asymmetric 7/5 hero with curated Unsplash portrait, layered warm radial washes + SVG grain, eyebrow "Open for new fosters" chip, display-italic primary accent on "Save a life.", floating 4.9-rating trust card, 3-stat social-proof bar (pilot-network caveat under the numbers).
 
+**⚠ Superseded by Phase 5-b Commits 2 + 3** (2026-04-20, session 3 pivot). Floating rating card and stats bar removed as placeholder-metrics debt (see `.impeccable.md` "no placeholder metrics" trust-signal stance). Italic accent, SVG grain overlay, and warm-honey panel replaced with calmer calm-contrast direction under the OKLCH tri-pastel palette. The two-column asymmetric composition and curated Unsplash portrait survive; everything else was redirected.
+
 ---
 
 ### Step 38: Landing Page — How It Works + Footer
@@ -2047,6 +2057,8 @@ export const metadata: Metadata = {
 
 **Status:** ✅ Shipped 2026-04-20 (session 3) — How It Works section rebuilt as 3 editorial cards (colored top strip + huge watermark step number + layered icon tile with accent dot + hover lift + staggered entrance). Shared `src/components/public-footer.tsx` extracted and now drives `/`, `/terms`, `/privacy` (replaces each page's inline strip). Root-layout metadata extended with `description`, `openGraph`, `twitter`, `metadataBase`, and a `title.template`. Roadmap specified `src/components/navbar.tsx (footer)` but that file is the portal navbar; deviation noted in commit — a dedicated `public-footer.tsx` is cleaner and reusable.
 
+**⚠ Superseded by Phase 5-b Commits 4 + 5** (2026-04-20, session 3 pivot). Card top-strip colors remapped under the three-pastel semantic rule (peach = shelter-list, butter = foster-browse, sage = placement success). Hover lift shortened to 200ms / -0.5 per principle 5. The section H2 now carries the page's single Source Serif 4 editorial accent. Watermark number further muted. Footer's `text-warm` paw icons switched to `text-primary` (butter), column headers lightened to Switzer 500.
+
 ---
 
 ### Step 39: Filter Pill Selectors
@@ -2059,6 +2071,8 @@ export const metadata: Metadata = {
 
 **Commit:** `feat: filter pill selectors replacing checkboxes on browse (§25e)`
 
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — the pill treatment has to sit on the new palette or it'll re-drift on the next pass. Not yet implemented; see Phase 5-b follow-ups section below.
+
 ---
 
 ### Step 40: Illustrated Empty States
@@ -2070,6 +2084,8 @@ export const metadata: Metadata = {
 - Can use simple inline SVGs or lucide icon compositions
 
 **Commit:** `feat: illustrated empty states across all views (§25g)`
+
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — empty states audit is referenced in the Commit 6 plan but deferred to a follow-up pass. Line-art illustrations only per `.impeccable.md` principle 1 (no ornament without purpose).
 
 ---
 
@@ -2085,6 +2101,8 @@ export const metadata: Metadata = {
 
 **Commit:** `feat: form polish — section headers, validation indicators, floating save (§25h)`
 
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — "colored left-border accent" for section headers violates principle 1's ban on >1px accent stripes. Replace with a small-caps eyebrow + butter-yellow check icons on valid fields. Not yet implemented.
+
 ---
 
 ### Step 42: Incoming Message Avatars
@@ -2096,6 +2114,8 @@ export const metadata: Metadata = {
 - Thread page already has application data with foster/shelter profiles — pass avatar URL to MessageThread
 
 **Commit:** `feat: incoming sender avatars in message thread (§25j)`
+
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — incoming-bubble avatar treatment plus the bubble palette remap (incoming = neutral surface, outgoing = butter at low alpha). Not yet implemented.
 
 ---
 
@@ -2109,6 +2129,8 @@ export const metadata: Metadata = {
 
 **Commit:** `feat: onboarding redesign — role cards and form grouping (§25k)`
 
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — role cards become two large pastel tiles (peach = shelter, butter = foster). Semantic meaning per the palette rule. Not yet implemented.
+
 ---
 
 ### Step 44: Micro-interactions + Animations
@@ -2120,6 +2142,8 @@ export const metadata: Metadata = {
 - Card entrance animations with staggered delays
 
 **Commit:** `feat: page transitions and card entrance animations (§25l)`
+
+**Status:** 🔁 Folded into Phase 5-b Commit 6 — any motion must pass `.impeccable.md` principle 5 (motion responds to intent). Page-load fade-ins ≤500ms total, max 3 staggered items, never stacked with hover/scroll motion, `motion-reduce:animate-none` on everything. Not yet implemented.
 
 ---
 
@@ -2134,6 +2158,8 @@ export const metadata: Metadata = {
 - Profile forms widened or two-column on `lg+`
 
 **Commit:** `feat: responsive polish, print styles, content centering (§25m, §25n)`
+
+**Status:** 🔁 Folded into Phase 5-b follow-ups — no palette impact, so this can ship anytime against the new design system. Not yet implemented.
 
 ---
 
@@ -2244,6 +2270,50 @@ These are larger features that can be tackled after the above phases, in any ord
 
 ---
 
+## Phase 5-b Summary — Visual Migration & Landing Redesign (2026-04-20, session 3)
+
+> Phase 5 was written before the `/impeccable teach` design direction existed
+> (see [`.impeccable.md`](../.impeccable.md)). Steps 37–38 shipped under the
+> old warm-honey direction and the user pivoted mid-session — fake "4.9
+> rating" + "2,400 dogs fostered" placeholder numbers couldn't ship. The
+> pivot produced Phase 5-b: a 7-commit migration that (a) adopted a new
+> OKLCH tri-pastel palette (butter / sage / peach) plus Source Serif 4 +
+> Switzer typography, and (b) restyled every public surface plus the portal
+> against those primitives.
+
+**Plan document:** [`docs/Phase5b_VisualMigration_Plan.md`](./Phase5b_VisualMigration_Plan.md).
+
+### Shipped commits
+
+| # | Commit | Sha-scope | What shipped |
+|---|--------|-----------|--------------|
+| 0 | `chore(docs): establish .impeccable.md design context and CLAUDE.md pointer` | `.impeccable.md`, `CLAUDE.md` | Single source of truth for design decisions. Five principles (restraint, calm contrast, typography leads, three pastels, motion-responds-to-intent). Locked typography + color tokens. |
+| 1 | `feat(design): migrate to OKLCH tri-pastel palette and Source Serif 4 + Switzer` | `globals.css`, `tailwind.config.ts`, `layout.tsx`, `fonts/switzer/`, every component using `text-warm` / `bg-warm` / `chart-N` | The big one. HSL → OKLCH. Plus Jakarta + Inter → Source Serif 4 + Switzer. `--warm` *semantic shift* from honey → sage; new `--accent-peach` token. Every affected utility class in `src/` audited and reclassified. |
+| 2 | `feat(landing): remove placeholder metrics and fake rating card` | `page.tsx` | `STATS` array + "2,400 dogs fostered" band deleted. Floating 4.9-rating card over the hero photo deleted. Trust-signal stance comment added at file top. |
+| 3 | `feat(landing): hero restyle against calm-contrast direction` | `page.tsx` | Italic accent dropped; SVG grain overlay removed; warm panel becomes butter-yellow; eyebrow chip pulsing dot removed; CTAs rebalanced as two equal doors (peach = shelter, butter = foster); H1 weight from extrabold → semibold (fixes faux-bold on serif). |
+| 4 | `feat(landing): how-it-works restyle with semantic pastels` | `page.tsx` | Card top-strips remapped under the three-pastel rule: peach (shelter-list), butter (foster-browse), sage (placement). Section H2 becomes the page's single Source Serif 4 editorial accent. Hover lift shortened to 200ms / -0.5. Watermark numbers muted to 0.04 alpha. |
+| 5 | `feat(landing): public-footer restyle and metadata review` | `public-footer.tsx`, `(shelter)/layout.tsx`, `(foster)/layout.tsx`, shelters/[slug], `loading.tsx`, `terms/privacy` | Footer paws repointed from `text-warm` → `text-primary`. Column headers softened to Switzer 500. Every `from-warm/30 to-primary/20` gradient on a shelter page collapsed to flat `bg-peach/30`. `og:image` deferred (skipping empty tag is worse than no tag). |
+| 6 | `feat(portal): align portals to tri-pastel palette and wire next-themes` | portal components, status badges, application stepper, accept/decline buttons, dashboards, browse card, dark tokens | Status badges + stepper + accept buttons collapse to three pastels + destructive. Dashboard stat chips take semantic pastels. `next-themes` wired via new `PortalThemeProvider`, mounted only in the shelter + foster layouts. Dark OKLCH palette derived in `.impeccable.md` and `globals.css`. Sun/moon toggle added to `portal-sidebar-user.tsx`. |
+| 7 | `docs: phase 5-b wrap — update roadmap markers, handoff` | `roadmap.md`, new `docs/AgentHandoff_2026-04-20_session-3.md` | This entry. Steps 37–38 marked superseded; Steps 39–45 marked folded. |
+
+### Phase 5-b follow-ups (deliberately deferred)
+
+These were scoped into the Phase 5-b plan but intentionally deferred from Commit 6 to keep that commit reviewable. Pick up in any order; each is independent.
+
+| Follow-up | Origin | Notes |
+|-----------|--------|-------|
+| Filter pill selectors (replaces §25e checkboxes) | Step 39 | `src/components/foster/filter-sidebar.tsx`. Active pill uses butter. Medical-needs stays a checkbox. |
+| Illustrated empty states | Step 40 | `src/components/empty-state.tsx` + all call sites. Line-art SVG only, per principle 1. Each illustration must map clearly to the emptiness shown (no generic "sad dog" across every empty state). |
+| Form polish — section headers, validation marks, sticky save | Step 41 | Replace Step 41's "colored left-border accent" (violates principle 1's stripe ban) with small-caps eyebrow + butter-yellow check icons on valid fields. |
+| Incoming message avatars + bubble palette | Step 42 | `src/components/messages/message-thread.tsx`. Incoming = neutral surface, outgoing = butter at low alpha. |
+| Onboarding role cards | Step 43 | Two large pastel tiles: peach = shelter, butter = foster. |
+| Page transitions + card entrance motion | Step 44 | Must pass principle 5: ≤500ms total, max 3 staggered, `motion-reduce:animate-none`, never stacked with other motion. |
+| Responsive polish + content centering | Step 45 | No palette impact. Can ship anytime. |
+| `og:image` asset | Commit 5 note | Deferred until a real brand hero photo exists — empty `og:image` is worse than no tag. |
+| Dark mode contrast sweep | Commit 6 | Dark tokens shipped, but a real pass through every portal component in dark needs a visual audit for edge cases (e.g. toast tints against dark surfaces, shadcn dialog overlays). |
+
+---
+
 ## Progress Tracker
 
 | Phase | Steps | Status |
@@ -2252,6 +2322,7 @@ These are larger features that can be tackled after the above phases, in any ord
 | **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
 | **Phase 3: Hardening** | Steps 23–30 | **Complete (8/8)** ✅ |
 | **Phase 4: Infrastructure** | Steps 31–36 | **Complete (6/6)** ✅ |
-| **Phase 5: Polish** | Steps 37–45 | Not started |
+| **Phase 5: Polish** | Steps 37–38 shipped (then restyled under 5-b); Steps 39–45 folded into 5-b follow-ups | Partial, superseded |
+| **Phase 5-b: Visual Migration & Landing Redesign** | Commits 0–7 | **Complete (7/7)** ✅ |
 
-**Last updated:** 2026-04-20 (Phase 4 complete)
+**Last updated:** 2026-04-20 (Phase 5-b complete, session 3)

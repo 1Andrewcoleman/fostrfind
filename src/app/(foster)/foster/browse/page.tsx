@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { X, SlidersHorizontal } from 'lucide-react'
+import { X, SlidersHorizontal, Loader2 } from 'lucide-react'
 import {
   FilterSidebar,
   BrowseFilterForm,
@@ -23,6 +23,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE, DOG_SIZE_LABELS, DOG_AGE_LABELS } from '@/lib/constants'
 import type { DogWithShelter } from '@/types/database'
+
+const PAGE_SIZE = 24
 
 const PLACEHOLDER_DOGS: DogWithShelter[] = [
   {
@@ -121,6 +123,8 @@ export default function BrowsePage() {
 
   const [dogs, setDogs] = useState<DogWithShelter[]>(DEV_MODE ? PLACEHOLDER_DOGS : [])
   const [loadingDogs, setLoadingDogs] = useState(!DEV_MODE)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(!DEV_MODE)
   const [filters, setFilters] = useState<FilterState>(initialFilters)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   // Track whether the user (or the prefs seed) has ever pushed filters to the
@@ -141,29 +145,57 @@ export default function BrowsePage() {
     [router],
   )
 
+  // Cursor-based pagination: fetch PAGE_SIZE dogs at a time and append.
+  // Client-side filtering still runs across all loaded dogs, so filters
+  // may only surface results once "Load More" pulls in the matching rows.
+  // Tracked as a known trade-off until server-side filtering lands.
+  const fetchDogsPage = useCallback(async (from: number) => {
+    const supabase = createClient()
+    const to = from + PAGE_SIZE - 1
+    const { data } = await supabase
+      .from('dogs')
+      .select('*, shelter:shelters(name, logo_url)')
+      .eq('status', 'available')
+      .order('created_at', { ascending: false })
+      .range(from, to)
+
+    const rows = data ?? []
+    const mapped: DogWithShelter[] = rows.map((row: Record<string, unknown>) => {
+      const shelter = row.shelter as { name: string; logo_url: string | null } | null
+      return {
+        ...(row as unknown as DogWithShelter),
+        shelter_name: shelter?.name ?? 'Unknown Shelter',
+        shelter_logo_url: shelter?.logo_url ?? null,
+      }
+    })
+    return { rows: mapped, reachedEnd: rows.length < PAGE_SIZE }
+  }, [])
+
   useEffect(() => {
     if (DEV_MODE) return
-    async function fetchDogs() {
-      const supabase = createClient()
-      const { data } = await supabase
-        .from('dogs')
-        .select('*, shelter:shelters(name, logo_url)')
-        .eq('status', 'available')
-        .order('created_at', { ascending: false })
-
-      const mapped: DogWithShelter[] = (data ?? []).map((row: Record<string, unknown>) => {
-        const shelter = row.shelter as { name: string; logo_url: string | null } | null
-        return {
-          ...(row as unknown as DogWithShelter),
-          shelter_name: shelter?.name ?? 'Unknown Shelter',
-          shelter_logo_url: shelter?.logo_url ?? null,
-        }
-      })
-      setDogs(mapped)
+    let cancelled = false
+    async function loadFirstPage() {
+      const { rows, reachedEnd } = await fetchDogsPage(0)
+      if (cancelled) return
+      setDogs(rows)
+      setHasMore(!reachedEnd)
       setLoadingDogs(false)
     }
-    fetchDogs()
-  }, [])
+    loadFirstPage()
+    return () => {
+      cancelled = true
+    }
+  }, [fetchDogsPage])
+
+  const loadMore = useCallback(async () => {
+    if (DEV_MODE) return
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const { rows, reachedEnd } = await fetchDogsPage(dogs.length)
+    setDogs((prev) => [...prev, ...rows])
+    setHasMore(!reachedEnd)
+    setLoadingMore(false)
+  }, [dogs.length, loadingMore, hasMore, fetchDogsPage])
 
   // Pre-populate filters from the foster's saved preferences on first visit.
   // Only seeds when the URL had zero filter params AND we haven't already
@@ -260,6 +292,11 @@ export default function BrowsePage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted-foreground mr-1">
                 {filteredDogs.length} dog{filteredDogs.length !== 1 ? 's' : ''} found
+                {hasMore && !hasActiveFilters && (
+                  <span className="ml-1 text-xs">
+                    (of loaded dogs &mdash; load more to see all)
+                  </span>
+                )}
               </span>
 
               {filters.search.trim() && (
@@ -338,11 +375,33 @@ export default function BrowsePage() {
               }}
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDogs.map((dog) => (
-                <BrowseDogCard key={dog.id} dog={dog} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredDogs.map((dog) => (
+                  <BrowseDogCard key={dog.id} dog={dog} />
+                ))}
+              </div>
+              {hasMore && !loadingDogs && (
+                <div className="flex justify-center pt-6">
+                  <Button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    variant="outline"
+                    size="lg"
+                    className="min-w-40"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load more dogs'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

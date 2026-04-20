@@ -22,6 +22,7 @@
 
 # local editor / agent config
 .claude/
+.serena/
 
 # debug
 npm-debug.log*

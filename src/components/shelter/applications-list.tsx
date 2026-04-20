@@ -41,6 +41,7 @@ export function ShelterApplicationsList({ applications }: ShelterApplicationsLis
 
       {filtered.length === 0 ? (
         <EmptyState
+          illustration="applications"
           title="No applications yet"
           description={
             activeTab === 'all'

@@ -205,6 +205,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
         <CardContent>
           {recentApplications.length === 0 ? (
             <EmptyState
+              illustration="applications"
               title="No applications yet"
               description="Browse available dogs and submit your first application."
               action={{ label: 'Browse Dogs', href: '/foster/browse' }}

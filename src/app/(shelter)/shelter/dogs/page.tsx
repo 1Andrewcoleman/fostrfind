@@ -118,6 +118,7 @@ export default async function ShelterDogsPage() {
         <ServerErrorPanel />
       ) : !hasAnyDogs && !DEV_MODE ? (
         <EmptyState
+          illustration="dog"
           title="No dogs found"
           description="Add your first dog listing to start receiving foster applications."
           action={{ label: 'Add Dog', href: '/shelter/dogs/new' }}

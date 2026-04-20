@@ -113,6 +113,7 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
 
       {fetchError ? null : placements.length === 0 ? (
         <EmptyState
+          illustration="history"
           title="No foster history yet"
           description="Your completed fosters will appear here. Each one makes a difference — keep going!"
           action={{ label: 'Browse Dogs', href: '/foster/browse' }}

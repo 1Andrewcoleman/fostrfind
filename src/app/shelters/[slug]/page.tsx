@@ -296,6 +296,7 @@ export default async function ShelterProfilePage({ params }: PageProps): Promise
 
           {dogs.length === 0 ? (
             <EmptyState
+              illustration="dog"
               title="No dogs currently listed"
               description={`${shelter.name} doesn't have any dogs available for fostering right now. Check back soon.`}
             />

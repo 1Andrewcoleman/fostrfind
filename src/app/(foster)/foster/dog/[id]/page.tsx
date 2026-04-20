@@ -217,6 +217,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
   if (notFound) {
     return (
       <EmptyState
+        illustration="search"
         title="Dog not found"
         description="This dog may have been removed or the link is invalid."
         action={{ label: 'Browse Dogs', href: '/foster/browse' }}

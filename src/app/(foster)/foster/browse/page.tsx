@@ -516,6 +516,7 @@ export default function BrowsePage() {
             <BrowseGridSkeleton />
           ) : filteredDogs.length === 0 ? (
             <EmptyState
+              illustration="search"
               title="No dogs match your filters"
               description="Try adjusting your filters to see more results."
               action={{

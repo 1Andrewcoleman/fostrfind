@@ -26,6 +26,7 @@ export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps
       <TabsContent value="active" className="mt-0">
         {activeDogs.length === 0 ? (
           <EmptyState
+            illustration="dog"
             title="No active dogs"
             description="Add your first dog listing to start receiving foster applications."
             action={{ label: 'Add Dog', href: '/shelter/dogs/new' }}
@@ -42,6 +43,7 @@ export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps
       <TabsContent value="placed" className="mt-0">
         {placedDogs.length === 0 ? (
           <EmptyState
+            illustration="history"
             title="No placed dogs yet"
             description="Dogs you've placed with a foster will appear here once the placement is complete."
           />

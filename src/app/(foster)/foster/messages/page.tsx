@@ -118,6 +118,7 @@ export default async function FosterMessagesPage() {
         <ServerErrorPanel />
       ) : threads.length === 0 ? (
         <EmptyState
+          illustration="messages"
           title="No messages yet"
           description="Once a shelter accepts your application, you'll be able to message them here."
           action={{ label: 'View applications', href: '/foster/applications' }}

@@ -1,9 +1,11 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
@@ -14,6 +16,7 @@ export interface FilterState {
   ages: string[]
   gender: string | null
   medicalOk: boolean
+  search: string
 }
 
 export const DEFAULT_FILTERS: FilterState = {
@@ -21,6 +24,7 @@ export const DEFAULT_FILTERS: FilterState = {
   ages: [],
   gender: null,
   medicalOk: false,
+  search: '',
 }
 
 // ---------------------------------------------------------------------------
@@ -45,6 +49,21 @@ export function BrowseFilterForm({ filters, onFilterChange, idPrefix }: BrowseFi
     return arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value]
   }
 
+  // Debounced search: keep the input snappy but only push URL / filter state
+  // once the user pauses typing for 300ms. Resets when parent search changes
+  // externally (e.g. removing the active search chip).
+  const [searchDraft, setSearchDraft] = useState(filters.search)
+  useEffect(() => {
+    setSearchDraft(filters.search)
+  }, [filters.search])
+  useEffect(() => {
+    if (searchDraft === filters.search) return
+    const t = setTimeout(() => {
+      onFilterChange({ ...filters, search: searchDraft })
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchDraft, filters, onFilterChange])
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -57,6 +76,23 @@ export function BrowseFilterForm({ filters, onFilterChange, idPrefix }: BrowseFi
         >
           Clear all
         </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}search`} className="text-sm font-medium">
+          Search
+        </Label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            id={`${idPrefix}search`}
+            type="search"
+            placeholder="Search by name or breed..."
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       <Separator />

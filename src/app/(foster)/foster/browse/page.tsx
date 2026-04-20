@@ -60,7 +60,8 @@ function parseFiltersFromParams(params: URLSearchParams): FilterState {
   const ages = params.get('ages')?.split(',').filter(Boolean) ?? []
   const gender = params.get('gender') || null
   const medicalOk = params.get('medicalOk') === '1'
-  return { sizes, ages, gender, medicalOk }
+  const search = params.get('q') ?? ''
+  return { sizes, ages, gender, medicalOk, search }
 }
 
 function filtersToParams(filters: FilterState): string {
@@ -69,6 +70,7 @@ function filtersToParams(filters: FilterState): string {
   if (filters.ages.length > 0) params.set('ages', filters.ages.join(','))
   if (filters.gender) params.set('gender', filters.gender)
   if (filters.medicalOk) params.set('medicalOk', '1')
+  if (filters.search.trim()) params.set('q', filters.search.trim())
   return params.toString()
 }
 
@@ -145,19 +147,28 @@ export default function BrowsePage() {
     fetchDogs()
   }, [])
 
-  const filteredDogs = useMemo(() => dogs.filter((dog) => {
-    if (filters.sizes.length > 0 && dog.size && !filters.sizes.includes(dog.size)) return false
-    if (filters.ages.length > 0 && dog.age && !filters.ages.includes(dog.age)) return false
-    if (filters.gender && dog.gender !== filters.gender) return false
-    if (!filters.medicalOk && dog.special_needs) return false
-    return true
-  }), [dogs, filters])
+  const filteredDogs = useMemo(() => {
+    const q = filters.search.trim().toLowerCase()
+    return dogs.filter((dog) => {
+      if (filters.sizes.length > 0 && dog.size && !filters.sizes.includes(dog.size)) return false
+      if (filters.ages.length > 0 && dog.age && !filters.ages.includes(dog.age)) return false
+      if (filters.gender && dog.gender !== filters.gender) return false
+      if (!filters.medicalOk && dog.special_needs) return false
+      if (q) {
+        const name = dog.name?.toLowerCase() ?? ''
+        const breed = dog.breed?.toLowerCase() ?? ''
+        if (!name.includes(q) && !breed.includes(q)) return false
+      }
+      return true
+    })
+  }, [dogs, filters])
 
   const hasActiveFilters =
     filters.sizes.length > 0 ||
     filters.ages.length > 0 ||
     !!filters.gender ||
-    filters.medicalOk
+    filters.medicalOk ||
+    filters.search.trim().length > 0
 
   function removeSize(value: string) {
     handleFilterChange({ ...filters, sizes: filters.sizes.filter((s) => s !== value) })
@@ -170,6 +181,9 @@ export default function BrowsePage() {
   }
   function removeMedical() {
     handleFilterChange({ ...filters, medicalOk: false })
+  }
+  function removeSearch() {
+    handleFilterChange({ ...filters, search: '' })
   }
 
   return (
@@ -191,6 +205,17 @@ export default function BrowsePage() {
               <span className="text-sm text-muted-foreground mr-1">
                 {filteredDogs.length} dog{filteredDogs.length !== 1 ? 's' : ''} found
               </span>
+
+              {filters.search.trim() && (
+                <Badge variant="secondary" className="gap-1 pr-1">
+                  <span className="sr-only">Search: </span>
+                  &quot;{filters.search.trim()}&quot;
+                  <button onClick={removeSearch} className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5">
+                    <X className="h-3 w-3" />
+                    <span className="sr-only">Remove search filter</span>
+                  </button>
+                </Badge>
+              )}
 
               {filters.sizes.map((size) => (
                 <Badge key={`s-${size}`} variant="secondary" className="gap-1 pr-1">
@@ -275,7 +300,11 @@ export default function BrowsePage() {
         Filters
         {hasActiveFilters && (
           <span className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-primary text-xs font-semibold">
-            {filters.sizes.length + filters.ages.length + (filters.gender ? 1 : 0) + (filters.medicalOk ? 1 : 0)}
+            {filters.sizes.length +
+              filters.ages.length +
+              (filters.gender ? 1 : 0) +
+              (filters.medicalOk ? 1 : 0) +
+              (filters.search.trim() ? 1 : 0)}
           </span>
         )}
       </Button>

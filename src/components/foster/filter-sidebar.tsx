@@ -17,7 +17,17 @@ export interface FilterState {
   gender: string | null
   medicalOk: boolean
   search: string
+  /**
+   * Maximum shelter distance in miles. null = filter disabled. Range values
+   * above DISTANCE_UNLIMITED_THRESHOLD are also treated as "no limit" so
+   * the slider has a sane "∞" stop at the top.
+   */
+  maxDistance: number | null
 }
+
+export const DISTANCE_MIN = 5
+export const DISTANCE_MAX = 250
+export const DISTANCE_UNLIMITED_THRESHOLD = DISTANCE_MAX
 
 export const DEFAULT_FILTERS: FilterState = {
   sizes: [],
@@ -25,6 +35,7 @@ export const DEFAULT_FILTERS: FilterState = {
   gender: null,
   medicalOk: false,
   search: '',
+  maxDistance: null,
 }
 
 // ---------------------------------------------------------------------------
@@ -167,6 +178,45 @@ export function BrowseFilterForm({ filters, onFilterChange, idPrefix }: BrowseFi
         <Label htmlFor={`${idPrefix}medical`} className="font-normal cursor-pointer text-sm">
           Open to medical needs
         </Label>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Max distance</h3>
+          {filters.maxDistance !== null && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => updateFilters({ maxDistance: null })}
+              className="text-xs h-auto py-1"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+        <input
+          id={`${idPrefix}distance`}
+          type="range"
+          min={DISTANCE_MIN}
+          max={DISTANCE_MAX}
+          step={5}
+          value={filters.maxDistance ?? DISTANCE_MAX}
+          onChange={(e) => {
+            const raw = Number(e.target.value)
+            updateFilters({
+              maxDistance: raw >= DISTANCE_UNLIMITED_THRESHOLD ? null : raw,
+            })
+          }}
+          className="w-full accent-primary"
+          aria-label="Maximum shelter distance in miles"
+        />
+        <p className="text-xs text-muted-foreground">
+          {filters.maxDistance === null
+            ? 'No limit'
+            : `Within ${filters.maxDistance} ${filters.maxDistance === 1 ? 'mile' : 'miles'}`}
+        </p>
       </div>
     </div>
   )

@@ -119,6 +119,10 @@ export interface DogWithShelter extends Dog {
   shelter_avg_rating?: number | null
   /** Number of ratings that produced `shelter_avg_rating`. */
   shelter_rating_count?: number
+  /** Shelter coordinates, pulled through the browse join, so the client can
+   *  recompute distance when the foster's coords update without refetching. */
+  shelter_latitude?: number | null
+  shelter_longitude?: number | null
   distance_miles?: number
 }
 

@@ -24,4 +24,15 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  // tsconfig.json sets `jsx: "preserve"` so Next.js can own JSX
+  // compilation for the app build. Vite 7+ / Vitest 4 use oxc (not
+  // esbuild) for transforms, so we set the JSX runtime here rather
+  // than via `esbuild.jsx`. The `automatic` runtime matches Next's
+  // JSX output and lets email templates + future component tests
+  // load without touching the app-side tsconfig.
+  oxc: {
+    jsx: {
+      runtime: 'automatic',
+    },
+  },
 })

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE } from '@/lib/constants'
@@ -20,6 +21,7 @@ function SignUpForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,6 +31,11 @@ function SignUpForm() {
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+
+    if (!acceptTerms) {
+      setError('You must agree to the Terms of Service and Privacy Policy.')
       return
     }
 
@@ -63,6 +70,10 @@ function SignUpForm() {
   }
 
   async function handleGoogleSignUp() {
+    if (!acceptTerms) {
+      setError('You must agree to the Terms of Service and Privacy Policy.')
+      return
+    }
     if (DEV_MODE) {
       window.location.href = '/onboarding'
       return
@@ -131,7 +142,38 @@ function SignUpForm() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <div className="flex items-start gap-2 pt-1">
+              <Checkbox
+                id="accept-terms"
+                checked={acceptTerms}
+                onCheckedChange={(checked) => setAcceptTerms(checked === true)}
+                className="mt-0.5"
+                aria-required="true"
+              />
+              <Label
+                htmlFor="accept-terms"
+                className="text-xs font-normal leading-snug text-muted-foreground"
+              >
+                I agree to the{' '}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Privacy Policy
+                </Link>
+                .
+              </Label>
+            </div>
+            <Button type="submit" className="w-full" disabled={loading || !acceptTerms}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</> : 'Create Account'}
             </Button>
           </form>
@@ -145,7 +187,12 @@ function SignUpForm() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full" onClick={handleGoogleSignUp}>
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignUp}
+            disabled={!acceptTerms}
+          >
             Continue with Google
           </Button>
 

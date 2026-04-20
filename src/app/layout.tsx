@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 import { Toaster } from '@/components/ui/sonner'
+import { validateEnv } from '@/lib/env'
 import './globals.css'
+
+validateEnv()
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-display' })

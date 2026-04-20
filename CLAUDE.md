@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Design Context (READ FIRST for any visual work)
+
+**Visual decisions are governed by [`.impeccable.md`](./.impeccable.md) at the project root.** Every font choice, color token, motion decision, and aesthetic direction lives there — including the three locked design principles (restraint over richness, calm contrast, typography leads), the three-pastel palette with per-color product meanings, the Source Serif 4 + Switzer typography pair, and the "no fake metrics / How-It-Works is the trust signal" product stance.
+
+Do NOT re-derive the visual direction from the code, the handoffs, or the roadmap — those describe what was built, not what the product should feel like. If `.impeccable.md` conflicts with anything in this file, `.impeccable.md` wins for the visual decision.
+
+The "Design system & UI" subsection below documents the **pre-redesign** warm-amber palette that still lives in `src/app/globals.css` at the time of writing; the migration to the `.impeccable.md` direction is tracked as upcoming work.
+
 ## Commands
 
 ```bash

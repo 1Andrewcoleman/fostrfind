@@ -15,8 +15,19 @@
  */
 
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -45,6 +56,11 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  // Delete-account confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const isOAuthUser = authProvider !== null && authProvider !== 'email'
 
@@ -103,7 +119,42 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
     setConfirmPassword('')
   }
 
+  async function handleAccountDelete() {
+    if (deleteConfirmation !== 'DELETE') {
+      toast.error('Type DELETE to confirm.')
+      return
+    }
+    if (DEV_MODE) {
+      toast.error('Account deletion is disabled in DEV_MODE.')
+      return
+    }
+    setIsDeleting(true)
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE' }),
+      })
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(payload.error ?? 'Failed to delete account.')
+        setIsDeleting(false)
+        return
+      }
+      toast.success('Account deleted. Signing you out…')
+      // Best-effort local cleanup; the server route already signed out the
+      // cookie-bound client, but this also wipes the in-memory browser
+      // client state before the hard nav.
+      await supabase.auth.signOut().catch(() => undefined)
+      window.location.href = '/'
+    } catch {
+      toast.error('Failed to delete account. Please try again.')
+      setIsDeleting(false)
+    }
+  }
+
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <CardTitle>Account</CardTitle>
@@ -191,5 +242,72 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
         )}
       </CardContent>
     </Card>
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Danger zone
+          </CardTitle>
+          <CardDescription>
+            Deleting your account cancels any active applications and
+            anonymises your profile. Completed placements stay in
+            history for audit purposes. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={(open) => {
+              setDeleteDialogOpen(open)
+              if (!open) setDeleteConfirmation('')
+            }}
+          >
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">Delete my account</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will immediately sign you out and remove your ability
+                  to log in. Active applications will be marked as declined
+                  so shelters / fosters you&apos;re connected with aren&apos;t
+                  left hanging.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-2">
+                <Label htmlFor="delete-confirm" className="text-sm">
+                  Type <span className="font-mono font-semibold">DELETE</span> to confirm
+                </Label>
+                <Input
+                  id="delete-confirm"
+                  value={deleteConfirmation}
+                  onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  spellCheck={false}
+                  placeholder="DELETE"
+                />
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={isDeleting || deleteConfirmation !== 'DELETE'}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    void handleAccountDelete()
+                  }}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Delete account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+    </div>
   )
 }

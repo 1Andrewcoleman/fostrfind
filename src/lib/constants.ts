@@ -58,3 +58,11 @@ export const DOG_STATUS_LABELS: Record<string, string> = {
 }
 
 export const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+
+/**
+ * Placeholder support address surfaced on error boundaries. Swap for a
+ * real inbox before public launch — the domain is intentionally `.local`
+ * so an accidental `mailto:` click in dev won't try to reach a real
+ * mailbox.
+ */
+export const SUPPORT_EMAIL = 'support@fostrfix.local'

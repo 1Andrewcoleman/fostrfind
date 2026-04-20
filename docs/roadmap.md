@@ -2163,12 +2163,66 @@ export const metadata: Metadata = {
 
 ---
 
+## Phase 6: Discovery, Trust & Safety (Backlog)
+
+> **Status:** Not scheduled — ideas captured **2026-04-20** (product owners). Pick up after Phase 5-b follow-ups (or in parallel where independent). When the first item is implemented, split this section into numbered **`Step 46+`** entries with the same rigor as earlier phases (files, pitfalls, verification).
+>
+> **Design guardrail:** `.impeccable.md` bans placeholder metrics. Any feature that surfaces **counts** to end users (e.g. save counts, “popular” badges) must use **real** aggregates from the database — never invented numbers for social proof.
+
+### 6.1 Shelter discovery — search listings by shelter name
+
+**Intent:** Fosters can narrow **dog listings** to a **specific shelter** by name (or jump to that shelter’s dogs).
+
+**Relationship to existing work:** **Step 13** (browse text search) filters by **dog name and breed** only. This extends browse with a shelter dimension: e.g. `FilterState.shelterQuery` matching nested `shelters.name` (client-side with current architecture) or a dedicated param + server query later. **Step 16** already exposes `/shelters/[slug]` — optional complement: a lightweight **shelter directory** page (`/shelters` index) with search + link to profile + “view their dogs” CTA.
+
+### 6.2 Shelter-side foster directory & history
+
+**Intent:** Shelters can **search fosters** they have worked with and see **history** (past applications, completed placements, notes) for quick lookup without digging through every application row.
+
+**Relationship to existing work:** New surface — likely a `/shelter/fosters` (or “Past fosters”) area backed by `applications` + `foster_parents` joins scoped to `shelter_id`, with filters (name, status = completed, last interaction). Respect **privacy**: only fosters who have **interacted** with that shelter appear; no global foster search.
+
+### 6.3 Share a dog — social & messaging
+
+**Intent:** From **dog detail** (and optionally browse card overflow), **Share** opens system share sheet / copies a **canonical URL** (`/foster/dog/[id]` or public landing with OG tags) suitable for **SMS, iMessage, and social apps**.
+
+**Relationship to existing work:** New UX — prefer **`navigator.share`** where available, fallback to **copy link** + toast. Coordinate with metadata/OG work (Phase 5-b follow-up: `og:image`) so shared links preview well.
+
+### 6.4 Mutual reporting — foster ↔ shelter
+
+**Intent:** Both parties can **report** the other (safety, harassment, misrepresentation, no-show, etc.) with a structured form; staff triage via an **admin/review queue** (could start as email + spreadsheet before a full admin app).
+
+**Relationship to existing work:** New — likely `reports` table (`reporter_user_id`, `subject_type` foster|shelter, `subject_id`, `application_id` optional, `category`, `body`, `status`), RLS so reporters read only their own rows, service-role or admin role for triage. **Policy/legal**: align copy with Terms; consider rate limits (**Step 30** pattern).
+
+### 6.5 Saved dogs (“favorites”) + shelter-visible save counts
+
+**Intent:** Fosters **save** animals for later; shelters see **how many saves** each dog has (aggregate only — not who saved unless policy says otherwise).
+
+**Relationship to existing work:** New table e.g. `dog_saves (foster_id, dog_id, saved_at)` with `UNIQUE(foster_id, dog_id)`, RLS for insert/delete/select own; shelter reads **count** via policy or RPC scoped to their `shelter_id`. UI: heart icon on dog detail + “Saved” list under foster nav.
+
+### 6.6 Map view — shelters in search radius (later)
+
+**Intent:** Fosters see **shelters on a map** within their **distance filter** / radius, not only a list.
+
+**Relationship to existing work:** **Step 22** ships **distance-based list** filtering + haversine; **Deferred Follow-ups Log** (2026-04-19, Step 22) already notes **no live geocoding pipeline** — map UX depends on reliable `latitude`/`longitude` on fosters and shelters. Defer until geocoding is production-ready; then add map component (Mapbox/Google) on browse or a dedicated tab, reusing the same radius constraint.
+
+### 6.7 Verification playbook — users & shelters
+
+**Intent:** Single coherent story for **who is verified** and **how**.
+
+**Relationship to existing work:**
+- **Email verification:** **Step 7** (`/auth/verify-email`, resend, DEV_MODE skip).
+- **Shelter verification (`is_verified`):** already in **Remaining Items** + [TODO.md §22](./TODO.md#22-two-way-trust--ratings) — request flow, admin queue, badge on listings.
+- **Foster identity / trust tier (open product question):** optional future — government ID, background-check partner, or “verified after N completed placements” — **not specified**; needs legal/product decision before implementation.
+
+---
+
 ## Remaining Items (Not Yet Scheduled)
 
 These are larger features that can be tackled after the above phases, in any order:
 
 | Item | TODO ref | Notes |
 |------|----------|-------|
+| Phase 6 — Discovery, trust & safety backlog | [§27](./TODO.md#27-phase-6-backlog-mirror) | Structured in **Phase 6** above (shelter search, foster directory, share, reports, saves, map, verification synthesis) |
 | Shelter verification workflow | [§22](./TODO.md#22-two-way-trust--ratings) | Needs admin interface — significant scope |
 | Multi-staff shelter access | [§23](./TODO.md#23-collaboration--scale) | New table, invitation flow, permission system |
 | In-app notification center | [§23](./TODO.md#23-collaboration--scale) | New table, bell UI, event triggers |
@@ -2325,4 +2379,4 @@ These were scoped into the Phase 5-b plan but intentionally deferred from Commit
 | **Phase 5: Polish** | Steps 37–38 shipped (then restyled under 5-b); Steps 39–45 folded into 5-b follow-ups | Partial, superseded |
 | **Phase 5-b: Visual Migration & Landing Redesign** | Commits 0–7 | **Complete (7/7)** ✅ |
 
-**Last updated:** 2026-04-20 (Phase 5-b complete, session 3)
+**Last updated:** 2026-04-20 (Phase 5-b complete, session 3; **Phase 6 backlog** added — discovery, trust, saves, share, map, verification)

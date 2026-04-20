@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { DogForm } from '@/components/shelter/dog-form'
+
+export const metadata: Metadata = { title: 'Add New Dog' }
 
 export default function NewDogPage() {
   return (

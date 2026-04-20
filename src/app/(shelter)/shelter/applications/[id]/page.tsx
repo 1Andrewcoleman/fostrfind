@@ -1,6 +1,33 @@
+import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, MessageCircle } from 'lucide-react'
+
+/**
+ * Dynamic tab title — "<First Last>'s application" — so shelter staff
+ * can skim between multiple open detail tabs. Must never throw; falls
+ * back to a generic title on any error path.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string }
+}): Promise<Metadata> {
+  if (DEV_MODE) return { title: 'Application' }
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('applications')
+      .select('foster:foster_parents(first_name, last_name)')
+      .eq('id', params.id)
+      .maybeSingle()
+    const foster = data?.foster as { first_name?: string; last_name?: string } | null
+    const name = `${foster?.first_name ?? ''} ${foster?.last_name ?? ''}`.trim()
+    return { title: name ? `${name}'s Application` : 'Application' }
+  } catch {
+    return { title: 'Application' }
+  }
+}
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'

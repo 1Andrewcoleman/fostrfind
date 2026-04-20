@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, RotateCcw, Home } from 'lucide-react'
+import { AlertTriangle, RotateCcw, LayoutDashboard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 
@@ -11,9 +11,15 @@ interface ErrorPageProps {
   reset: () => void
 }
 
-export default function ErrorPage({ error, reset }: ErrorPageProps) {
+/**
+ * Error boundary for the shelter portal route group. Same design as
+ * the foster boundary — self-contained (rendered without the sidebar
+ * layout), warm palette, static copy, digest-only reference. Diverges
+ * only in the recovery CTA, which sends staff back to their dashboard.
+ */
+export default function ShelterErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    console.error('[error-boundary:root]', {
+    console.error('[error-boundary:shelter]', {
       message: error.message,
       digest: error.digest,
     })
@@ -26,11 +32,11 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           <AlertTriangle className="h-7 w-7 text-destructive" aria-hidden="true" />
         </div>
         <h1 className="font-display text-2xl font-bold text-foreground">
-          Something went wrong
+          We hit a snag loading this page
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          An unexpected error occurred. Try again — if the problem keeps
-          happening, our support team can help.
+          Something on our side didn&apos;t cooperate. Try again, or head
+          back to your dashboard while we sort it out.
         </p>
         {error.digest && (
           <p className="mt-4 text-xs text-muted-foreground">
@@ -43,14 +49,14 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             Try again
           </Button>
           <Button asChild variant="outline" className="gap-2">
-            <Link href="/">
-              <Home className="h-4 w-4" aria-hidden="true" />
-              Go home
+            <Link href="/shelter/dashboard">
+              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+              Back to dashboard
             </Link>
           </Button>
         </div>
         <p className="mt-6 text-xs text-muted-foreground">
-          Need help?{' '}
+          Still stuck?{' '}
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
             className="font-medium text-primary underline-offset-4 hover:underline"

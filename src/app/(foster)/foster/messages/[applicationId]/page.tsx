@@ -1,7 +1,10 @@
+import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { MessageThread } from '@/components/messages/message-thread'
+
+export const metadata: Metadata = { title: 'Thread' }
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'

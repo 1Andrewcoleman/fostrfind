@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterSettingsForm } from '@/components/shelter/shelter-settings-form'
+import { AccountSettingsForm } from '@/components/account-settings-form'
 import { DEV_MODE } from '@/lib/constants'
 import type { Shelter } from '@/types/database'
 
@@ -26,6 +27,8 @@ const DEV_SHELTER: Shelter = {
 
 export default async function ShelterSettingsPage(): Promise<React.JSX.Element> {
   let shelterData: Shelter | null = null
+  let currentEmail = 'you@example.com'
+  let authProvider: string | null = null
 
   if (DEV_MODE) {
     shelterData = DEV_SHELTER
@@ -38,6 +41,9 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
     if (!user) {
       redirect('/login')
     }
+
+    currentEmail = user.email ?? 'unknown'
+    authProvider = (user.app_metadata?.provider as string | undefined) ?? null
 
     const { data } = await supabase
       .from('shelters')
@@ -56,6 +62,7 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
     <div className="max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
       <ShelterSettingsForm initialData={shelterData} />
+      <AccountSettingsForm currentEmail={currentEmail} authProvider={authProvider} />
     </div>
   )
 }

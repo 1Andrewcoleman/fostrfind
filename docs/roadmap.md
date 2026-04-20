@@ -2031,6 +2031,8 @@ export const metadata: Metadata = {
 
 **Commit:** `feat: landing page hero redesign with social proof (§25b)`
 
+**Status:** ✅ Shipped 2026-04-20 (session 3) — asymmetric 7/5 hero with curated Unsplash portrait, layered warm radial washes + SVG grain, eyebrow "Open for new fosters" chip, display-italic primary accent on "Save a life.", floating 4.9-rating trust card, 3-stat social-proof bar (pilot-network caveat under the numbers).
+
 ---
 
 ### Step 38: Landing Page — How It Works + Footer
@@ -2233,6 +2235,8 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-20 | Step 35 | `generateMetadata` in shelter app-detail + dog edit does its own Supabase fetch — duplicates the page's query | acceptable | Next's current App Router doesn't expose a "cache the page data for metadata" primitive short of React `cache()`. The pages themselves already hit their own query; the metadata hit is identical and both are `.maybeSingle()` so the penalty is one extra in-flight DB call per SSR. If it ever hurts, wrap the fetch in `React.cache` and share between `generateMetadata` + the page default export. |
 | 2026-04-20 | Step 36 (Error Boundaries) | No Sentry / observability integration — errors only go to `console.error` with `[error-boundary:root|foster|shelter]` prefix | Remaining Items (Error tracking) | Already listed in Remaining Items. The prefixed console path is compatible with whatever ingestion adapter lands later — just swap the `useEffect` log for a Sentry `captureException(error, { tags: { scope: 'foster' } })`. |
 | 2026-04-20 | Step 36 | `SUPPORT_EMAIL` in `src/lib/constants.ts` is placeholder (`support@fostrfix.local`) | ops / pre-launch | Domain is intentionally `.local` so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — every error boundary's "Contact support" CTA flows through this single constant. |
+| 2026-04-20 | Step 37 (Hero Redesign) | Social-proof stat numbers (2,400+ / 180+ / 4.9) are placeholder pilot-network figures | Remaining Items (Analytics) | Labeled "Based on our pilot network of early partner shelters." below the grid so they don't read as fabricated analytics. Swap to real counts once analytics (PostHog/Mixpanel) lands and we have production data to source from. Numbers live as the `STATS` array at the top of `src/app/page.tsx`. |
+| 2026-04-20 | Step 37 (Hero Redesign) | Hero photograph is a hardcoded Unsplash URL (`photo-1583337130417-3346a1be7dee`) | unscheduled — brand assets | Stable CDN image but not owned by us. Pre-public-launch brand work should commission or license an exclusive hero photo and replace `HERO_IMAGE_SRC` at the top of `src/app/page.tsx`. The `next/image` frame aspect is fixed at 4/5 so a replacement just needs matching dimensions. |
 
 ---
 

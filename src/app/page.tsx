@@ -22,7 +22,11 @@ const STATS = [
 // How-It-Works step definitions. Accent maps to a tint pair: the top
 // strip uses the solid token; the icon tile uses the /10 opacity variant
 // so each card reads as a coordinated block of color without shouting.
-type StepAccent = 'warm' | 'sage' | 'primary'
+// Accent is a role-token from the tri-pastel palette (see `.impeccable.md`).
+// Commit 4 will re-map these to the canonical product meanings
+// (peach = shelter, butter/primary = foster, sage/warm = placement); for now
+// the goal of Commit 1 is only to stop referencing the dropped chart tokens.
+type StepAccent = 'warm' | 'peach' | 'primary'
 interface HowItWorksStep {
   title: string
   body: string
@@ -40,7 +44,7 @@ const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: 'Fosters browse & apply',
     body: 'Foster parents search by location, size, age, and temperament — then apply with a personal note.',
     Icon: Search,
-    accent: 'sage',
+    accent: 'peach',
   },
   {
     title: 'Dogs find homes',
@@ -51,9 +55,9 @@ const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
 ]
 
 const ACCENT_CLASSES: Record<StepAccent, { strip: string; tile: string; icon: string; dot: string }> = {
-  warm:    { strip: 'bg-warm',           tile: 'bg-warm/10',          icon: 'text-warm-foreground',    dot: 'bg-warm' },
-  sage:    { strip: 'bg-chart-2/70',     tile: 'bg-chart-2/10',       icon: 'text-chart-2',            dot: 'bg-chart-2/80' },
-  primary: { strip: 'bg-primary',        tile: 'bg-primary/10',       icon: 'text-primary',            dot: 'bg-primary' },
+  warm:    { strip: 'bg-warm',    tile: 'bg-warm/15',    icon: 'text-foreground', dot: 'bg-warm' },
+  peach:   { strip: 'bg-peach',   tile: 'bg-peach/15',   icon: 'text-foreground', dot: 'bg-peach' },
+  primary: { strip: 'bg-primary', tile: 'bg-primary/15', icon: 'text-foreground', dot: 'bg-primary' },
 }
 
 export default function LandingPage() {
@@ -65,7 +69,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-display font-extrabold text-lg tracking-tight">
-            <PawPrint className="h-6 w-6 text-warm" aria-hidden="true" />
+            <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
             Fostr Fix
           </Link>
           <div className="flex gap-2">

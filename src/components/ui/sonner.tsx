@@ -30,14 +30,19 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast:
             "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg group-[.toaster]:rounded-lg",
+          // Status tints borrow from the three-pastel palette where the
+          // semantic map is clean: sage (--warm) for success, destructive
+          // token for error. Warning and info stay as muted neutrals rather
+          // than inventing a fourth brand pastel — see `.impeccable.md`
+          // principle 4 ("three pastels, each with a job").
           success:
-            "group-[.toaster]:!border-green-200 group-[.toaster]:!bg-green-50 group-[.toaster]:!text-green-900",
+            "group-[.toaster]:!border-warm/40 group-[.toaster]:!bg-warm/15 group-[.toaster]:!text-foreground",
           error:
-            "group-[.toaster]:!border-red-200 group-[.toaster]:!bg-red-50 group-[.toaster]:!text-red-900",
+            "group-[.toaster]:!border-destructive/40 group-[.toaster]:!bg-destructive/10 group-[.toaster]:!text-foreground",
           warning:
-            "group-[.toaster]:!border-amber-200 group-[.toaster]:!bg-amber-50 group-[.toaster]:!text-amber-900",
+            "group-[.toaster]:!border-peach/50 group-[.toaster]:!bg-peach/20 group-[.toaster]:!text-foreground",
           info:
-            "group-[.toaster]:!border-sky-200 group-[.toaster]:!bg-sky-50 group-[.toaster]:!text-sky-900",
+            "group-[.toaster]:!border-border group-[.toaster]:!bg-muted group-[.toaster]:!text-foreground",
           description: "group-[.toast]:text-muted-foreground",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",

@@ -2,64 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens — OKLCH tri-pastel palette.
+ *
+ * See `.impeccable.md` for the full rationale. Short version:
+ * --primary      = butter-yellow   (brand / foster-side / primary CTA)
+ * --warm         = sage            (success / placements / verified)
+ * --accent-peach = peach           (shelter-side / pending states)
+ *
+ * Tokens are stored as OKLCH component triples (lightness, chroma, hue)
+ * and composed via oklch(var(--token) / <alpha-value>) in tailwind.config.
+ * Public pages are light-only. Dark mode is deferred to the portals
+ * redesign (Phase 5-b Commit 6).
+ */
+
 @layer base {
   :root {
-    --background: 30 20% 99%;
-    --foreground: 25 40% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 25 40% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 25 40% 10%;
-    --primary: 25 55% 30%;
-    --primary-foreground: 36 50% 97%;
-    --secondary: 30 20% 95%;
-    --secondary-foreground: 25 40% 15%;
-    --muted: 30 25% 95%;
-    --muted-foreground: 25 15% 42%;
-    --accent: 30 30% 93%;
-    --accent-foreground: 25 40% 15%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 30 18% 88%;
-    --input: 30 18% 88%;
-    --ring: 25 55% 35%;
-    --warm: 36 90% 55%;
-    --warm-foreground: 25 55% 18%;
-    --radius: 0.75rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-  }
+    /* Surfaces */
+    --background:             97.5% 0.010 80;   /* bone */
+    --foreground:             26%   0.025 250;  /* soft ink-navy */
+    --card:                   99%   0.006 80;
+    --card-foreground:        26%   0.025 250;
+    --popover:                99%   0.006 80;
+    --popover-foreground:     26%   0.025 250;
 
-  .dark {
-    --background: 25 30% 7%;
-    --foreground: 30 15% 92%;
-    --card: 25 25% 10%;
-    --card-foreground: 30 15% 92%;
-    --popover: 25 25% 10%;
-    --popover-foreground: 30 15% 92%;
-    --primary: 36 75% 58%;
-    --primary-foreground: 25 40% 10%;
-    --secondary: 25 20% 14%;
-    --secondary-foreground: 30 15% 90%;
-    --muted: 25 20% 14%;
-    --muted-foreground: 25 12% 60%;
-    --accent: 25 18% 16%;
-    --accent-foreground: 30 15% 90%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 25 15% 18%;
-    --input: 25 15% 18%;
-    --ring: 36 70% 50%;
-    --warm: 36 80% 50%;
-    --warm-foreground: 25 30% 8%;
-    --chart-1: 30 80% 55%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 220 70% 50%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    /* Neutrals */
+    --muted:                  95%   0.010 80;
+    --muted-foreground:       55%   0.020 250;
+    --border:                 90%   0.008 80;
+    --input:                  90%   0.008 80;
+    --secondary:              95%   0.010 80;
+    --secondary-foreground:   26%   0.025 250;
+    --accent:                 93%   0.015 80;
+    --accent-foreground:      26%   0.025 250;
+
+    /* Three pastels — each has a fixed product meaning. */
+    --primary:                85%   0.070 85;   /* butter-yellow  */
+    --primary-foreground:     26%   0.025 250;
+    --warm:                   82%   0.050 155;  /* sage */
+    --warm-foreground:        26%   0.025 250;
+    --accent-peach:           84%   0.060 35;   /* peach */
+    --accent-peach-foreground: 26%  0.025 250;
+
+    /* Status */
+    --destructive:            62%   0.140 25;
+    --destructive-foreground: 99%   0.006 80;
+
+    --ring:                   85%   0.070 85;   /* matches primary */
+    --radius:                 0.625rem;
   }
 }
 
@@ -67,7 +57,12 @@
   * {
     @apply border-border;
   }
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
 }

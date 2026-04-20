@@ -8,7 +8,7 @@ export default function ShelterProfileLoading(): React.JSX.Element {
         <Skeleton className="h-8 w-32" />
 
         <Card className="overflow-hidden">
-          <div className="h-24 bg-gradient-to-br from-warm/30 to-primary/20" />
+          <div className="h-24 bg-peach/30" />
           <div className="p-6 md:p-8 -mt-12 md:-mt-16 space-y-6">
             <div className="flex flex-col md:flex-row md:items-end gap-4">
               <Skeleton className="h-24 w-24 md:h-28 md:w-28 rounded-full ring-4 ring-background" />

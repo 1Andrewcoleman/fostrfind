@@ -25,7 +25,7 @@ export function PublicFooter() {
               href="/"
               className="inline-flex items-center gap-2 font-display font-extrabold text-lg tracking-tight"
             >
-              <PawPrint className="h-6 w-6 text-warm" aria-hidden="true" />
+              <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
               Fostr Fix
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
@@ -36,7 +36,7 @@ export function PublicFooter() {
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
                 aria-label={`Email support at ${SUPPORT_EMAIL}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:border-warm/60 hover:text-warm-foreground hover:bg-warm/10"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground hover:bg-primary/15"
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
               </a>
@@ -69,7 +69,7 @@ export function PublicFooter() {
           <span>&copy; {year} Fostr Fix. All rights reserved.</span>
           <span className="inline-flex items-center gap-1.5">
             Built with
-            <PawPrint className="h-3.5 w-3.5 text-warm" aria-hidden="true" />
+            <PawPrint className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
             for dogs.
           </span>
         </div>

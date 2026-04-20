@@ -24,7 +24,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
           {/* ── Desktop sidebar ── */}
           <aside className="hidden md:flex w-60 flex-col border-r bg-background">
             <div className="flex items-center gap-2.5 px-6 h-16 border-b font-display font-bold text-lg">
-              <PawPrint className="h-6 w-6 text-warm" />
+              <PawPrint className="h-6 w-6 text-primary" />
               Fostr Fix
             </div>
             <nav className="flex-1 py-4 px-3 space-y-1">
@@ -45,7 +45,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
             <header className="flex md:hidden items-center gap-3 px-4 h-14 border-b bg-background sticky top-0 z-50">
               <MobileNav portal="shelter" portalLabel="Shelter Portal" unreadMessages={unreadMessages} identity={identity} />
               <div className="flex items-center gap-2 font-display font-bold text-base">
-                <PawPrint className="h-5 w-5 text-warm" />
+                <PawPrint className="h-5 w-5 text-primary" />
                 Fostr Fix
               </div>
             </header>

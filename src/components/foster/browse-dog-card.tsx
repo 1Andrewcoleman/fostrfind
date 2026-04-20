@@ -24,8 +24,8 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
             className="object-cover object-top"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-warm/20 to-primary/10">
-            <PawPrint className="h-12 w-12 text-warm/50" />
+          <div className="flex h-full items-center justify-center bg-primary/15">
+            <PawPrint className="h-12 w-12 text-foreground/40" />
           </div>
         )}
         {dog.special_needs && (

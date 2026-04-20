@@ -1918,6 +1918,8 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 
 **Commit:** `chore: add environment variable validation on startup (§15)`
 
+**Status:** ✅ Complete (2026-04-20) — `7586f9c`. `src/lib/env.ts` splits required vars into `BACKEND_VARS` (Supabase URL + anon key, always required outside DEV_MODE) and `PROD_VARS` (service role, Resend key/from, app URL — only required in production). Throws in production, warns in dev. Called once at module scope in `src/app/layout.tsx`.
+
 ---
 
 ### Step 32: Seed Script
@@ -1931,6 +1933,8 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 **Seed data:** Create realistic test data for all 6 tables — 3 shelters, 10 dogs, 5 foster parents, 15 applications (various statuses), 30 messages, 5 ratings. Use Supabase service role client to bypass RLS.
 
 **Commit:** `chore: add development seed script (§15)`
+
+**Status:** ✅ Complete (2026-04-20) — `d541c8f`. Replaced `scripts/seed-demo-data.mjs` with a TypeScript `scripts/seed.ts` that creates 3 shelters, 5 foster parents, 10 dogs, 15 applications (all five statuses), 30 messages, and 5 ratings. Safety-guarded behind `SEED_I_UNDERSTAND=1` + a `seed-` prefix on every email/slug so `--reset` can only target seeded rows. `tsx` added as a devDep; `npm run seed` script wired.
 
 ---
 
@@ -1950,6 +1954,8 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 
 **Commit:** `chore: add Vitest setup and helper unit tests (§15)`
 
+**Status:** ✅ Complete (2026-04-20) — `99440f3`. Vitest 4 + `vitest.config.ts` (node env, `@/*` alias mirroring tsconfig, `oxc.jsx.runtime: 'automatic'` so `.tsx` email templates parse). `helpers.test.ts` covers `formatDate`, `formatDateShort`, `formatRelativeTime` (fake timers), `getInitials`, `slugify`, `calculateAverageRating`, `haversineMiles`, `pluralize`, `getGreeting`. `auth-routing.test.ts` covers every `getPostAuthDestination` branch via a hand-rolled Supabase mock. React Testing Library + jsdom env deferred — add when component tests land.
+
 ---
 
 ### Step 34: API Route Tests
@@ -1966,6 +1972,8 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 **Test approach:** Mock Supabase client, test auth checks, ownership verification, idempotency guards, and error handling.
 
 **Commit:** `test: add API route tests for critical endpoints (§15)`
+
+**Status:** ✅ Complete (2026-04-20) — `05acc4c`. Covers `/api/applications/[id]/accept`, `/decline`, `/complete`, `/api/ratings`, `DELETE /api/dogs/[id]` — every branch: auth service 503, unauthorized 401, rate-limit 429, not-found 404, forbidden 403, idempotency 409, RPC / update / insert 500, happy-path 200, and email-send omission when recipient is null. Shared `src/lib/__tests__/supabase-mock.ts` (thenable chain + rpc/update/insert/delete) + mocks for `rate-limit` + `email`. Zod v4's strict UUIDv4 tripped test fixtures once — `APP_ID` now uses a valid v4 UUID.
 
 ---
 
@@ -1988,6 +1996,8 @@ export const metadata: Metadata = {
 
 **Commit:** `chore: add page metadata for SEO (§26)`
 
+**Status:** ✅ Complete (2026-04-20) — `0ec1c80`. Portal layouts own a `title.template` (`%s — Fostr Fix`) so nested server pages export short titles. Foster + shelter server pages (dashboard, applications, history, messages, profile, dogs list, dogs new, settings) export static `metadata.title`. Dynamic routes use `generateMetadata` — shelter application detail renders `<Name>'s Application`, shelter dog edit renders `Edit <Dog Name>`. Client-only foster pages (`/foster/browse`, `/foster/dog/[id]`) got sibling server `layout.tsx` files so they can carry metadata without losing `'use client'`. All dynamic paths short-circuit in DEV_MODE and swallow errors to a generic default — `generateMetadata` must never throw. OpenGraph / Twitter cards / sitemap still deferred.
+
 ---
 
 ### Step 36: Error Boundary Improvements
@@ -1999,6 +2009,8 @@ export const metadata: Metadata = {
 - Create `src/app/(foster)/error.tsx` and `src/app/(shelter)/error.tsx` — portal-specific error boundaries
 
 **Commit:** `fix: improve error boundaries with retry and context (§15)`
+
+**Status:** ✅ Complete (2026-04-20) — `5a39b78`. `src/app/error.tsx` redesigned with warm-palette card, `AlertTriangle` accent, reference-ID (digest) surfaced to the user, "Try again" + "Go home" CTAs, and a `mailto:` to `SUPPORT_EMAIL` (new constant in `src/lib/constants.ts`, placeholder `.local` domain). Added `(foster)/error.tsx` (retry + "Back to browse") and `(shelter)/error.tsx` (retry + "Back to dashboard"), each with its own themed copy. Logs go through `console.error('[error-boundary:root|foster|shelter]', { message, digest })` — no Sentry / observability integration yet.
 
 ---
 
@@ -2210,6 +2222,17 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-20 | Step 30 (Rate Limiting) | Rate limit store is an in-process `Map` keyed by `user.id`/IP | Phase 4 Infrastructure | Works on a single Next.js server process but does NOT survive serverless cold starts or multi-region deploys. When we move to Vercel/Supabase Edge or run >1 instance, swap for Upstash Redis or a Supabase `rate_limits` table with `SECURITY DEFINER` RPC. Current caps are conservative so pre-launch scale is fine. |
 | 2026-04-20 | Step 30 (Input Sanitization) | `sanitizeText` / `sanitizeMultiline` are regex-based tag strippers, not a real HTML sanitizer | Phase 5 Polish / security | Good for plaintext fields (messages, notes, bios) because we never render user-authored HTML. If we ever introduce Markdown/rich-text rendering for bios or descriptions, switch to DOMPurify (client) / `sanitize-html` (server) with an allowlist. |
 | 2026-04-20 | Phase 3 wrap | Supabase auth built-in rate limits not tuned | Phase 4 Infrastructure | Supabase defaults throttle sign-in / sign-up / password reset at ~4–30 per hour per IP, which is adequate for MVP. Before public launch, audit `auth.rate_limit.*` settings in the Supabase dashboard and set them explicitly (`email_sent`, `sign_up`, `sign_in`, `token_refresh`) — document them in this file once set. |
+| 2026-04-20 | Step 31 (Env Validation) | `src/lib/env.ts` uses presence-only checks — no Zod schema for URL format / key shape | Phase 5 Polish / observability | Good enough to catch missing vars on boot. Doesn't catch (e.g.) a truncated Supabase URL, a Resend key that isn't `re_*`, or an app URL without a scheme. If a config mistake ever ships to prod undetected, upgrade to a `zod.object({...}).parse(process.env)` call and surface specific field errors. |
+| 2026-04-20 | Step 32 (Seed Script) | Seed does not create Supabase Storage objects — dog photos / avatars / logos are placeholder public URLs | unscheduled — dev-UX | `scripts/seed.ts` populates rows only. The app renders unsplash URLs for dog photos and `null` avatars/logos fine, but image-upload flows can't be exercised end-to-end against seeded data. If we want a realistic upload-path demo, extend the seed to POST dummy PNGs to the `dog-photos` / `avatars` / `shelter-logos` buckets via the admin client. |
+| 2026-04-20 | Step 32 | Re-running `npm run seed` without `--reset` will fail on `UNIQUE(user_id)` / `UNIQUE(dog_id, foster_id)` constraints | acceptable | The happy-path is `npm run seed -- --reset` (or just `--reset` on first run after the Phase 3 unique constraints ship). Documented in the script's top-of-file comment; not going to add an upsert path because it would mask genuine seed mismatches. |
+| 2026-04-20 | Step 33 (Test Setup) | React Testing Library + jsdom env not wired — no component tests yet | Phase 5 Polish | `vitest.config.ts` is pinned to `environment: 'node'` because every test so far is either a pure helper or a Route Handler (which runs in Node at runtime). When component tests land, add `@testing-library/react` + `@testing-library/jest-dom` + `jsdom`, and switch to a per-file environment directive (`// @vitest-environment jsdom`) rather than flipping the default — we don't want helper tests paying for a DOM. |
+| 2026-04-20 | Step 33 | No test coverage reporter / thresholds configured | Phase 5 Polish / CI | Works for dev's "did I break something" signal. Before CI lands (Remaining Items), wire `vitest run --coverage`, set a floor (e.g. 60% lines on `src/lib/**`), and fail the run below it. |
+| 2026-04-20 | Step 34 (API Route Tests) | Coverage is only 5 routes: accept / decline / complete / ratings / dogs-delete | Phase 5 Polish / CI | Deliberately the most sensitive routes (state transitions + destructive action). Still untested: `/api/applications/[id]/review`, `/withdraw`, `/api/dogs/[id]/status` (PATCH), `/api/account/delete`, `/api/upload/photo`, `/api/notifications/send`. The `supabase-mock.ts` helper + email / rate-limit mock pattern drop-in to each. Schedule alongside CI so the suite gets meaningful gating. |
+| 2026-04-20 | Step 34 | Supabase mock is hand-rolled; not msw or a typed Supabase test client | acceptable | A "thenable chain" that proxies common methods covered every test we wrote. Adding `msw` would let us write closer-to-integration tests (network-level mocking) but also pulls in Node's `undici` for fetch polyfills. Revisit if/when route tests start tripping on Supabase client internals. |
+| 2026-04-20 | Step 35 (Metadata / SEO) | Only `title` set — no `description`, `openGraph`, `twitter`, `og:image`, `sitemap.xml`, `robots.txt` | Phase 5 Polish | Tab titles were the immediate asked-for payoff. Social previews matter once the landing page hero redesign (Step 37) is actually shareable. Next.js 14 App Router ships `generateSitemap()` + `generateMetadata()` cleanly; coordinate both passes so we don't redo the asset pipeline twice. |
+| 2026-04-20 | Step 35 | `generateMetadata` in shelter app-detail + dog edit does its own Supabase fetch — duplicates the page's query | acceptable | Next's current App Router doesn't expose a "cache the page data for metadata" primitive short of React `cache()`. The pages themselves already hit their own query; the metadata hit is identical and both are `.maybeSingle()` so the penalty is one extra in-flight DB call per SSR. If it ever hurts, wrap the fetch in `React.cache` and share between `generateMetadata` + the page default export. |
+| 2026-04-20 | Step 36 (Error Boundaries) | No Sentry / observability integration — errors only go to `console.error` with `[error-boundary:root|foster|shelter]` prefix | Remaining Items (Error tracking) | Already listed in Remaining Items. The prefixed console path is compatible with whatever ingestion adapter lands later — just swap the `useEffect` log for a Sentry `captureException(error, { tags: { scope: 'foster' } })`. |
+| 2026-04-20 | Step 36 | `SUPPORT_EMAIL` in `src/lib/constants.ts` is placeholder (`support@fostrfix.local`) | ops / pre-launch | Domain is intentionally `.local` so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — every error boundary's "Contact support" CTA flows through this single constant. |
 
 ---
 
@@ -2220,7 +2243,7 @@ These are larger features that can be tackled after the above phases, in any ord
 | **Phase 1: Core Features** | Steps 1–12 | **Complete (12/12)** ✅ |
 | **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
 | **Phase 3: Hardening** | Steps 23–30 | **Complete (8/8)** ✅ |
-| **Phase 4: Infrastructure** | Steps 31–36 | Not started |
+| **Phase 4: Infrastructure** | Steps 31–36 | **Complete (6/6)** ✅ |
 | **Phase 5: Polish** | Steps 37–45 | Not started |
 
-**Last updated:** 2026-04-20
+**Last updated:** 2026-04-20 (Phase 4 complete)

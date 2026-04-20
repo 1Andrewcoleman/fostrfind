@@ -290,7 +290,11 @@ export default function BrowsePage() {
     let cancelled = false
     async function load() {
       const supabase = createClient()
-      const { data: userData } = await supabase.auth.getUser()
+      const { data: userData, error: authError } = await supabase.auth.getUser()
+      if (authError) {
+        console.error('[foster/browse] getUser failed:', authError.message)
+        return
+      }
       const userId = userData.user?.id
       if (!userId) return
       const { data: foster } = await supabase

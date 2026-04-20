@@ -1445,6 +1445,7 @@ Returns distance in miles.
 ---
 
 ### Step 23: Database Indexes
+**Status:** ✅ Complete (2026-04-19)
 **TODO ref:** [§26 RED — Database indexes](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 30–45 minutes
 
@@ -1488,6 +1489,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_shelters_slug ON public.shelters(slug);
 ---
 
 ### Step 24: Atomic Status Transitions
+**Status:** ✅ Complete (2026-04-19) — scope expanded to cover `relist_dog` alongside accept/complete.
 **TODO ref:** [§26 RED — Atomic status transitions](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 1.5–2 hours
 
@@ -1544,6 +1546,7 @@ const { error } = await supabase.rpc('accept_application', { app_id: params.id }
 ---
 
 ### Step 25: Unique Constraints + Application RLS
+**Status:** ✅ Complete (2026-04-19) — migration 20240111000000 authored + RLS policy surgery on `applications` INSERT. User must apply the migration + run `scripts/phase-3-step-25-preflight.sql` before migration.
 **TODO ref:** [§26 RED — Unique constraints, RLS](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 1 hour
 
@@ -1596,6 +1599,7 @@ CREATE POLICY "can only apply to available dogs"
 ---
 
 ### Step 26: getUser() Error Handling Audit
+**Status:** ✅ Complete (2026-04-19) — all ~20 call sites audited; server components throw + ErrorPanel, client components `toast.error` + redirect, API routes 503 on service err / 401 on no user.
 **TODO ref:** [§26 RED — getUser() error handling](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 1.5–2 hours
 
@@ -1642,6 +1646,7 @@ grep -rn "getUser()" src/ --include="*.tsx" --include="*.ts" | grep -v "error"
 ---
 
 ### Step 27: Server Page Error Handling
+**Status:** ✅ Complete (2026-04-19) — `ServerErrorPanel`, `isNextControlFlowError`, every portal server page wrapped, `.single()` → `.maybeSingle()` for identity lookups.
 **TODO ref:** [§26 RED — Server page error handling](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 1.5–2 hours
 
@@ -1705,6 +1710,7 @@ if (fetchError) {
 ---
 
 ### Step 28: Message Thread Auth + Profile Form Validation
+**Status:** ✅ Complete (2026-04-19) — explicit `foster_id`/`shelter_id` filters on thread pages; Zod schemas shared in `src/lib/schemas.ts`; auth pages fully migrated to RHF + zodResolver; foster profile + shelter settings use `safeParse` + inline errors (full RHF migration deferred).
 **TODO ref:** [§26 ORANGE — Message thread auth, Profile form validation](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 1.5–2 hours
 
@@ -1762,6 +1768,7 @@ Wire with `react-hook-form` + `zodResolver` (already used in `dog-form.tsx`).
 ---
 
 ### Step 29: Error Message Sanitization + Image Domain Config
+**Status:** ✅ Complete (2026-04-20) — `describeAuthError` mapper, `app/error.tsx` static copy + console logging, raw `error.message` surfaces replaced everywhere, `next.config.mjs` image `remotePatterns` confirmed scoped (`images.unsplash.com` + `*.supabase.co|in`).
 **TODO ref:** [§26 ORANGE — Sanitize error messages, Image domain config](./TODO.md#26-pre-launch-hardening)
 **Estimated time:** 45 minutes–1 hour
 
@@ -1803,6 +1810,7 @@ Confirm `next.config.mjs` has `images.remotePatterns` for Supabase Storage.
 ---
 
 ### Step 30: Rate Limiting + Input Sanitization
+**Status:** ✅ Complete (2026-04-20) — in-memory `rateLimit()` + `rateLimitResponse()` applied to every API route; `sanitizeText` / `sanitizeMultiline` strip HTML-ish tags on message body, application note, shelter note, dog fields, profile/settings free text, ratings comments; message body hard-capped at 4000 chars.
 **TODO ref:** [§13 — Security](./TODO.md#13-security--edge-cases) (items 1-2)
 **Estimated time:** 1.5–2 hours
 
@@ -2198,6 +2206,10 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-19 | Step 22 (Distance Filter) | Filter is client-side and operates only over currently-loaded dogs | Phase 3 / §27 | Same shape as Step 13's text search — a foster who wants "within 10 miles" with only 24 dogs loaded might see 0 matches even though matches exist further in the feed. The SQL `distance_miles()` function ships alongside to unblock a future server-side filter move. |
 | 2026-04-19 | Step 22 | Permissive distance filter lets unknown-distance dogs through | intentional | If a foster or shelter has no geocode, every dog for that pair has `distance_miles = undefined` and passes the slider. This is the right call for MVP (better false-positives than silent hides), but once geocoding is a required onboarding step the filter can tighten to reject unknown. Captured so the design intent isn't lost. |
 | 2026-04-19 | Step 22 | No live geocoding pipeline for addresses | Phase 3 / §31 infrastructure | `foster_parents.latitude/longitude` and `shelters.latitude/longitude` have to be populated manually today; onboarding captures location text but doesn't geocode it. The distance slider works fine for demo data with seeded coords, but launch needs an onboarding-side Mapbox/Google geocoding call (or a Supabase Edge Function trigger). |
+| 2026-04-20 | Step 28 (Profile Form Validation) | Foster profile + shelter settings use `safeParse` + manual error state instead of full `react-hook-form` integration | Phase 5 Polish | Custom avatar/logo upload fields, tri-state checkboxes, and multi-select preference arrays didn't map cleanly onto RHF without a bigger refactor. Hybrid approach (Zod schema shared, manual `setErrors` map) ships equivalent UX; future polish can unify under RHF. |
+| 2026-04-20 | Step 30 (Rate Limiting) | Rate limit store is an in-process `Map` keyed by `user.id`/IP | Phase 4 Infrastructure | Works on a single Next.js server process but does NOT survive serverless cold starts or multi-region deploys. When we move to Vercel/Supabase Edge or run >1 instance, swap for Upstash Redis or a Supabase `rate_limits` table with `SECURITY DEFINER` RPC. Current caps are conservative so pre-launch scale is fine. |
+| 2026-04-20 | Step 30 (Input Sanitization) | `sanitizeText` / `sanitizeMultiline` are regex-based tag strippers, not a real HTML sanitizer | Phase 5 Polish / security | Good for plaintext fields (messages, notes, bios) because we never render user-authored HTML. If we ever introduce Markdown/rich-text rendering for bios or descriptions, switch to DOMPurify (client) / `sanitize-html` (server) with an allowlist. |
+| 2026-04-20 | Phase 3 wrap | Supabase auth built-in rate limits not tuned | Phase 4 Infrastructure | Supabase defaults throttle sign-in / sign-up / password reset at ~4–30 per hour per IP, which is adequate for MVP. Before public launch, audit `auth.rate_limit.*` settings in the Supabase dashboard and set them explicitly (`email_sent`, `sign_up`, `sign_in`, `token_refresh`) — document them in this file once set. |
 
 ---
 
@@ -2207,8 +2219,8 @@ These are larger features that can be tackled after the above phases, in any ord
 |-------|-------|--------|
 | **Phase 1: Core Features** | Steps 1–12 | **Complete (12/12)** ✅ |
 | **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
-| **Phase 3: Hardening** | Steps 23–30 | Not started |
+| **Phase 3: Hardening** | Steps 23–30 | **Complete (8/8)** ✅ |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |
 | **Phase 5: Polish** | Steps 37–45 | Not started |
 
-**Last updated:** 2026-04-19
+**Last updated:** 2026-04-20

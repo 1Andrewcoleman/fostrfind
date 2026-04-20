@@ -23,14 +23,19 @@ export async function getPortalIdentity(
 
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+    if (authError) {
+      console.error('[portal-identity] getUser failed:', authError.message)
+      return { displayName: 'Account', avatarUrl: null, roleLabel }
+    }
     if (!user) {
       return { displayName: 'Account', avatarUrl: null, roleLabel }
     }
 
     return getPortalIdentityForUser(portal, supabase, user)
-  } catch {
+  } catch (e) {
+    console.error('[portal-identity] identity fetch failed:', e instanceof Error ? e.message : String(e))
     return { displayName: 'Account', avatarUrl: null, roleLabel }
   }
 }

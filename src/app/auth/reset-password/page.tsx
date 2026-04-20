@@ -4,12 +4,15 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { PawPrint, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE } from '@/lib/constants'
+import { resetPasswordSchema, type ResetPasswordInput } from '@/lib/schemas'
 
 type RecoveryStatus = 'waiting' | 'ready' | 'expired' | 'dev-mode'
 
@@ -17,9 +20,16 @@ const WAIT_FOR_RECOVERY_MS = 5000
 
 export default function ResetPasswordPage() {
   const [status, setStatus] = useState<RecoveryStatus>(DEV_MODE ? 'dev-mode' : 'waiting')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { newPassword: '', confirmPassword: '' },
+  })
 
   useEffect(() => {
     if (DEV_MODE) return
@@ -47,22 +57,12 @@ export default function ResetPasswordPage() {
     }
   }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function onSubmit(values: ResetPasswordInput) {
     if (status !== 'ready') return
-
-    if (newPassword.length < 8) {
-      toast.error('Password must be at least 8 characters.')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match.')
-      return
-    }
 
     setLoading(true)
     const supabase = createClient()
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    const { error } = await supabase.auth.updateUser({ password: values.newPassword })
 
     if (error) {
       console.error('[reset-password] updateUser error:', error.message)
@@ -119,31 +119,35 @@ export default function ResetPasswordPage() {
           )}
 
           {status === 'ready' && (
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
               <div className="space-y-1">
                 <Label htmlFor="new-password">New password</Label>
                 <Input
                   id="new-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  minLength={8}
-                  required
+                  aria-invalid={errors.newPassword ? 'true' : undefined}
                   autoFocus
+                  {...register('newPassword')}
                 />
+                {errors.newPassword && (
+                  <p className="text-xs text-destructive">{errors.newPassword.message}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="confirm-password">Confirm new password</Label>
                 <Input
                   id="confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={8}
-                  required
+                  aria-invalid={errors.confirmPassword ? 'true' : undefined}
+                  {...register('confirmPassword')}
                 />
+                {errors.confirmPassword && (
+                  <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                )}
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (

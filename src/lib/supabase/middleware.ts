@@ -31,8 +31,14 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session — do not remove this line
-  await supabase.auth.getUser()
+  // Refresh session — do not remove this line. A failure here (auth
+  // service unavailable, transient DNS, etc.) must not crash every
+  // request, so we log and continue. Downstream RLS / guards will
+  // reject the request if the session truly isn't valid.
+  const { error: authError } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[middleware] getUser failed:', authError.message)
+  }
 
   return supabaseResponse
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /** Minimal shape of the joined application fetch used below. Typed
  *  narrowly so the email-payload field access stays lint-clean. */
@@ -14,7 +15,7 @@ interface AcceptedApplicationRow {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
   const supabase = await createClient()
@@ -22,11 +23,20 @@ export async function POST(
   // 1. Authenticate the caller
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
+  if (authError) {
+    console.error('[applications/accept] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Rate limit: 20 accept/min per shelter user.
+  const rl = rateLimit('applications:accept', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application with shelter ownership + data needed for the
   //    foster notification email, all in one round-trip.
@@ -54,24 +64,18 @@ export async function POST(
     )
   }
 
-  // 4. Update application status to accepted
-  const { error: updateError } = await supabase
-    .from('applications')
-    .update({ status: 'accepted' })
-    .eq('id', params.id)
+  // 4. Atomically flip application -> accepted AND dog -> pending.
+  //    The RPC wraps both UPDATEs in one Postgres function body so they
+  //    either both commit or both roll back. See migration
+  //    20240110000000_atomic_transitions.sql. The function is
+  //    SECURITY DEFINER, so auth + ownership + idempotency above are
+  //    still the authorization boundary.
+  const { error: rpcError } = await supabase.rpc('accept_application', {
+    app_id: params.id,
+  })
 
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
-  }
-
-  // 5. Set the dog's status to pending
-  const { error: dogError } = await supabase
-    .from('dogs')
-    .update({ status: 'pending' })
-    .eq('id', application.dog_id)
-
-  if (dogError) {
-    return NextResponse.json({ error: 'Application accepted but failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to accept application' }, { status: 500 })
   }
 
   // 6. Fire-and-forget: notify the foster that they were accepted.

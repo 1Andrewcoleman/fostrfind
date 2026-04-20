@@ -4,9 +4,11 @@ import { MessageCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/empty-state'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { RelativeTime } from '@/components/relative-time'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { Message } from '@/types/database'
 
 interface RawApplicationRow {
@@ -64,42 +66,58 @@ export default async function ShelterMessagesPage() {
     )
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  let threads: ThreadSummary[] = []
+  let fetchError = false
 
-  const { data: shelterRow } = await supabase
-    .from('shelters')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-  if (!shelterRow) redirect('/onboarding')
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError) throw authError
+    if (!user) redirect('/login')
 
-  const { data: raw } = await supabase
-    .from('applications')
-    .select(
-      'id, status, dog:dogs(name), foster:foster_parents(first_name, last_name), messages(id, body, created_at, read, sender_role)',
-    )
-    .eq('shelter_id', shelterRow.id)
-    .in('status', ['accepted', 'completed'])
-    .order('created_at', { ascending: false })
+    const { data: shelterRow, error: shelterError } = await supabase
+      .from('shelters')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (shelterError) throw shelterError
+    if (!shelterRow) redirect('/onboarding')
 
-  const threads: ThreadSummary[] = ((raw ?? []) as unknown as RawApplicationRow[])
-    .map(toThreadSummary)
-    .sort((a, b) => {
-      // Threads with messages float to the top, sorted by most-recent message
-      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0
-      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0
-      return bTime - aTime
-    })
+    const { data: raw, error: rawError } = await supabase
+      .from('applications')
+      .select(
+        'id, status, dog:dogs(name), foster:foster_parents(first_name, last_name), messages(id, body, created_at, read, sender_role)',
+      )
+      .eq('shelter_id', shelterRow.id)
+      .in('status', ['accepted', 'completed'])
+      .order('created_at', { ascending: false })
+
+    if (rawError) throw rawError
+
+    threads = ((raw ?? []) as unknown as RawApplicationRow[])
+      .map(toThreadSummary)
+      .sort((a, b) => {
+        // Threads with messages float to the top, sorted by most-recent message
+        const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0
+        const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0
+        return bTime - aTime
+      })
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error('[shelter/messages] load failed:', e instanceof Error ? e.message : String(e))
+    fetchError = true
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold">Messages</h1>
 
-      {threads.length === 0 ? (
+      {fetchError ? (
+        <ServerErrorPanel />
+      ) : threads.length === 0 ? (
         <EmptyState
           title="No message threads yet"
           description="Messaging opens automatically when you accept a foster application."

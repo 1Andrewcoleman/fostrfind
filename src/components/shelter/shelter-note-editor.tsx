@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeMultiline } from '@/lib/sanitize'
 
 interface ShelterNoteEditorProps {
   applicationId: string
@@ -22,12 +23,14 @@ export function ShelterNoteEditor({ applicationId, initialNote }: ShelterNoteEdi
     try {
       const supabase = createClient()
 
+      const cleanNote = sanitizeMultiline(note)
       const { error } = await supabase
         .from('applications')
-        .update({ shelter_note: note || null })
+        .update({ shelter_note: cleanNote || null })
         .eq('id', applicationId)
 
       if (error) {
+        console.error('[shelter-note] update failed:', error.message)
         toast.error('Failed to save note. Please try again.')
         return
       }

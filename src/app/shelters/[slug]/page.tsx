@@ -8,9 +8,11 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { BrowseDogCard } from '@/components/foster/browse-dog-card'
 import { EmptyState } from '@/components/empty-state'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { calculateAverageRating, getInitials } from '@/lib/helpers'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { Dog, DogWithShelter, Shelter } from '@/types/database'
 
 interface PageProps {
@@ -58,12 +60,14 @@ const PLACEHOLDER_SHELTERS: Record<string, Shelter> = {
   },
 }
 
-async function loadShelterBySlug(slug: string): Promise<{
+interface ShelterPayload {
   shelter: Shelter
   dogs: DogWithShelter[]
   avgRating: number | null
   ratingCount: number
-} | null> {
+}
+
+async function loadShelterBySlug(slug: string): Promise<ShelterPayload | null> {
   if (DEV_MODE) {
     const shelter = PLACEHOLDER_SHELTERS[slug]
     if (!shelter) return null
@@ -71,12 +75,13 @@ async function loadShelterBySlug(slug: string): Promise<{
   }
 
   const supabase = await createClient()
-  const { data: shelter } = await supabase
+  const { data: shelter, error: shelterError } = await supabase
     .from('shelters')
     .select('*')
     .eq('slug', slug)
     .maybeSingle()
 
+  if (shelterError) throw shelterError
   if (!shelter) return null
 
   const [dogsRes, ratingsRes] = await Promise.all([
@@ -91,6 +96,9 @@ async function loadShelterBySlug(slug: string): Promise<{
       .select('score')
       .eq('shelter_id', shelter.id),
   ])
+
+  if (dogsRes.error) throw dogsRes.error
+  if (ratingsRes.error) throw ratingsRes.error
 
   const dogs: DogWithShelter[] = ((dogsRes.data ?? []) as Dog[]).map((dog) => ({
     ...dog,
@@ -107,17 +115,23 @@ async function loadShelterBySlug(slug: string): Promise<{
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const payload = await loadShelterBySlug(params.slug)
-  if (!payload) {
-    return { title: 'Shelter not found | Fostr Fix' }
-  }
-  const { shelter } = payload
-  const description = shelter.bio
-    ? shelter.bio.slice(0, 155)
-    : `${shelter.name} is a partner shelter on Fostr Fix.`
-  return {
-    title: `${shelter.name} | Fostr Fix`,
-    description,
+  try {
+    const payload = await loadShelterBySlug(params.slug)
+    if (!payload) {
+      return { title: 'Shelter not found | Fostr Fix' }
+    }
+    const { shelter } = payload
+    const description = shelter.bio
+      ? shelter.bio.slice(0, 155)
+      : `${shelter.name} is a partner shelter on Fostr Fix.`
+    return {
+      title: `${shelter.name} | Fostr Fix`,
+      description,
+    }
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error('[shelters/:slug metadata] load failed:', e instanceof Error ? e.message : String(e))
+    return { title: 'Fostr Fix' }
   }
 }
 
@@ -131,8 +145,36 @@ function normalizeWebsiteUrl(raw: string): string {
 }
 
 export default async function ShelterProfilePage({ params }: PageProps): Promise<React.JSX.Element> {
-  const payload = await loadShelterBySlug(params.slug)
-  if (!payload) notFound()
+  let payload: ShelterPayload | null = null
+  let fetchError = false
+
+  try {
+    payload = await loadShelterBySlug(params.slug)
+    if (!payload) notFound()
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error('[shelters/:slug] load failed:', e instanceof Error ? e.message : String(e))
+    fetchError = true
+  }
+
+  if (fetchError || !payload) {
+    return (
+      <div className="min-h-screen bg-muted/30">
+        <div className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12 space-y-8">
+          <div>
+            <Button asChild variant="ghost" size="sm" className="-ml-2 gap-1">
+              <Link href="/foster/browse">
+                <ArrowLeft className="h-4 w-4" />
+                Back to browse
+              </Link>
+            </Button>
+          </div>
+          <ServerErrorPanel />
+        </div>
+      </div>
+    )
+  }
+
   const { shelter, dogs, avgRating, ratingCount } = payload
 
   const instagramHandle = shelter.instagram ? normalizeInstagramHandle(shelter.instagram) : null

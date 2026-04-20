@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { PlacementCompletedEmail } from '@/emails/placement-completed'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 interface CompletedApplicationRow {
   status: string
@@ -20,11 +21,19 @@ export async function POST(
   // 1. Authenticate the caller
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
+  if (authError) {
+    console.error('[applications/complete] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('applications:complete', user.id, { limit: 10, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application + ownership + both parties' contact info in one hop
   const { data: application, error: fetchError } = await supabase
@@ -51,24 +60,16 @@ export async function POST(
     )
   }
 
-  // 4. Update application status to completed
-  const { error: updateError } = await supabase
-    .from('applications')
-    .update({ status: 'completed' })
-    .eq('id', params.id)
+  // 4. Atomically flip application -> completed AND dog -> placed.
+  //    The RPC wraps both UPDATEs in one Postgres function body so they
+  //    either both commit or both roll back. See migration
+  //    20240110000000_atomic_transitions.sql.
+  const { error: rpcError } = await supabase.rpc('complete_application', {
+    app_id: params.id,
+  })
 
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update application' }, { status: 500 })
-  }
-
-  // 5. Set the dog's status to placed
-  const { error: dogError } = await supabase
-    .from('dogs')
-    .update({ status: 'placed' })
-    .eq('id', application.dog_id)
-
-  if (dogError) {
-    return NextResponse.json({ error: 'Application completed but failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to complete application' }, { status: 500 })
   }
 
   // 6. Fire-and-forget: notify BOTH parties. Copy is identical; the

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { PortalIdentity } from '@/types/portal'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -108,16 +109,21 @@ export async function getPortalLayoutData(
     return { unreadMessages: 0, identity: DEV_IDENTITY[portal] }
   }
 
+  // A layout render can't fail the whole page for a transient auth or
+  // query hiccup — the layout wraps every (shelter)/(foster) route, so
+  // any uncaught throw here would replace the portal with error.tsx. We
+  // fall back to an unauthenticated-looking identity on error and let
+  // RoleGuard / individual pages re-check and redirect.
   try {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+    if (authError) {
+      console.error('[portal-layout-data] getUser failed:', authError.message)
+      return fallbackLayoutData(portal)
+    }
     if (!user) {
-      const roleLabel = portal === 'shelter' ? 'Shelter' as const : 'Foster' as const
-      return {
-        unreadMessages: 0,
-        identity: { displayName: 'Account', avatarUrl: null, roleLabel },
-      }
+      return fallbackLayoutData(portal)
     }
 
     const [unreadMessages, identity] = await Promise.all([
@@ -126,11 +132,20 @@ export async function getPortalLayoutData(
     ])
 
     return { unreadMessages, identity }
-  } catch {
-    const roleLabel = portal === 'shelter' ? 'Shelter' as const : 'Foster' as const
-    return {
-      unreadMessages: 0,
-      identity: { displayName: 'Account', avatarUrl: null, roleLabel },
-    }
+  } catch (e) {
+    // Re-throw Next control-flow errors (redirect / notFound / dynamic
+    // server usage during build-time static analysis) so Next can do its
+    // thing instead of us swallowing them into a generic fallback.
+    if (isNextControlFlowError(e)) throw e
+    console.error('[portal-layout-data] layout fetch failed:', e instanceof Error ? e.message : String(e))
+    return fallbackLayoutData(portal)
+  }
+}
+
+function fallbackLayoutData(portal: 'shelter' | 'foster'): PortalLayoutData {
+  const roleLabel = portal === 'shelter' ? 'Shelter' as const : 'Foster' as const
+  return {
+    unreadMessages: 0,
+    identity: { displayName: 'Account', avatarUrl: null, roleLabel },
   }
 }

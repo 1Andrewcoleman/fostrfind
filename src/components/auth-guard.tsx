@@ -10,8 +10,9 @@ export async function AuthGuard({ children }: AuthGuardProps) {
   if (DEV_MODE) return <>{children}</>
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+  if (authError) throw authError
   if (!user) {
     redirect('/login')
   }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * Foster withdrawal of their own application.
@@ -18,11 +19,19 @@ export async function POST(
   // 1. Authenticate the caller
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
+  if (authError) {
+    console.error('[applications/withdraw] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('applications:withdraw', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application and verify FOSTER ownership (not shelter — this is the foster's action)
   const { data: application, error: fetchError } = await supabase

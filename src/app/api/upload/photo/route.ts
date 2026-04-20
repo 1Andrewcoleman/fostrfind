@@ -7,6 +7,7 @@ import {
   validateBucketName,
   validateImageFile,
 } from '@/lib/storage'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * POST /api/upload/photo
@@ -36,10 +37,21 @@ export async function POST(request: Request): Promise<NextResponse> {
   const supabase = await createClient()
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[upload/photo] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Uploads are expensive (bandwidth + storage writes). Cap at 30 per
+  // minute per user — enough for realistic profile/dog onboarding flows
+  // but well below what a script could exfiltrate our storage quota with.
+  const rl = rateLimit('upload:photo', user.id, { limit: 30, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   let formData: FormData
   try {

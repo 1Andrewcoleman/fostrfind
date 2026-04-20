@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * PATCH /api/dogs/[id]/status
@@ -29,10 +30,18 @@ export async function PATCH(
   // 1. Authenticate
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[dogs/status] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('dogs:status', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch dog + verify shelter ownership
   const { data: dog, error: fetchError } = await supabase
@@ -83,29 +92,18 @@ export async function PATCH(
     )
   }
 
-  // 6. Decline any accepted application(s) for this dog, so the lifecycle
-  //    stays consistent. Placement fell through → foster is no longer accepted.
-  const { error: declineError } = await supabase
-    .from('applications')
-    .update({ status: 'declined' })
-    .eq('dog_id', params.id)
-    .eq('status', 'accepted')
+  // 6. Atomically decline any accepted application for this dog AND set
+  //    the dog back to available. The RPC wraps both UPDATEs in one
+  //    Postgres function body so the placement-falls-through lifecycle
+  //    stays consistent even if the second UPDATE would have failed
+  //    under the old sequential model. See migration
+  //    20240110000000_atomic_transitions.sql.
+  const { error: rpcError } = await supabase.rpc('relist_dog', {
+    p_dog_id: params.id,
+  })
 
-  if (declineError) {
-    return NextResponse.json(
-      { error: 'Failed to clean up associated application' },
-      { status: 500 },
-    )
-  }
-
-  // 7. Update dog status to available
-  const { error: updateError } = await supabase
-    .from('dogs')
-    .update({ status: 'available' })
-    .eq('id', params.id)
-
-  if (updateError) {
-    return NextResponse.json({ error: 'Failed to update dog status' }, { status: 500 })
+  if (rpcError) {
+    return NextResponse.json({ error: 'Failed to re-list dog' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true, dogId: params.id })

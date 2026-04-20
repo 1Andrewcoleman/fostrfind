@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { Dog } from '@/types/database'
+import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import {
   ALLOWED_IMAGE_TYPES,
   DEV_MODE,
@@ -206,7 +207,12 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
     }
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('[dog-form] getUser failed:', authError.message)
+      setSubmitError('Could not verify your session. Please sign in again.')
+      return
+    }
     if (!user) { setSubmitError('You must be logged in.'); return }
 
     const { data: shelterRow } = await supabase
@@ -231,16 +237,20 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
 
     const photos = [...existingPhotos, ...uploadedUrls]
 
+    // Strip any HTML-ish content from free-text fields. Multiline on
+    // description (paragraphs matter); single-line on temperament /
+    // medical / special_needs so stray newlines don't stretch cards.
     const payload = {
       ...values,
-      breed: values.breed || null,
+      name: sanitizeText(values.name),
+      breed: values.breed ? sanitizeText(values.breed) || null : null,
       age: values.age || null,
       size: values.size || null,
       gender: values.gender || null,
-      temperament: values.temperament || null,
-      medical_status: values.medical_status || null,
-      special_needs: values.special_needs || null,
-      description: values.description || null,
+      temperament: values.temperament ? sanitizeText(values.temperament) || null : null,
+      medical_status: values.medical_status ? sanitizeText(values.medical_status) || null : null,
+      special_needs: values.special_needs ? sanitizeText(values.special_needs) || null : null,
+      description: values.description ? sanitizeMultiline(values.description) || null : null,
       photos,
     }
 
@@ -249,13 +259,21 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
         shelter_id: shelterRow.id,
         ...payload,
       })
-      if (error) { setSubmitError(error.message); return }
+      if (error) {
+        console.error('[dog-form] create failed:', error.message)
+        setSubmitError('Could not save this dog. Please try again.')
+        return
+      }
     } else {
       const { error } = await supabase
         .from('dogs')
         .update(payload)
         .eq('id', dogId!)
-      if (error) { setSubmitError(error.message); return }
+      if (error) {
+        console.error('[dog-form] update failed:', error.message)
+        setSubmitError('Could not save this dog. Please try again.')
+        return
+      }
     }
 
     router.push('/shelter/dogs')

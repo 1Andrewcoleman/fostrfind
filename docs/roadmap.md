@@ -954,6 +954,7 @@ void sendEmail({
 ---
 
 ### Step 13: Browse — Text/Keyword Search
+**Status:** ✅ Shipped 2026-04-19 — `0cccf83`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (first item)
 **Estimated time:** 1–1.5 hours
 
@@ -1003,6 +1004,7 @@ void sendEmail({
 ---
 
 ### Step 14: Browse — Pre-populate Filters from Foster Preferences
+**Status:** ✅ Shipped 2026-04-19 — `f6ccd98`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (second item)
 **Estimated time:** 45 minutes–1 hour
 
@@ -1054,6 +1056,7 @@ void sendEmail({
 ---
 
 ### Step 15: Browse — Pagination
+**Status:** ✅ Shipped 2026-04-19 — `757a6ee`
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (fourth item), [§3 item 4](./TODO.md#3-browse--search-foster-side)
 **Estimated time:** 1.5–2 hours
 
@@ -1090,6 +1093,7 @@ void sendEmail({
 ---
 
 ### Step 16: Public Shelter Profile Page
+**Status:** ✅ Shipped 2026-04-19 — `3954c35` (URL deviated to `/shelters/[slug]`, plural; see Deferred Log)
 **TODO ref:** [§20 — Browse & Discovery Gaps](./TODO.md#20-browse--discovery-gaps) (third item)
 **Estimated time:** 1.5–2 hours
 
@@ -1131,6 +1135,7 @@ void sendEmail({
 ---
 
 ### Step 17: Realtime Messaging
+**Status:** ✅ Shipped 2026-04-19 — `b13e0bf`
 **TODO ref:** [§6 — Messaging](./TODO.md#6-messaging) (fifth item)
 **Estimated time:** 2–2.5 hours
 
@@ -1196,6 +1201,7 @@ void sendEmail({
 ---
 
 ### Step 18: Account Settings — Password + Email Change
+**Status:** ✅ Shipped 2026-04-19 — `06aebd4`
 **TODO ref:** [§21 — Account Settings](./TODO.md#21-account-settings) (first two items)
 **Estimated time:** 1.5–2 hours
 
@@ -1233,6 +1239,7 @@ Two sections:
 ---
 
 ### Step 19: Account Deletion
+**Status:** ✅ Shipped 2026-04-19 — `4263873` (note: commit message tags §21; it implements §19)
 **TODO ref:** [§21 — Account Settings](./TODO.md#21-account-settings) (third item)
 **Estimated time:** 1.5–2 hours
 
@@ -1274,6 +1281,7 @@ Two sections:
 ---
 
 ### Step 20: Two-Way Trust — Foster-to-Shelter Ratings
+**Status:** ✅ Shipped 2026-04-19 — `7df342d`
 **TODO ref:** [§22 — Two-Way Trust & Ratings](./TODO.md#22-two-way-trust--ratings) (first item)
 **Estimated time:** 2–2.5 hours
 
@@ -1338,6 +1346,7 @@ On completed applications in the foster applications list, show "Rate Shelter" b
 ---
 
 ### Step 21: Legal Pages + Terms Acceptance
+**Status:** ✅ Shipped 2026-04-19 — `5c415ea`
 **TODO ref:** [§24 — Legal & Compliance](./TODO.md#24-legal--compliance)
 **Estimated time:** 1–1.5 hours
 
@@ -1373,6 +1382,7 @@ On completed applications in the foster applications list, show "Rate Shelter" b
 ---
 
 ### Step 22: Distance-Based Search
+**Status:** ✅ Shipped 2026-04-19 — `7ff7bb8`
 **TODO ref:** [§3 item 3](./TODO.md#3-browse--search-foster-side), [§20](./TODO.md#20-browse--discovery-gaps)
 **Estimated time:** 2–2.5 hours
 

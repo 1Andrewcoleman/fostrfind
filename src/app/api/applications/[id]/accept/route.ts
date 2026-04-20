@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /** Minimal shape of the joined application fetch used below. Typed
  *  narrowly so the email-payload field access stays lint-clean. */
@@ -14,7 +15,7 @@ interface AcceptedApplicationRow {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } },
 ): Promise<NextResponse> {
   const supabase = await createClient()
@@ -32,6 +33,10 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Rate limit: 20 accept/min per shelter user.
+  const rl = rateLimit('applications:accept', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application with shelter ownership + data needed for the
   //    foster notification email, all in one round-trip.

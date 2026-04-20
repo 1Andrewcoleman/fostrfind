@@ -4,20 +4,30 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PawPrint, Loader2, MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE } from '@/lib/constants'
+import { forgotPasswordSchema, type ForgotPasswordInput } from '@/lib/schemas'
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordInput>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: '' },
+  })
+
+  async function onSubmit(values: ForgotPasswordInput) {
     setLoading(true)
 
     if (DEV_MODE) {
@@ -27,7 +37,7 @@ export default function ForgotPasswordPage() {
     }
 
     const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
       // The target page must be listed in Supabase Dashboard →
       // Authentication → URL Configuration → Redirect URLs. Using
       // window.location.origin lets the flow work in local dev and
@@ -66,18 +76,21 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {!submitted && (
-            <form onSubmit={handleSubmit} className="space-y-3">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
               <div className="space-y-1">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
+                  aria-invalid={errors.email ? 'true' : undefined}
                   autoFocus
+                  {...register('email')}
                 />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email.message}</p>
+                )}
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (

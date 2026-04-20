@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PawPrint, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,17 +13,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { createClient } from '@/lib/supabase/client'
 import { getPostAuthDestination } from '@/lib/auth-routing'
 import { DEV_MODE } from '@/lib/constants'
+import { loginSchema, type LoginInput } from '@/lib/schemas'
+import { describeAuthError } from '@/lib/auth-errors'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  async function handleSignIn(e: React.FormEvent) {
-    e.preventDefault()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
+
+  async function onSubmit(values: LoginInput) {
+    setSubmitError(null)
     setLoading(true)
-    setError(null)
 
     if (DEV_MODE) {
       window.location.href = '/shelter/dashboard'
@@ -29,11 +39,16 @@ export default function LoginPage() {
     }
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({
+      email: values.email,
+      password: values.password,
+    })
 
     if (error) {
-      setError(error.message)
-      toast.error(error.message)
+      console.error('[login] signInWithPassword failed:', error.message)
+      const copy = describeAuthError(error, 'Could not sign you in. Please try again.')
+      setSubmitError(copy)
+      toast.error(copy)
       setLoading(false)
       return
     }
@@ -72,23 +87,26 @@ export default function LoginPage() {
           <CardDescription>Sign in to your Fostr Fix account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error && (
+          {submitError && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
-              {error}
+              {submitError}
             </p>
           )}
 
-          <form onSubmit={handleSignIn} className="space-y-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                aria-invalid={errors.email ? 'true' : undefined}
+                {...register('email')}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
@@ -103,11 +121,14 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                aria-invalid={errors.password ? 'true' : undefined}
+                {...register('password')}
               />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</> : 'Sign In'}

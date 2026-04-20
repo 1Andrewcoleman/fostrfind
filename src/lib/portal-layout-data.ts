@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { PortalIdentity } from '@/types/portal'
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
@@ -132,6 +133,10 @@ export async function getPortalLayoutData(
 
     return { unreadMessages, identity }
   } catch (e) {
+    // Re-throw Next control-flow errors (redirect / notFound / dynamic
+    // server usage during build-time static analysis) so Next can do its
+    // thing instead of us swallowing them into a generic fallback.
+    if (isNextControlFlowError(e)) throw e
     console.error('[portal-layout-data] layout fetch failed:', e instanceof Error ? e.message : String(e))
     return fallbackLayoutData(portal)
   }

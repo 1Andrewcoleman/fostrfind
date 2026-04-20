@@ -4,12 +4,14 @@ import { ChevronLeft, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { FosterProfileView } from '@/components/shelter/foster-profile-view'
 import { AcceptDeclineButtons } from '@/components/shelter/accept-decline-buttons'
 import { ShelterNoteEditor } from '@/components/shelter/shelter-note-editor'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/helpers'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails, Rating } from '@/types/database'
 
 interface ApplicationDetailPageProps {
@@ -30,48 +32,69 @@ export default async function ApplicationDetailPage({
     )
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
+  let app: ApplicationWithDetails | null = null
+  let ratings: Rating[] = []
+  let fetchError = false
 
-  if (authError) throw authError
-  if (!user) {
-    redirect('/login')
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError) throw authError
+    if (!user) redirect('/login')
+
+    const { data: application, error: applicationError } = await supabase
+      .from('applications')
+      .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+      .eq('id', params.id)
+      .single()
+
+    if (applicationError) throw applicationError
+    if (!application) notFound()
+
+    app = application as ApplicationWithDetails
+
+    // Verify the current user owns this shelter
+    if (app.shelter.user_id !== user.id) redirect('/shelter/applications')
+
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from('ratings')
+      .select('*')
+      .eq('foster_id', app.foster.id)
+      .order('created_at', { ascending: false })
+
+    if (ratingsError) throw ratingsError
+    ratings = (ratingsData ?? []) as Rating[]
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error('[shelter/applications/:id] load failed:', e instanceof Error ? e.message : String(e))
+    fetchError = true
   }
 
-  // Fetch application with all related data
-  const { data: application } = await supabase
-    .from('applications')
-    .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
-    .eq('id', params.id)
-    .single()
-
-  if (!application) {
-    notFound()
+  if (fetchError || !app) {
+    return (
+      <div className="max-w-2xl space-y-6">
+        <Link
+          href="/shelter/applications"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Applications
+        </Link>
+        <ServerErrorPanel />
+      </div>
+    )
   }
 
-  const app = application as ApplicationWithDetails
-
-  // Verify the current user owns this shelter
-  if (app.shelter.user_id !== user.id) {
-    redirect('/shelter/applications')
-  }
-
-  // Fetch ratings for this foster parent
-  const { data: ratingsData } = await supabase
-    .from('ratings')
-    .select('*')
-    .eq('foster_id', app.foster.id)
-    .order('created_at', { ascending: false })
-
-  const ratings = (ratingsData ?? []) as Rating[]
+  const appId = app.id
   const fosterName = `${app.foster.first_name} ${app.foster.last_name}`
 
   // A rating is tied to a specific application, not just the foster.
   // Checking here avoids showing the "Rate Foster" button when one already exists.
-  const hasExistingRating = ratings.some((r) => r.application_id === app.id)
+  const hasExistingRating = ratings.some((r) => r.application_id === appId)
 
   return (
     <div className="max-w-2xl space-y-6">

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * PATCH /api/dogs/[id]/status
@@ -38,6 +39,9 @@ export async function PATCH(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('dogs:status', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch dog + verify shelter ownership
   const { data: dog, error: fetchError } = await supabase
@@ -95,7 +99,7 @@ export async function PATCH(
   //    under the old sequential model. See migration
   //    20240110000000_atomic_transitions.sql.
   const { error: rpcError } = await supabase.rpc('relist_dog', {
-    dog_id: params.id,
+    p_dog_id: params.id,
   })
 
   if (rpcError) {

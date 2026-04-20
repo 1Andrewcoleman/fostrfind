@@ -4,10 +4,12 @@ import { Plus, Dog, FileText, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { ApplicationCard } from '@/components/shelter/application-card'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { getGreeting } from '@/lib/helpers'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails } from '@/types/database'
 
 interface DashboardStats {
@@ -20,63 +22,97 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
   let stats: DashboardStats = { activeDogs: 0, pendingApplications: 0, unreadMessages: 0 }
   let recentApplications: ApplicationWithDetails[] = []
   let shelterName = 'your shelter'
+  let fetchError = false
 
   if (!DEV_MODE) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (authError) throw authError
-    if (!user) {
-      redirect('/login')
-    }
+      if (authError) throw authError
+      if (!user) redirect('/login')
 
-    const { data: shelterRow } = await supabase
-      .from('shelters')
-      .select('id, name')
-      .eq('user_id', user.id)
-      .single()
+      // Missing row is a valid state (new user → onboarding), so use
+      // maybeSingle so this path doesn't turn into a fetch failure.
+      const { data: shelterRow, error: shelterError } = await supabase
+        .from('shelters')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-    if (!shelterRow) {
-      redirect('/onboarding')
-    }
+      if (shelterError) throw shelterError
+      if (!shelterRow) redirect('/onboarding')
 
-    const shelterId = shelterRow.id
-    shelterName = shelterRow.name ?? 'your shelter'
+      const shelterId = shelterRow.id
+      shelterName = shelterRow.name ?? 'your shelter'
 
-    const [dogsCount, appsCount, messagesCount, recentApps] = await Promise.all([
-      supabase
-        .from('dogs')
-        .select('*', { count: 'exact', head: true })
-        .eq('shelter_id', shelterId)
-        .eq('status', 'available'),
-      supabase
+      // Unread messages need to be scoped to this shelter's application threads.
+      // Without this filter, RLS would still scope reads, but then a shelter
+      // with multiple accounts (test / transfer / etc.) could double-count,
+      // and the query is clearer when the filter is explicit.
+      const { data: shelterAppIdsRows, error: shelterAppIdsError } = await supabase
         .from('applications')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('shelter_id', shelterId)
-        .in('status', ['submitted', 'reviewing']),
-      supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('sender_role', 'foster')
-        .eq('read', false),
-      supabase
-        .from('applications')
-        .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
-        .eq('shelter_id', shelterId)
-        .order('created_at', { ascending: false })
-        .limit(5),
-    ])
+        .in('status', ['accepted', 'completed'])
+      if (shelterAppIdsError) throw shelterAppIdsError
+      const shelterAppIds = (shelterAppIdsRows ?? []).map((r) => r.id)
 
-    stats = {
-      activeDogs: dogsCount.count ?? 0,
-      pendingApplications: appsCount.count ?? 0,
-      unreadMessages: messagesCount.count ?? 0,
+      const [dogsCount, appsCount, messagesCount, recentApps] = await Promise.all([
+        supabase
+          .from('dogs')
+          .select('*', { count: 'exact', head: true })
+          .eq('shelter_id', shelterId)
+          .eq('status', 'available'),
+        supabase
+          .from('applications')
+          .select('*', { count: 'exact', head: true })
+          .eq('shelter_id', shelterId)
+          .in('status', ['submitted', 'reviewing']),
+        shelterAppIds.length === 0
+          ? Promise.resolve({ count: 0, error: null })
+          : supabase
+              .from('messages')
+              .select('*', { count: 'exact', head: true })
+              .in('application_id', shelterAppIds)
+              .eq('sender_role', 'foster')
+              .eq('read', false),
+        supabase
+          .from('applications')
+          .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+          .eq('shelter_id', shelterId)
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ])
+
+      if (dogsCount.error || appsCount.error || (messagesCount as { error?: unknown }).error || recentApps.error) {
+        throw (
+          dogsCount.error ||
+          appsCount.error ||
+          (messagesCount as { error?: unknown }).error ||
+          recentApps.error
+        )
+      }
+
+      stats = {
+        activeDogs: dogsCount.count ?? 0,
+        pendingApplications: appsCount.count ?? 0,
+        unreadMessages: messagesCount.count ?? 0,
+      }
+
+      recentApplications = (recentApps.data ?? []) as ApplicationWithDetails[]
+    } catch (e) {
+      if (isNextControlFlowError(e)) throw e
+      console.error('[shelter/dashboard] load failed:', e instanceof Error ? e.message : String(e))
+      fetchError = true
     }
+  }
 
-    recentApplications = (recentApps.data ?? []) as ApplicationWithDetails[]
+  if (fetchError) {
+    return <ServerErrorPanel />
   }
 
   return (

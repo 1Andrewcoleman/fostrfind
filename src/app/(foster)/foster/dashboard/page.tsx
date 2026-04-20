@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
 import { ApplicationStatusCard } from '@/components/foster/application-status-card'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { getGreeting } from '@/lib/helpers'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails } from '@/types/database'
 
 interface DashboardStats {
@@ -24,76 +26,103 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
   }
   let recentApplications: ApplicationWithDetails[] = []
   let firstName = 'there'
+  let fetchError = false
 
   if (!DEV_MODE) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (authError) throw authError
-    if (!user) {
-      redirect('/login')
+      if (authError) throw authError
+      if (!user) {
+        redirect('/login')
+      }
+
+      // Missing row is a valid state (new user → onboarding). maybeSingle
+      // keeps that path alive instead of raising an error here.
+      const { data: fosterRow, error: fosterError } = await supabase
+        .from('foster_parents')
+        .select('id, first_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (fosterError) throw fosterError
+      if (!fosterRow) {
+        redirect('/onboarding')
+      }
+
+      const fosterId = fosterRow.id
+      firstName = fosterRow.first_name || 'there'
+
+      const { data: myAppIdsRows, error: myAppIdsError } = await supabase
+        .from('applications')
+        .select('id')
+        .eq('foster_id', fosterId)
+        .in('status', ['accepted', 'completed'])
+      if (myAppIdsError) throw myAppIdsError
+      const myAppIds = (myAppIdsRows ?? []).map((r) => r.id)
+
+      const [activeAppsCount, currentlyFosteringCount, unreadMessagesCount, recentApps] =
+        await Promise.all([
+          supabase
+            .from('applications')
+            .select('*', { count: 'exact', head: true })
+            .eq('foster_id', fosterId)
+            .in('status', ['submitted', 'reviewing', 'accepted']),
+          supabase
+            .from('applications')
+            .select('*', { count: 'exact', head: true })
+            .eq('foster_id', fosterId)
+            .eq('status', 'accepted'),
+          myAppIds.length === 0
+            ? Promise.resolve({ count: 0, error: null })
+            : supabase
+                .from('messages')
+                .select('*', { count: 'exact', head: true })
+                .in('application_id', myAppIds)
+                .neq('sender_role', 'foster')
+                .eq('read', false),
+          supabase
+            .from('applications')
+            .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+            .eq('foster_id', fosterId)
+            .order('created_at', { ascending: false })
+            .limit(5),
+        ])
+
+      if (
+        activeAppsCount.error ||
+        currentlyFosteringCount.error ||
+        (unreadMessagesCount as { error?: unknown }).error ||
+        recentApps.error
+      ) {
+        throw (
+          activeAppsCount.error ||
+          currentlyFosteringCount.error ||
+          (unreadMessagesCount as { error?: unknown }).error ||
+          recentApps.error
+        )
+      }
+
+      stats = {
+        activeApplications: activeAppsCount.count ?? 0,
+        currentlyFostering: currentlyFosteringCount.count ?? 0,
+        unreadMessages: unreadMessagesCount.count ?? 0,
+      }
+
+      recentApplications = (recentApps.data ?? []) as ApplicationWithDetails[]
+    } catch (e) {
+      if (isNextControlFlowError(e)) throw e
+      console.error('[foster/dashboard] load failed:', e instanceof Error ? e.message : String(e))
+      fetchError = true
     }
+  }
 
-    const { data: fosterRow } = await supabase
-      .from('foster_parents')
-      .select('id, first_name')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!fosterRow) {
-      redirect('/onboarding')
-    }
-
-    const fosterId = fosterRow.id
-    firstName = fosterRow.first_name || 'there'
-
-    // Unread messages are scoped to this foster's message threads.
-    // Fetch the thread ids first so we can filter messages correctly.
-    const { data: myAppIdsRows } = await supabase
-      .from('applications')
-      .select('id')
-      .eq('foster_id', fosterId)
-      .in('status', ['accepted', 'completed'])
-    const myAppIds = (myAppIdsRows ?? []).map((r) => r.id)
-
-    const [activeAppsCount, currentlyFosteringCount, unreadMessagesCount, recentApps] =
-      await Promise.all([
-        supabase
-          .from('applications')
-          .select('*', { count: 'exact', head: true })
-          .eq('foster_id', fosterId)
-          .in('status', ['submitted', 'reviewing', 'accepted']),
-        supabase
-          .from('applications')
-          .select('*', { count: 'exact', head: true })
-          .eq('foster_id', fosterId)
-          .eq('status', 'accepted'),
-        myAppIds.length === 0
-          ? Promise.resolve({ count: 0 })
-          : supabase
-              .from('messages')
-              .select('*', { count: 'exact', head: true })
-              .in('application_id', myAppIds)
-              .neq('sender_role', 'foster')
-              .eq('read', false),
-        supabase
-          .from('applications')
-          .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
-          .eq('foster_id', fosterId)
-          .order('created_at', { ascending: false })
-          .limit(5),
-      ])
-
-    stats = {
-      activeApplications: activeAppsCount.count ?? 0,
-      currentlyFostering: currentlyFosteringCount.count ?? 0,
-      unreadMessages: unreadMessagesCount.count ?? 0,
-    }
-
-    recentApplications = (recentApps.data ?? []) as ApplicationWithDetails[]
+  if (fetchError) {
+    return <ServerErrorPanel />
   }
 
   return (

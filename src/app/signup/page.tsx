@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
 import { PawPrint, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useForm, Controller } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,32 +14,36 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE } from '@/lib/constants'
+import { signupSchema, type SignupInput } from '@/lib/schemas'
+import { describeAuthError } from '@/lib/auth-errors'
 
 function SignUpForm() {
   const searchParams = useSearchParams()
   const role = searchParams.get('role')
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [acceptTerms, setAcceptTerms] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
-  async function handleSignUp(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    formState: { errors },
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+      acceptTerms: false,
+    },
+  })
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
+  const acceptTerms = watch('acceptTerms')
 
-    if (!acceptTerms) {
-      setError('You must agree to the Terms of Service and Privacy Policy.')
-      return
-    }
-
+  async function onSubmit(values: SignupInput) {
+    setSubmitError(null)
     setLoading(true)
 
     if (DEV_MODE) {
@@ -48,16 +53,18 @@ function SignUpForm() {
 
     const supabase = createClient()
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: values.email,
+      password: values.password,
       options: {
         data: { intended_role: role },
       },
     })
 
     if (error) {
-      setError(error.message)
-      toast.error(error.message)
+      console.error('[signup] signUp failed:', error.message)
+      const copy = describeAuthError(error, 'Could not create your account. Please try again.')
+      setSubmitError(copy)
+      toast.error(copy)
       setLoading(false)
       return
     }
@@ -71,7 +78,7 @@ function SignUpForm() {
 
   async function handleGoogleSignUp() {
     if (!acceptTerms) {
-      setError('You must agree to the Terms of Service and Privacy Policy.')
+      setSubmitError('You must agree to the Terms of Service and Privacy Policy.')
       return
     }
     if (DEV_MODE) {
@@ -102,53 +109,69 @@ function SignUpForm() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {error && (
+          {submitError && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
-              {error}
+              {submitError}
             </p>
           )}
 
-          <form onSubmit={handleSignUp} className="space-y-3">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
+                aria-invalid={errors.email ? 'true' : undefined}
+                {...register('email')}
               />
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+                aria-invalid={errors.password ? 'true' : undefined}
+                {...register('password')}
               />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="confirm">Confirm Password</Label>
               <Input
                 id="confirm"
                 type="password"
+                autoComplete="new-password"
                 placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
+                aria-invalid={errors.confirmPassword ? 'true' : undefined}
+                {...register('confirmPassword')}
               />
+              {errors.confirmPassword && (
+                <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+              )}
             </div>
             <div className="flex items-start gap-2 pt-1">
-              <Checkbox
-                id="accept-terms"
-                checked={acceptTerms}
-                onCheckedChange={(checked) => setAcceptTerms(checked === true)}
-                className="mt-0.5"
-                aria-required="true"
+              <Controller
+                name="acceptTerms"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="accept-terms"
+                    checked={field.value === true}
+                    onCheckedChange={(checked) => field.onChange(checked === true)}
+                    className="mt-0.5"
+                    aria-required="true"
+                    aria-invalid={errors.acceptTerms ? 'true' : undefined}
+                  />
+                )}
               />
               <Label
                 htmlFor="accept-terms"
@@ -173,6 +196,9 @@ function SignUpForm() {
                 .
               </Label>
             </div>
+            {errors.acceptTerms && (
+              <p className="text-xs text-destructive">{errors.acceptTerms.message}</p>
+            )}
             <Button type="submit" className="w-full" disabled={loading || !acceptTerms}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</> : 'Create Account'}
             </Button>

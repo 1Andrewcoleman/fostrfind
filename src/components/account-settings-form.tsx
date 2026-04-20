@@ -35,6 +35,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { createClient } from '@/lib/supabase/client'
 import { DEV_MODE } from '@/lib/constants'
+import { describeAuthError } from '@/lib/auth-errors'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -82,7 +83,8 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
     setIsChangingEmail(false)
 
     if (error) {
-      toast.error(error.message || 'Failed to update email.')
+      console.error('[account-settings] updateEmail failed:', error.message)
+      toast.error(describeAuthError(error, 'Failed to update email. Please try again.'))
       return
     }
     toast.success(
@@ -111,7 +113,8 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
     setIsChangingPassword(false)
 
     if (error) {
-      toast.error(error.message || 'Failed to update password.')
+      console.error('[account-settings] updatePassword failed:', error.message)
+      toast.error(describeAuthError(error, 'Failed to update password. Please try again.'))
       return
     }
     toast.success('Password updated.')

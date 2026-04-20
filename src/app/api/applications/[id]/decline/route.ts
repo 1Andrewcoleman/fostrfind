@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationDeclinedEmail } from '@/emails/application-declined'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 interface DeclinedApplicationRow {
   status: string
@@ -29,6 +30,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('applications:decline', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application and verify shelter ownership (+ data for the foster notification)
   const { data: application, error: fetchError } = await supabase

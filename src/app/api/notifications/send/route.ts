@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import type { ReactElement } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { ApplicationSubmittedEmail } from '@/emails/application-submitted'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
 import { ApplicationDeclinedEmail } from '@/emails/application-declined'
@@ -164,6 +165,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Notifications are fire-and-forget from trigger points (message send,
+  // application submit, etc.) — legitimate volume is small. Keep tight.
+  const rl = rateLimit('notifications:send', user.id, { limit: 30, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
+
   let body: BaseBody
   try {
     body = (await request.json()) as BaseBody
@@ -188,14 +194,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     ;({ subject, react } = renderNotification(body.type, body.data))
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Invalid payload'
-    return NextResponse.json({ error: message }, { status: 400 })
+    console.error('[notifications/send] renderNotification failed:', err instanceof Error ? err.message : String(err))
+    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
   const result = await sendEmail({ to: body.to, subject, react })
 
   if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 502 })
+    console.error('[notifications/send] sendEmail failed:', result.error)
+    return NextResponse.json({ error: 'Failed to send notification' }, { status: 502 })
   }
 
   return NextResponse.json({ success: true, mocked: result.mocked })

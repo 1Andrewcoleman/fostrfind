@@ -2,8 +2,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/empty-state'
 import { FosterHistoryCard } from '@/components/foster/foster-history-card'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import { calculateAverageRating } from '@/lib/helpers'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type {
   ApplicationWithDetails,
   Rating,
@@ -15,59 +17,71 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
   const ratingsMap: Record<string, Rating | undefined> = {}
   const shelterRatingsMap: Record<string, ShelterRating | undefined> = {}
   let averageRating = 0
+  let fetchError = false
 
   if (!DEV_MODE) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (authError) throw authError
-    if (!user) {
-      redirect('/login')
+      if (authError) throw authError
+      if (!user) {
+        redirect('/login')
+      }
+
+      const { data: fosterRow, error: fosterError } = await supabase
+        .from('foster_parents')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (fosterError) throw fosterError
+      if (!fosterRow) {
+        redirect('/onboarding')
+      }
+
+      const [applicationsResult, ratingsResult, shelterRatingsResult] = await Promise.all([
+        supabase
+          .from('applications')
+          .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
+          .eq('foster_id', fosterRow.id)
+          .eq('status', 'completed')
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('ratings')
+          .select('*')
+          .eq('foster_id', fosterRow.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('shelter_ratings')
+          .select('*')
+          .eq('foster_id', fosterRow.id),
+      ])
+
+      if (applicationsResult.error || ratingsResult.error || shelterRatingsResult.error) {
+        throw applicationsResult.error || ratingsResult.error || shelterRatingsResult.error
+      }
+
+      placements = (applicationsResult.data ?? []) as ApplicationWithDetails[]
+      const allRatings = (ratingsResult.data ?? []) as Rating[]
+      const allShelterRatings = (shelterRatingsResult.data ?? []) as ShelterRating[]
+
+      for (const rating of allRatings) {
+        ratingsMap[rating.application_id] = rating
+      }
+      for (const sr of allShelterRatings) {
+        shelterRatingsMap[sr.application_id] = sr
+      }
+
+      averageRating = calculateAverageRating(allRatings)
+    } catch (e) {
+      if (isNextControlFlowError(e)) throw e
+      console.error('[foster/history] load failed:', e instanceof Error ? e.message : String(e))
+      fetchError = true
     }
-
-    const { data: fosterRow } = await supabase
-      .from('foster_parents')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!fosterRow) {
-      redirect('/onboarding')
-    }
-
-    const [applicationsResult, ratingsResult, shelterRatingsResult] = await Promise.all([
-      supabase
-        .from('applications')
-        .select('*, dog:dogs(*), foster:foster_parents(*), shelter:shelters(*)')
-        .eq('foster_id', fosterRow.id)
-        .eq('status', 'completed')
-        .order('updated_at', { ascending: false }),
-      supabase
-        .from('ratings')
-        .select('*')
-        .eq('foster_id', fosterRow.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('shelter_ratings')
-        .select('*')
-        .eq('foster_id', fosterRow.id),
-    ])
-
-    placements = (applicationsResult.data ?? []) as ApplicationWithDetails[]
-    const allRatings = (ratingsResult.data ?? []) as Rating[]
-    const allShelterRatings = (shelterRatingsResult.data ?? []) as ShelterRating[]
-
-    for (const rating of allRatings) {
-      ratingsMap[rating.application_id] = rating
-    }
-    for (const sr of allShelterRatings) {
-      shelterRatingsMap[sr.application_id] = sr
-    }
-
-    averageRating = calculateAverageRating(allRatings)
   }
 
   const totalPlacements = placements.length
@@ -76,8 +90,10 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
     <div className="space-y-6 max-w-2xl">
       <h1 className="text-2xl font-bold">Foster History</h1>
 
+      {fetchError && <ServerErrorPanel />}
+
       {/* Stats */}
-      {totalPlacements > 0 && (
+      {!fetchError && totalPlacements > 0 && (
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg border p-4 text-center">
             <p className="text-3xl font-bold">{totalPlacements}</p>
@@ -92,7 +108,7 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
         </div>
       )}
 
-      {placements.length === 0 ? (
+      {fetchError ? null : placements.length === 0 ? (
         <EmptyState
           title="No foster history yet"
           description="Your completed fosters will appear here. Each one makes a difference — keep going!"

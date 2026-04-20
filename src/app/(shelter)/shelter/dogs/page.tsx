@@ -2,12 +2,14 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/empty-state'
+import { ServerErrorPanel } from '@/components/server-error-panel'
 import {
   ShelterDogsTabs,
   type PlacedDogEntry,
 } from '@/components/shelter/shelter-dogs-tabs'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
+import { isNextControlFlowError } from '@/lib/server-errors'
 import type { Dog } from '@/types/database'
 
 interface CompletedAppRow {
@@ -20,69 +22,80 @@ export default async function ShelterDogsPage() {
   let activeDogs: Dog[] = []
   let placedDogs: PlacedDogEntry[] = []
   let hasAnyDogs = false
+  let fetchError = false
 
   if (!DEV_MODE) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
+    try {
+      const supabase = await createClient()
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser()
 
-    if (authError) throw authError
-    if (user) {
-      const { data: shelterRow } = await supabase
-        .from('shelters')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
+      if (authError) throw authError
+      if (user) {
+        const { data: shelterRow, error: shelterError } = await supabase
+          .from('shelters')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle()
 
-      if (shelterRow) {
-        // Fetch ALL dogs for this shelter in a single query; partition in JS.
-        const { data: allDogsData } = await supabase
-          .from('dogs')
-          .select('*')
-          .eq('shelter_id', shelterRow.id)
-          .order('created_at', { ascending: false })
+        if (shelterError) throw shelterError
+        if (shelterRow) {
+          // Fetch ALL dogs for this shelter in a single query; partition in JS.
+          const { data: allDogsData, error: dogsError } = await supabase
+            .from('dogs')
+            .select('*')
+            .eq('shelter_id', shelterRow.id)
+            .order('created_at', { ascending: false })
 
-        const allDogs = (allDogsData ?? []) as Dog[]
-        hasAnyDogs = allDogs.length > 0
+          if (dogsError) throw dogsError
+          const allDogs = (allDogsData ?? []) as Dog[]
+          hasAnyDogs = allDogs.length > 0
 
-        const placedList = allDogs.filter((d) =>
-          ['placed', 'adopted'].includes(d.status),
-        )
-        activeDogs = allDogs.filter((d) =>
-          ['available', 'pending'].includes(d.status),
-        )
+          const placedList = allDogs.filter((d) =>
+            ['placed', 'adopted'].includes(d.status),
+          )
+          activeDogs = allDogs.filter((d) =>
+            ['available', 'pending'].includes(d.status),
+          )
 
-        // Enrich placed dogs with their completed-application foster names.
-        if (placedList.length > 0) {
-          const placedIds = placedList.map((d) => d.id)
-          const { data: completedAppsData } = await supabase
-            .from('applications')
-            .select('dog_id, foster:foster_parents(first_name, last_name)')
-            .in('dog_id', placedIds)
-            .eq('status', 'completed')
+          // Enrich placed dogs with their completed-application foster names.
+          if (placedList.length > 0) {
+            const placedIds = placedList.map((d) => d.id)
+            const { data: completedAppsData, error: appsError } = await supabase
+              .from('applications')
+              .select('dog_id, foster:foster_parents(first_name, last_name)')
+              .in('dog_id', placedIds)
+              .eq('status', 'completed')
 
-          // Supabase TS codegen models nested FK selects as arrays, but
-          // PostgREST returns a single object for one-to-one FKs like
-          // applications.foster_id → foster_parents.id. Double-cast to
-          // reconcile the two views.
-          const fosterByDog = new Map<string, string>()
-          const rows = (completedAppsData ?? []) as unknown as CompletedAppRow[]
-          for (const row of rows) {
-            if (!row.foster) continue
-            const name = `${row.foster.first_name ?? ''} ${row.foster.last_name ?? ''}`.trim()
-            if (name && !fosterByDog.has(row.dog_id)) {
-              fosterByDog.set(row.dog_id, name)
+            if (appsError) throw appsError
+
+            // Supabase TS codegen models nested FK selects as arrays, but
+            // PostgREST returns a single object for one-to-one FKs like
+            // applications.foster_id → foster_parents.id. Double-cast to
+            // reconcile the two views.
+            const fosterByDog = new Map<string, string>()
+            const rows = (completedAppsData ?? []) as unknown as CompletedAppRow[]
+            for (const row of rows) {
+              if (!row.foster) continue
+              const name = `${row.foster.first_name ?? ''} ${row.foster.last_name ?? ''}`.trim()
+              if (name && !fosterByDog.has(row.dog_id)) {
+                fosterByDog.set(row.dog_id, name)
+              }
             }
-          }
 
-          placedDogs = placedList.map((dog) => ({
-            dog,
-            fosterName: fosterByDog.get(dog.id) ?? 'a foster parent',
-          }))
+            placedDogs = placedList.map((dog) => ({
+              dog,
+              fosterName: fosterByDog.get(dog.id) ?? 'a foster parent',
+            }))
+          }
         }
       }
+    } catch (e) {
+      if (isNextControlFlowError(e)) throw e
+      console.error('[shelter/dogs] load failed:', e instanceof Error ? e.message : String(e))
+      fetchError = true
     }
   }
 
@@ -98,7 +111,9 @@ export default async function ShelterDogsPage() {
         </Button>
       </div>
 
-      {!hasAnyDogs && !DEV_MODE ? (
+      {fetchError ? (
+        <ServerErrorPanel />
+      ) : !hasAnyDogs && !DEV_MODE ? (
         <EmptyState
           title="No dogs found"
           description="Add your first dog listing to start receiving foster applications."

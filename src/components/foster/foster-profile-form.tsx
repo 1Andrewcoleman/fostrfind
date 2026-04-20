@@ -33,6 +33,8 @@ import {
   DOG_AGE_LABELS,
   STORAGE_BUCKETS,
 } from '@/lib/constants'
+import { fosterProfileSchema } from '@/lib/schemas'
+import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import type { FosterParent } from '@/types/database'
 
 interface FosterProfileFormProps {
@@ -42,6 +44,11 @@ interface FosterProfileFormProps {
 export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  // Per-field error copy from the last validation pass. We intentionally
+  // keep the existing setState-driven UI (multi-select prefs, refs) rather
+  // than a full react-hook-form rewrite; see docs/roadmap.md Deferred
+  // Follow-ups for the full RHF migration of this form.
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const avatarFieldRef = useRef<AvatarLogoFieldHandle>(null)
   const [foster, setFoster] = useState<Partial<FosterParent>>(
     initialData ?? {
@@ -75,6 +82,7 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
   async function handleSave(e: React.FormEvent): Promise<void> {
     e.preventDefault()
     setLoading(true)
+    setErrors({})
 
     try {
       const supabase = createClient()
@@ -93,6 +101,42 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         return
       }
 
+      // Client-side validation before we attempt any side effects. This
+      // mirrors the server-side constraints so users see inline errors
+      // instead of a generic "Failed to save" after a round trip.
+      const parsed = fosterProfileSchema.safeParse({
+        first_name: foster.first_name ?? '',
+        last_name: foster.last_name ?? '',
+        email: foster.email || user.email || '',
+        phone: foster.phone ?? '',
+        location: foster.location ?? '',
+        housing_type: foster.housing_type ?? null,
+        has_yard: foster.has_yard ?? false,
+        has_other_pets: foster.has_other_pets ?? false,
+        other_pets_info: foster.other_pets_info ?? '',
+        has_children: foster.has_children ?? false,
+        children_info: foster.children_info ?? '',
+        experience: foster.experience ?? null,
+        bio: foster.bio ?? '',
+        pref_size: foster.pref_size ?? [],
+        pref_age: foster.pref_age ?? [],
+        pref_medical: foster.pref_medical ?? false,
+        max_distance: foster.max_distance ?? 25,
+      })
+
+      if (!parsed.success) {
+        const fieldErrors: Record<string, string> = {}
+        for (const issue of parsed.error.issues) {
+          const key = issue.path[0]
+          if (typeof key === 'string' && !fieldErrors[key]) {
+            fieldErrors[key] = issue.message
+          }
+        }
+        setErrors(fieldErrors)
+        toast.error('Please fix the highlighted fields.')
+        return
+      }
+
       // Upload any pending avatar (and clean up the old one) before
       // writing the row. A failed upload aborts the save so the DB
       // doesn't end up pointing at a URL that doesn't exist yet.
@@ -106,25 +150,24 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         return
       }
 
+      // Strip HTML-ish content from free-text fields before persisting
+      // so exports / emails / future plaintext views stay safe.
       const payload = {
-        first_name: foster.first_name ?? '',
-        last_name: foster.last_name ?? '',
-        email: foster.email || user.email || '',
-        phone: foster.phone || null,
-        location: foster.location ?? '',
-        housing_type: foster.housing_type ?? null,
-        has_yard: foster.has_yard ?? false,
-        has_other_pets: foster.has_other_pets ?? false,
-        other_pets_info: foster.other_pets_info ?? null,
-        has_children: foster.has_children ?? false,
-        children_info: foster.children_info ?? null,
-        experience: foster.experience ?? null,
-        bio: foster.bio || null,
+        ...parsed.data,
+        first_name: sanitizeText(parsed.data.first_name),
+        last_name: sanitizeText(parsed.data.last_name),
+        location: sanitizeText(parsed.data.location),
+        phone: parsed.data.phone ? sanitizeText(parsed.data.phone) || null : null,
+        other_pets_info: parsed.data.other_pets_info
+          ? sanitizeMultiline(parsed.data.other_pets_info) || null
+          : null,
+        children_info: parsed.data.children_info
+          ? sanitizeMultiline(parsed.data.children_info) || null
+          : null,
+        bio: parsed.data.bio ? sanitizeMultiline(parsed.data.bio) || null : null,
+        housing_type: parsed.data.housing_type ?? null,
+        experience: parsed.data.experience ?? null,
         avatar_url: avatarUrl,
-        pref_size: foster.pref_size ?? [],
-        pref_age: foster.pref_age ?? [],
-        pref_medical: foster.pref_medical ?? false,
-        max_distance: foster.max_distance ?? 25,
       }
 
       // The foster profile row is always pre-created by the onboarding
@@ -176,14 +219,22 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 <Input
                   value={foster.first_name ?? ''}
                   onChange={(e) => setFoster({ ...foster, first_name: e.target.value })}
+                  aria-invalid={errors.first_name ? 'true' : undefined}
                 />
+                {errors.first_name && (
+                  <p className="text-xs text-destructive">{errors.first_name}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Last Name</Label>
                 <Input
                   value={foster.last_name ?? ''}
                   onChange={(e) => setFoster({ ...foster, last_name: e.target.value })}
+                  aria-invalid={errors.last_name ? 'true' : undefined}
                 />
+                {errors.last_name && (
+                  <p className="text-xs text-destructive">{errors.last_name}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Email</Label>
@@ -191,14 +242,22 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   type="email"
                   value={foster.email ?? ''}
                   onChange={(e) => setFoster({ ...foster, email: e.target.value })}
+                  aria-invalid={errors.email ? 'true' : undefined}
                 />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Phone</Label>
                 <Input
                   value={foster.phone ?? ''}
                   onChange={(e) => setFoster({ ...foster, phone: e.target.value })}
+                  aria-invalid={errors.phone ? 'true' : undefined}
                 />
+                {errors.phone && (
+                  <p className="text-xs text-destructive">{errors.phone}</p>
+                )}
               </div>
               <div className="col-span-2 space-y-1">
                 <Label>Location</Label>
@@ -206,7 +265,11 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   placeholder="City, State"
                   value={foster.location ?? ''}
                   onChange={(e) => setFoster({ ...foster, location: e.target.value })}
+                  aria-invalid={errors.location ? 'true' : undefined}
                 />
+                {errors.location && (
+                  <p className="text-xs text-destructive">{errors.location}</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label>Housing Type</Label>
@@ -286,7 +349,11 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   rows={4}
                   value={foster.bio ?? ''}
                   onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
+                  aria-invalid={errors.bio ? 'true' : undefined}
                 />
+                {errors.bio && (
+                  <p className="text-xs text-destructive">{errors.bio}</p>
+                )}
               </div>
             </div>
           </CardContent>

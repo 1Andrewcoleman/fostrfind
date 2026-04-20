@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { sanitizeText } from '@/lib/sanitize'
 
 const bodySchema = z.object({
   applicationId: z.string().uuid(),
@@ -43,6 +45,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const rl = rateLimit('shelter-ratings:post', user.id, { limit: 20, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
+
   const { data: application, error: fetchError } = await supabase
     .from('applications')
     .select(
@@ -80,13 +85,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
+  const cleanComment = body.comment ? sanitizeText(body.comment) : ''
   const { error: insertError } = await supabase.from('shelter_ratings').insert({
     application_id: body.applicationId,
     shelter_id: application.shelter_id,
     foster_id: application.foster_id,
     dog_id: application.dog_id,
     score: body.score,
-    comment: body.comment ?? null,
+    comment: cleanComment || null,
   })
 
   if (insertError) {

@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { DEV_MODE, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/helpers'
+import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
 
@@ -124,20 +125,22 @@ export default function OnboardingPage() {
 
       const { error: dbError } = await supabase.from('shelters').insert({
         user_id: user.id,
-        name: shelter.name,
+        name: sanitizeText(shelter.name),
         slug,
         email: shelter.email,
-        phone: shelter.phone || null,
-        location: shelter.location,
-        ein: shelter.ein || null,
-        bio: shelter.bio || null,
-        website: shelter.website || null,
-        instagram: shelter.instagram || null,
+        phone: shelter.phone ? sanitizeText(shelter.phone) || null : null,
+        location: sanitizeText(shelter.location),
+        ein: shelter.ein ? sanitizeText(shelter.ein) || null : null,
+        bio: shelter.bio ? sanitizeMultiline(shelter.bio) || null : null,
+        website: shelter.website ? sanitizeText(shelter.website) || null : null,
+        instagram: shelter.instagram ? sanitizeText(shelter.instagram) || null : null,
       })
 
       if (dbError) {
-        setError(dbError.message)
-        toast.error(dbError.message)
+        console.error('[onboarding/shelter] insert failed:', dbError.message)
+        const copy = 'Could not create your shelter. Please try again.'
+        setError(copy)
+        toast.error(copy)
         setLoading(false)
         return
       }
@@ -181,24 +184,30 @@ export default function OnboardingPage() {
 
       const { error: dbError } = await supabase.from('foster_parents').insert({
         user_id: user.id,
-        first_name: foster.first_name,
-        last_name: foster.last_name,
+        first_name: sanitizeText(foster.first_name),
+        last_name: sanitizeText(foster.last_name),
         email: foster.email,
-        phone: foster.phone || null,
-        location: foster.location,
+        phone: foster.phone ? sanitizeText(foster.phone) || null : null,
+        location: sanitizeText(foster.location),
         housing_type: foster.housing_type || null,
         has_yard: foster.has_yard,
         has_other_pets: foster.has_other_pets,
-        other_pets_info: foster.other_pets_info || null,
+        other_pets_info: foster.other_pets_info
+          ? sanitizeMultiline(foster.other_pets_info) || null
+          : null,
         has_children: foster.has_children,
-        children_info: foster.children_info || null,
+        children_info: foster.children_info
+          ? sanitizeMultiline(foster.children_info) || null
+          : null,
         experience: foster.experience || null,
-        bio: foster.bio || null,
+        bio: foster.bio ? sanitizeMultiline(foster.bio) || null : null,
       })
 
       if (dbError) {
-        setError(dbError.message)
-        toast.error(dbError.message)
+        console.error('[onboarding/foster] insert failed:', dbError.message)
+        const copy = 'Could not create your profile. Please try again.'
+        setError(copy)
+        toast.error(copy)
         setLoading(false)
         return
       }

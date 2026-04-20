@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { PlacementCompletedEmail } from '@/emails/placement-completed'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 interface CompletedApplicationRow {
   status: string
@@ -30,6 +31,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('applications:complete', user.id, { limit: 10, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application + ownership + both parties' contact info in one hop
   const { data: application, error: fetchError } = await supabase

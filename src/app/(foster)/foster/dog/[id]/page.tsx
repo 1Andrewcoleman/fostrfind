@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import { DEV_MODE, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeMultiline } from '@/lib/sanitize'
 
 interface DogDetailPageProps {
   params: { id: string }
@@ -165,6 +166,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       .maybeSingle()
     if (!fosterRow) { setApplyError('Complete your foster profile first.'); setApplying(false); return }
 
+    const cleanNote = note ? sanitizeMultiline(note) : ''
     const { data: inserted, error } = await supabase
       .from('applications')
       .insert({
@@ -172,13 +174,14 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
         foster_id: fosterRow.id,
         shelter_id: dog!.shelter_id,
         status: 'submitted',
-        note: note || null,
+        note: cleanNote || null,
       })
       .select('id')
       .single()
 
     if (error || !inserted) {
-      setApplyError(error?.message ?? 'Could not submit application.')
+      console.error('[foster/dog/apply] insert failed:', error?.message)
+      setApplyError('Could not submit application. Please try again.')
       setApplying(false)
       return
     }

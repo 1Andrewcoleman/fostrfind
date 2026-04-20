@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 /**
  * DELETE /api/dogs/[id]
@@ -33,6 +34,9 @@ export async function DELETE(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('dogs:delete', user.id, { limit: 10, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch the dog and verify shelter ownership in one query
   const { data: dog, error: fetchError } = await supabase

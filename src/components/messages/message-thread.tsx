@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
+import { sanitizeMultiline } from '@/lib/sanitize'
 import type { Message } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -132,7 +133,10 @@ export function MessageThread({
   async function handleSend(e: React.FormEvent) {
     e.preventDefault()
 
-    const body = inputValue.trim()
+    // Sanitise before submit so we neither persist nor echo back raw
+    // HTML. Next still escapes on render, but other surfaces (email
+    // previews, exports) won't get that for free.
+    const body = sanitizeMultiline(inputValue).slice(0, 4000)
     if (!body || isSending) return
 
     // Optimistically add the message before the network round-trip

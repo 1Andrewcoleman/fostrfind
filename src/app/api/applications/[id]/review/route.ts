@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 
 export async function POST(
   _request: Request,
@@ -20,6 +21,9 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const rl = rateLimit('applications:review', user.id, { limit: 30, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application and verify shelter ownership
   const { data: application, error: fetchError } = await supabase

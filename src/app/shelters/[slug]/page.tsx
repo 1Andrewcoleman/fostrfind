@@ -209,7 +209,7 @@ export default async function ShelterProfilePage({ params }: PageProps): Promise
                     {shelter.name}
                   </h1>
                   {shelter.is_verified && (
-                    <Badge className="gap-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
+                    <Badge className="gap-1 bg-warm/25 text-foreground hover:bg-warm/25">
                       <BadgeCheck className="h-3.5 w-3.5" />
                       Verified
                     </Badge>
@@ -222,7 +222,7 @@ export default async function ShelterProfilePage({ params }: PageProps): Promise
                   </span>
                   {avgRating !== null && (
                     <span className="flex items-center gap-1">
-                      <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+                      <Star className="h-3.5 w-3.5 fill-peach text-peach" />
                       <span className="font-medium text-foreground">{avgRating.toFixed(1)}</span>
                       <span>
                         ({ratingCount} {ratingCount === 1 ? 'review' : 'reviews'})

@@ -78,7 +78,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${switzer.variable} ${sourceSerif.variable}`}>
+    <html
+      lang="en"
+      className={`${switzer.variable} ${sourceSerif.variable}`}
+      // `next-themes` writes `class="light"` / `"dark"` to <html> at mount
+      // for the authenticated portals (see `PortalThemeProvider`). That
+      // conflicts with SSR's empty class attribute and triggers React's
+      // hydration warning. Suppressing here rather than inside the portal
+      // layouts because this is the element that actually gets mutated.
+      suppressHydrationWarning
+    >
       <body className="font-sans">
         {children}
         <Toaster />

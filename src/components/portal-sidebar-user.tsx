@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { LogOut, Moon, Sun } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTheme } from 'next-themes'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,8 @@ export function PortalSidebarUser({ identity }: PortalSidebarUserProps) {
           </Badge>
         </div>
 
+        <ThemeToggle />
+
         <Button
           variant="ghost"
           size="icon"
@@ -59,5 +62,40 @@ export function PortalSidebarUser({ identity }: PortalSidebarUserProps) {
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Portal-only theme toggle. Renders as a static placeholder until mounted
+ * to avoid the hydration-mismatch warning that `next-themes` documents for
+ * SSR: server doesn't know the user's `resolvedTheme` until client hydrates.
+ * Principle 5 ("motion responds to intent") — no cross-fade or rotate on
+ * swap; the icon simply swaps.
+ */
+function ThemeToggle() {
+  const [mounted, setMounted] = useState(false)
+  const { resolvedTheme, setTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isDark = mounted && resolvedTheme === 'dark'
+  const Icon = isDark ? Sun : Moon
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      aria-label={mounted ? (isDark ? 'Switch to light mode' : 'Switch to dark mode') : 'Toggle theme'}
+      title={mounted ? (isDark ? 'Light mode' : 'Dark mode') : 'Toggle theme'}
+      // Render the moon icon on the server so the button has stable
+      // dimensions; swap to resolved after mount.
+      suppressHydrationWarning
+    >
+      <Icon className="h-4 w-4" />
+    </Button>
   )
 }

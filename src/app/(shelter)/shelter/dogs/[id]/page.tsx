@@ -88,7 +88,7 @@ export default async function EditDogPage({ params }: EditDogPageProps) {
       </div>
 
       {dog?.status === 'pending' && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-peach/40 bg-peach/20">
           <CardContent className="flex items-start justify-between gap-4 py-4">
             <div>
               <p className="font-medium">This dog is currently pending placement</p>

@@ -152,7 +152,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-peach/25 text-foreground/80">
                 <FileText className="h-4 w-4" />
               </span>
               Active Applications
@@ -166,7 +166,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 text-green-700">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warm/25 text-foreground/80">
                 <Heart className="h-4 w-4" />
               </span>
               Currently Fostering
@@ -180,7 +180,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/25 text-foreground/80">
                 <MessageCircle className="h-4 w-4" />
               </span>
               Unread Messages

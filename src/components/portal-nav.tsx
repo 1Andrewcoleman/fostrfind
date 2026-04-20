@@ -88,7 +88,7 @@ function NavLinkItem({ item, isActive, unreadMessages, onClick }: NavLinkItemPro
       className={cn(
         'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
         isActive
-          ? 'bg-primary/20 text-foreground font-semibold'
+          ? 'bg-warm/25 text-foreground font-semibold'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
     >

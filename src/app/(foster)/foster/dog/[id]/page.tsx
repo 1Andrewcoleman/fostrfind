@@ -348,9 +348,9 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
       {/* Special needs */}
       {dog.special_needs && (
-        <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4">
-          <h2 className="font-semibold mb-1 text-yellow-900">Special Needs</h2>
-          <p className="text-sm text-yellow-800">{dog.special_needs}</p>
+        <div className="rounded-lg bg-peach/25 border border-peach/40 p-4">
+          <h2 className="font-semibold mb-1 text-foreground">Special Needs</h2>
+          <p className="text-sm text-foreground/80">{dog.special_needs}</p>
         </div>
       )}
 
@@ -370,7 +370,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
           )}
           {shelterRating && (
             <span className="flex items-center gap-1 text-sm">
-              <Star className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
+              <Star className="h-3.5 w-3.5 fill-peach text-peach" />
               <span className="font-medium">{shelterRating.avg.toFixed(1)}</span>
               <span className="text-muted-foreground">
                 ({shelterRating.count} {shelterRating.count === 1 ? 'review' : 'reviews'})

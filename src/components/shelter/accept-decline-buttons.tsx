@@ -187,7 +187,7 @@ export function AcceptDeclineButtons({
       {/* Accept */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button className="bg-green-600 hover:bg-green-700" disabled={!!loading}>
+          <Button className="bg-warm text-warm-foreground hover:bg-warm/90" disabled={!!loading}>
             {loading === 'accept' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
             {loading === 'accept' ? 'Accepting…' : 'Accept'}
           </Button>
@@ -204,7 +204,7 @@ export function AcceptDeclineButtons({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleAction('accept')}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-warm text-warm-foreground hover:bg-warm/90"
             >
               Confirm Accept
             </AlertDialogAction>

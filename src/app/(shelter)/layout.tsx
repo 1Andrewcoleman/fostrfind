@@ -4,6 +4,7 @@ import { AuthGuard } from '@/components/auth-guard'
 import { RoleGuard } from '@/components/role-guard'
 import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
+import { PortalThemeProvider } from '@/components/portal-theme-provider'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
 
@@ -20,6 +21,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
   return (
     <AuthGuard>
       <RoleGuard allowedRole="shelter">
+        <PortalThemeProvider>
         <div className="flex min-h-screen">
           {/* ── Desktop sidebar ── */}
           <aside className="hidden md:flex w-60 flex-col border-r bg-background">
@@ -36,7 +38,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
           {/* ── Main content ── */}
           <main className="flex-1 flex flex-col min-w-0">
             {DEV_MODE && (
-              <div className="bg-yellow-400 text-yellow-900 text-xs font-medium text-center py-1.5 px-4">
+              <div className="bg-peach/40 text-foreground text-xs font-medium text-center py-1.5 px-4">
                 DEV MODE — auth bypassed, no Supabase credentials configured
               </div>
             )}
@@ -53,6 +55,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
             <div className="flex-1 p-6 md:p-8">{children}</div>
           </main>
         </div>
+        </PortalThemeProvider>
       </RoleGuard>
     </AuthGuard>
   )

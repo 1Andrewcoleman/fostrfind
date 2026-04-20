@@ -36,7 +36,7 @@ export function StarRating({ value, onChange, size = 'md', className }: StarRati
             className={cn(
               sizeClasses[size],
               star <= value
-                ? 'fill-yellow-400 text-yellow-400'
+                ? 'fill-peach text-peach'
                 : 'fill-transparent text-muted-foreground'
             )}
           />

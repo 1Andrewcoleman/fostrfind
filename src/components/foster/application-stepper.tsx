@@ -21,20 +21,25 @@ const ORDER: Record<string, number> = {
   completed: 3,
 }
 
+// Stepper colors collapse down to the three-pastel palette plus the
+// destructive token. Each step uses a semantic pastel (peach for
+// shelter-side in-progress, warm/sage for success, destructive for
+// declined). The icon inside the dot (check or X) carries the exact
+// meaning; the color signals the family of state.
 const STEP_COLORS: Record<string, string> = {
-  submitted: 'bg-blue-500',
-  reviewing: 'bg-amber-500',
-  accepted: 'bg-green-500',
-  declined: 'bg-red-500',
-  completed: 'bg-purple-500',
+  submitted: 'bg-peach',
+  reviewing: 'bg-peach',
+  accepted:  'bg-warm',
+  declined:  'bg-destructive',
+  completed: 'bg-warm',
 }
 
 const STEP_RING: Record<string, string> = {
-  submitted: 'ring-blue-200',
-  reviewing: 'ring-amber-200',
-  accepted: 'ring-green-200',
-  declined: 'ring-red-200',
-  completed: 'ring-purple-200',
+  submitted: 'ring-peach/40',
+  reviewing: 'ring-peach/40',
+  accepted:  'ring-warm/40',
+  declined:  'ring-destructive/30',
+  completed: 'ring-warm/40',
 }
 
 /**
@@ -99,9 +104,9 @@ export function ApplicationStepper({ status }: ApplicationStepperProps) {
                 )}
               >
                 {showDeclined ? (
-                  <XCircle className="h-3.5 w-3.5 text-white" />
+                  <XCircle className="h-3.5 w-3.5 text-destructive-foreground" />
                 ) : isReached ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-white" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
                 ) : (
                   <span className="h-2 w-2 rounded-full bg-muted-foreground/30" />
                 )}

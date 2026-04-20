@@ -93,7 +93,7 @@ export function FosterProfileView({ foster, ratings = [] }: FosterProfileViewPro
             <Badge key={a} variant="outline" className="capitalize">{a}</Badge>
           ))}
           {foster.pref_medical && (
-            <Badge variant="outline" className="text-blue-700 border-blue-300">
+            <Badge variant="outline" className="text-foreground border-primary/40 bg-primary/10">
               Open to medical needs
             </Badge>
           )}

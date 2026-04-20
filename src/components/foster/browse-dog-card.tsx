@@ -29,7 +29,7 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
           </div>
         )}
         {dog.special_needs && (
-          <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[11px] font-medium text-rose-700">
+          <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-peach/40 px-2 py-0.5 text-[11px] font-medium text-foreground">
             <Heart className="h-3 w-3" />
             Special needs
           </span>
@@ -43,28 +43,27 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
           )}
         </div>
 
+        {/*
+         * Attribute chips (age/size/gender) render as quiet metadata — they
+         * are descriptors, not statuses, so they sit on `bg-muted` and borrow
+         * no chroma from the three-pastel palette. The icon tells the user
+         * which attribute it is.
+         */}
         <div className="flex flex-wrap gap-1.5">
           {dog.age && (
-            <Badge variant="secondary" className="bg-amber-50 text-amber-800 hover:bg-amber-50 gap-1">
+            <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted gap-1">
               <Calendar className="h-3 w-3" />
               {DOG_AGE_LABELS[dog.age]}
             </Badge>
           )}
           {dog.size && (
-            <Badge variant="secondary" className="bg-teal-50 text-teal-800 hover:bg-teal-50 gap-1">
+            <Badge variant="secondary" className="bg-muted text-muted-foreground hover:bg-muted gap-1">
               <Ruler className="h-3 w-3" />
               {DOG_SIZE_LABELS[dog.size]}
             </Badge>
           )}
           {dog.gender && (
-            <Badge
-              variant="secondary"
-              className={`capitalize gap-1 ${
-                dog.gender === 'female'
-                  ? 'bg-pink-50 text-pink-800 hover:bg-pink-50'
-                  : 'bg-sky-50 text-sky-800 hover:bg-sky-50'
-              }`}
-            >
+            <Badge variant="secondary" className="capitalize gap-1 bg-muted text-muted-foreground hover:bg-muted">
               {dog.gender}
             </Badge>
           )}
@@ -93,7 +92,7 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
           )}
           {dog.shelter_avg_rating !== undefined && dog.shelter_avg_rating !== null && (
             <span className="flex items-center gap-0.5 shrink-0">
-              <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+              <Star className="h-3 w-3 fill-peach text-peach" />
               <span className="font-medium text-foreground">
                 {dog.shelter_avg_rating.toFixed(1)}
               </span>

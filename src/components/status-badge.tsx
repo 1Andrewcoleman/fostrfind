@@ -17,16 +17,29 @@ interface StatusBadgeProps {
   className?: string
 }
 
+// Status badges collapse down to the three-pastel palette plus the
+// destructive token, per `.impeccable.md` principle #4 ("three pastels,
+// each with a job"). The product semantic groups are:
+//   - in-progress / shelter action        -> peach  (submitted, reviewing, pending)
+//   - success / positive terminal state   -> warm   (accepted, completed, available, placed, adopted)
+//   - destructive                         -> destructive (declined)
+// Two states in the same group render the same because, product-wise,
+// they *are* the same "you're in a good spot" moment. The Icon is the
+// thing that tells the user which specific state.
+const inProgress  = 'bg-peach/25 text-foreground hover:bg-peach/25'
+const success     = 'bg-warm/25 text-foreground hover:bg-warm/25'
+const destructive = 'bg-destructive/15 text-destructive hover:bg-destructive/15'
+
 const statusConfig: Record<string, { label: string; className: string; icon: LucideIcon }> = {
-  submitted:  { label: 'Submitted',  className: 'bg-blue-100 text-blue-800 hover:bg-blue-100',     icon: Clock },
-  reviewing:  { label: 'Reviewing',  className: 'bg-amber-100 text-amber-800 hover:bg-amber-100',  icon: Eye },
-  accepted:   { label: 'Accepted',   className: 'bg-green-100 text-green-800 hover:bg-green-100',   icon: CheckCircle2 },
-  declined:   { label: 'Declined',   className: 'bg-red-100 text-red-800 hover:bg-red-100',         icon: XCircle },
-  completed:  { label: 'Completed',  className: 'bg-purple-100 text-purple-800 hover:bg-purple-100', icon: Award },
-  available:  { label: 'Available',  className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100', icon: CircleDot },
-  pending:    { label: 'Pending',    className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-100', icon: Clock },
-  placed:     { label: 'Placed',     className: 'bg-sky-100 text-sky-800 hover:bg-sky-100',         icon: Home },
-  adopted:    { label: 'Adopted',    className: 'bg-violet-100 text-violet-800 hover:bg-violet-100', icon: Heart },
+  submitted:  { label: 'Submitted',  className: inProgress,  icon: Clock },
+  reviewing:  { label: 'Reviewing',  className: inProgress,  icon: Eye },
+  accepted:   { label: 'Accepted',   className: success,     icon: CheckCircle2 },
+  declined:   { label: 'Declined',   className: destructive, icon: XCircle },
+  completed:  { label: 'Completed',  className: success,     icon: Award },
+  available:  { label: 'Available',  className: success,     icon: CircleDot },
+  pending:    { label: 'Pending',    className: inProgress,  icon: Clock },
+  placed:     { label: 'Placed',     className: success,     icon: Home },
+  adopted:    { label: 'Adopted',    className: success,     icon: Heart },
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

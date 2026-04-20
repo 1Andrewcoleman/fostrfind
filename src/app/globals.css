@@ -51,6 +51,48 @@
     --ring:                   85%   0.070 85;   /* matches primary */
     --radius:                 0.625rem;
   }
+
+  /*
+   * Dark mode — authenticated portals only. Public pages stay light.
+   * Per `.impeccable.md`: --background is a deep warm-navy (not black);
+   * the three pastels drop ~10 lightness and gain ~3 chroma so they
+   * stay visible on the darker ground; borders remain whispers (within
+   * ~10 lightness points of surfaces). Dark tokens are scoped to the
+   * `next-themes` class="dark" on <html>.
+   */
+  .dark {
+    /* Surfaces */
+    --background:             20%   0.015 250;
+    --foreground:             90%   0.010 80;
+    --card:                   23%   0.018 250;
+    --card-foreground:        90%   0.010 80;
+    --popover:                23%   0.018 250;
+    --popover-foreground:     90%   0.010 80;
+
+    /* Neutrals */
+    --muted:                  26%   0.015 250;
+    --muted-foreground:       65%   0.015 80;
+    --border:                 30%   0.012 250;
+    --input:                  30%   0.012 250;
+    --secondary:              26%   0.015 250;
+    --secondary-foreground:   90%   0.010 80;
+    --accent:                 28%   0.018 250;
+    --accent-foreground:      90%   0.010 80;
+
+    /* Three pastels — same hues, shifted for dark surfaces. */
+    --primary:                75%   0.100 85;
+    --primary-foreground:     15%   0.020 250;
+    --warm:                   72%   0.080 155;
+    --warm-foreground:        15%   0.020 250;
+    --accent-peach:           74%   0.090 35;
+    --accent-peach-foreground: 15%  0.020 250;
+
+    /* Status */
+    --destructive:            55%   0.150 25;
+    --destructive-foreground: 90%   0.010 80;
+
+    --ring:                   75%   0.100 85;
+  }
 }
 
 @layer base {

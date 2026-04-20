@@ -10,6 +10,40 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { DOG_SIZES, DOG_AGES, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
+
+// Multi-select pill used for Size + Age. Behaviour mirrors a checkbox
+// (role="checkbox", aria-checked), rendered as a pastel-filled chip when
+// selected so the page still keeps its calm contrast band (principle 2:
+// no new saturated-primary surface). All colour values resolve through
+// design tokens so dark mode picks them up for free.
+interface FilterPillProps {
+  id: string
+  checked: boolean
+  onToggle: () => void
+  label: string
+}
+
+function FilterPill({ id, checked, onToggle, label }: FilterPillProps) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onToggle}
+      className={cn(
+        'inline-flex items-center justify-center rounded-full border h-10 px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none',
+        checked
+          ? 'border-primary bg-primary/15 text-foreground ring-1 ring-primary/30'
+          : 'border-border bg-card text-foreground hover:bg-muted',
+      )}
+    >
+      {label}
+    </button>
+  )
+}
 
 export interface FilterState {
   sizes: string[]
@@ -109,41 +143,51 @@ export function BrowseFilterForm({ filters, onFilterChange, idPrefix }: BrowseFi
       <Separator />
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium">Size</h3>
-        {DOG_SIZES.map((size) => (
-          <div key={size} className="flex items-center gap-2 min-h-[44px]">
-            <Checkbox
+        <h3 id={`${idPrefix}size-heading`} className="text-sm font-medium">
+          Size
+        </h3>
+        <div
+          role="group"
+          aria-labelledby={`${idPrefix}size-heading`}
+          className="flex flex-wrap gap-2"
+        >
+          {DOG_SIZES.map((size) => (
+            <FilterPill
+              key={size}
               id={`${idPrefix}size-${size}`}
               checked={filters.sizes.includes(size)}
-              onCheckedChange={() =>
+              onToggle={() =>
                 updateFilters({ sizes: toggleArray(filters.sizes, size) })
               }
+              label={DOG_SIZE_LABELS[size]}
             />
-            <Label htmlFor={`${idPrefix}size-${size}`} className="font-normal cursor-pointer">
-              {DOG_SIZE_LABELS[size]}
-            </Label>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <Separator />
 
       <div className="space-y-2">
-        <h3 className="text-sm font-medium">Age</h3>
-        {DOG_AGES.map((age) => (
-          <div key={age} className="flex items-center gap-2 min-h-[44px]">
-            <Checkbox
+        <h3 id={`${idPrefix}age-heading`} className="text-sm font-medium">
+          Age
+        </h3>
+        <div
+          role="group"
+          aria-labelledby={`${idPrefix}age-heading`}
+          className="flex flex-wrap gap-2"
+        >
+          {DOG_AGES.map((age) => (
+            <FilterPill
+              key={age}
               id={`${idPrefix}age-${age}`}
               checked={filters.ages.includes(age)}
-              onCheckedChange={() =>
+              onToggle={() =>
                 updateFilters({ ages: toggleArray(filters.ages, age) })
               }
+              label={DOG_AGE_LABELS[age]}
             />
-            <Label htmlFor={`${idPrefix}age-${age}`} className="font-normal cursor-pointer">
-              {DOG_AGE_LABELS[age]}
-            </Label>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <Separator />

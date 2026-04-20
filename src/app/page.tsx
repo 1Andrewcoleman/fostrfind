@@ -18,14 +18,14 @@ import { PublicFooter } from '@/components/public-footer'
 const HERO_IMAGE_SRC =
   'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=1200&q=80'
 
-// How-It-Works step definitions. Accent maps to a tint pair: the top
-// strip uses the solid token; the icon tile uses the /10 opacity variant
-// so each card reads as a coordinated block of color without shouting.
-// Accent is a role-token from the tri-pastel palette (see `.impeccable.md`).
-// Commit 4 will re-map these to the canonical product meanings
-// (peach = shelter, butter/primary = foster, sage/warm = placement); for now
-// the goal of Commit 1 is only to stop referencing the dropped chart tokens.
-type StepAccent = 'warm' | 'peach' | 'primary'
+// How-It-Works step definitions. Accents follow the canonical product
+// semantics locked in .impeccable.md:
+//   peach   = shelter-side   (card 1: shelters list)
+//   primary = foster / brand (card 2: fosters apply)
+//   warm    = sage / success (card 3: placement happens)
+// The top strip uses the solid token; the icon tile uses the /15 wash,
+// so each card reads as one coordinated color without shouting.
+type StepAccent = 'peach' | 'primary' | 'warm'
 interface HowItWorksStep {
   title: string
   body: string
@@ -37,26 +37,26 @@ const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
     title: 'Shelters list dogs',
     body: 'Rescue organizations post dogs who need temporary foster homes with full profiles, photos, and medical details.',
     Icon: Heart,
-    accent: 'warm',
+    accent: 'peach',
   },
   {
     title: 'Fosters browse & apply',
     body: 'Foster parents search by location, size, age, and temperament — then apply with a personal note.',
     Icon: Search,
-    accent: 'peach',
+    accent: 'primary',
   },
   {
     title: 'Dogs find homes',
     body: 'Shelters review foster history and ratings, accept the best match, and coordinate every step via in-app messaging.',
     Icon: CheckCircle,
-    accent: 'primary',
+    accent: 'warm',
   },
 ]
 
-const ACCENT_CLASSES: Record<StepAccent, { strip: string; tile: string; icon: string; dot: string }> = {
-  warm:    { strip: 'bg-warm',    tile: 'bg-warm/15',    icon: 'text-foreground', dot: 'bg-warm' },
-  peach:   { strip: 'bg-peach',   tile: 'bg-peach/15',   icon: 'text-foreground', dot: 'bg-peach' },
-  primary: { strip: 'bg-primary', tile: 'bg-primary/15', icon: 'text-foreground', dot: 'bg-primary' },
+const ACCENT_CLASSES: Record<StepAccent, { strip: string; tile: string }> = {
+  peach:   { strip: 'bg-peach',   tile: 'bg-peach/20' },
+  primary: { strip: 'bg-primary', tile: 'bg-primary/20' },
+  warm:    { strip: 'bg-warm',    tile: 'bg-warm/20' },
 }
 
 export default function LandingPage() {
@@ -67,7 +67,7 @@ export default function LandingPage() {
       {/* -------------------------------------------------------------- */}
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-display font-extrabold text-lg tracking-tight">
+          <Link href="/" className="flex items-center gap-2 font-sans font-bold text-lg tracking-tight">
             <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
             Fostr Fix
           </Link>
@@ -158,16 +158,19 @@ export default function LandingPage() {
       {/* -------------------------------------------------------------- */}
       {/* How it works                                                    */}
       {/* -------------------------------------------------------------- */}
-      <section id="how-it-works" className="py-20 md:py-24 px-4 bg-background scroll-mt-20">
+      {/* The section heading is the page's one editorial serif accent
+       * besides the H1 (per .impeccable.md principle #3 — "typography
+       * leads"). Card titles are Switzer so the serif stays rare. */}
+      <section id="how-it-works" className="py-20 md:py-28 px-4 bg-background scroll-mt-20">
         <div className="container mx-auto max-w-6xl">
           <div className="max-w-2xl mx-auto text-center mb-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-warm-foreground">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               The flow
             </p>
-            <h2 className="mt-3 font-display text-3xl md:text-4xl font-extrabold tracking-tight">
+            <h2 className="mt-3 font-display text-4xl md:text-5xl font-semibold tracking-[-0.01em] leading-[1.05]">
               How it works
             </h2>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mt-4 text-muted-foreground leading-relaxed">
               Three steps from listing to placement — with fewer handoffs and more warmth at every
               stage.
             </p>
@@ -180,38 +183,34 @@ export default function LandingPage() {
               return (
                 <li
                   key={step.title}
-                  className="relative overflow-hidden rounded-[1.25rem] border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 [animation-fill-mode:both] motion-reduce:animate-none"
+                  className="relative overflow-hidden rounded-[1.25rem] border border-border/70 bg-card shadow-sm transition-transform transition-shadow duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 [animation-fill-mode:both] motion-reduce:animate-none"
                   style={{ animationDelay: `${index * 120}ms` }}
                 >
-                  {/* Top accent strip */}
                   <span
                     aria-hidden="true"
                     className={`absolute inset-x-0 top-0 block h-1.5 ${accent.strip}`}
                   />
 
-                  {/* Decorative watermark number */}
                   <span
                     aria-hidden="true"
-                    className="pointer-events-none absolute -top-3 right-5 font-display font-extrabold text-[7rem] leading-none text-foreground/[0.05] select-none"
+                    className="pointer-events-none absolute -top-4 right-5 font-display font-semibold text-[7rem] leading-none text-foreground/[0.04] select-none"
                   >
                     {index + 1}
                   </span>
 
-                  <div className="relative p-7 pt-8">
+                  <div className="relative p-7 pt-9">
                     <div className="flex items-start justify-between gap-4">
-                      <div className={`relative inline-flex h-12 w-12 items-center justify-center rounded-2xl ${accent.tile}`}>
-                        <Icon className={`h-6 w-6 ${accent.icon}`} aria-hidden="true" />
-                        <span
-                          aria-hidden="true"
-                          className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full ring-2 ring-card ${accent.dot}`}
-                        />
+                      <div
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${accent.tile}`}
+                      >
+                        <Icon className="h-5 w-5 text-foreground" aria-hidden="true" />
                       </div>
-                      <span className="font-display font-bold text-sm text-muted-foreground">
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Step {index + 1}
                       </span>
                     </div>
 
-                    <h3 className="mt-5 font-display font-bold text-xl tracking-tight">
+                    <h3 className="mt-6 font-sans font-semibold text-xl tracking-tight">
                       {step.title}
                     </h3>
                     <p className="mt-2 text-sm text-muted-foreground leading-relaxed">

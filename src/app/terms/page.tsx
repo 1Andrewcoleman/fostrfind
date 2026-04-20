@@ -34,7 +34,7 @@ export default function TermsPage() {
 
       <main className="flex-1">
         <article className="container mx-auto max-w-3xl px-4 py-12 prose prose-slate dark:prose-invert">
-          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">
+          <h1 className="font-display text-3xl md:text-4xl font-semibold tracking-tight mb-2">
             Terms of Service
           </h1>
           <p className="text-sm text-muted-foreground">

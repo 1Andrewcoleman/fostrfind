@@ -16,14 +16,14 @@ export function PublicFooter() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="border-t border-border/60 bg-muted/30">
-      <div className="container mx-auto px-4 py-12">
+    <footer className="border-t border-border/60 bg-muted/40">
+      <div className="container mx-auto px-4 py-14">
         <div className="grid gap-10 lg:grid-cols-[2fr_1fr_1fr_1fr]">
           {/* Brand */}
           <div className="space-y-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 font-display font-extrabold text-lg tracking-tight"
+              className="inline-flex items-center gap-2 font-sans font-bold text-lg tracking-tight"
             >
               <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
               Fostr Fix
@@ -36,7 +36,7 @@ export function PublicFooter() {
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
                 aria-label={`Email support at ${SUPPORT_EMAIL}`}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground hover:bg-primary/15"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground hover:bg-primary/20"
               >
                 <Mail className="h-4 w-4" aria-hidden="true" />
               </a>
@@ -81,7 +81,7 @@ export function PublicFooter() {
 function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+      <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-foreground/80">
         {title}
       </h3>
       <ul className="space-y-2 text-sm">{children}</ul>

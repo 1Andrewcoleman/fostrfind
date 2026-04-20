@@ -2045,6 +2045,8 @@ export const metadata: Metadata = {
 
 **Commit:** `feat: landing page how-it-works cards and footer redesign (§25b)`
 
+**Status:** ✅ Shipped 2026-04-20 (session 3) — How It Works section rebuilt as 3 editorial cards (colored top strip + huge watermark step number + layered icon tile with accent dot + hover lift + staggered entrance). Shared `src/components/public-footer.tsx` extracted and now drives `/`, `/terms`, `/privacy` (replaces each page's inline strip). Root-layout metadata extended with `description`, `openGraph`, `twitter`, `metadataBase`, and a `title.template`. Roadmap specified `src/components/navbar.tsx (footer)` but that file is the portal navbar; deviation noted in commit — a dedicated `public-footer.tsx` is cleaner and reusable.
+
 ---
 
 ### Step 39: Filter Pill Selectors
@@ -2237,6 +2239,8 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-20 | Step 36 | `SUPPORT_EMAIL` in `src/lib/constants.ts` is placeholder (`support@fostrfix.local`) | ops / pre-launch | Domain is intentionally `.local` so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — every error boundary's "Contact support" CTA flows through this single constant. |
 | 2026-04-20 | Step 37 (Hero Redesign) | Social-proof stat numbers (2,400+ / 180+ / 4.9) are placeholder pilot-network figures | Remaining Items (Analytics) | Labeled "Based on our pilot network of early partner shelters." below the grid so they don't read as fabricated analytics. Swap to real counts once analytics (PostHog/Mixpanel) lands and we have production data to source from. Numbers live as the `STATS` array at the top of `src/app/page.tsx`. |
 | 2026-04-20 | Step 37 (Hero Redesign) | Hero photograph is a hardcoded Unsplash URL (`photo-1583337130417-3346a1be7dee`) | unscheduled — brand assets | Stable CDN image but not owned by us. Pre-public-launch brand work should commission or license an exclusive hero photo and replace `HERO_IMAGE_SRC` at the top of `src/app/page.tsx`. The `next/image` frame aspect is fixed at 4/5 so a replacement just needs matching dimensions. |
+| 2026-04-20 | Step 38 (How It Works + Footer) | Public footer ships with Mail only — no Instagram / Twitter / LinkedIn icons | ops / pre-launch | Per the Agent Code Quality Protocol we refused to wire placeholder `href="#"` links. When real social handles exist, add them to the brand column of `src/components/public-footer.tsx` alongside the existing `Mail` icon (same circular-border styling, same `aria-label` pattern). |
+| 2026-04-20 | Step 38 (How It Works + Footer) | No `og:image`, `sitemap.xml`, or `robots.txt` yet | unscheduled — brand assets + analytics | The Step 38 metadata upgrade added copy-only `openGraph` + `twitter` fields and a `metadataBase`. Pre-launch, (a) generate an `og:image` (1200×630) once the brand hero photo exists, (b) emit `sitemap.xml` via Next's Route Handler, and (c) emit `robots.txt` (both in `src/app/` as `sitemap.ts` / `robots.ts`). |
 
 ---
 

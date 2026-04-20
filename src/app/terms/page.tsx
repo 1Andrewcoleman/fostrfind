@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PawPrint } from 'lucide-react'
+import { PublicFooter } from '@/components/public-footer'
 
 export const metadata: Metadata = {
   title: 'Terms of Service | Fostr Fix',
@@ -150,17 +151,7 @@ export default function TermsPage() {
         </article>
       </main>
 
-      <footer className="border-t py-6 text-center text-sm text-muted-foreground">
-        <div className="container mx-auto px-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          <span>&copy; {new Date().getFullYear()} Fostr Fix</span>
-          <Link href="/terms" className="hover:text-foreground">
-            Terms
-          </Link>
-          <Link href="/privacy" className="hover:text-foreground">
-            Privacy
-          </Link>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

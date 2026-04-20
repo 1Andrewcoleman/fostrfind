@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { PawPrint, Heart, Search, CheckCircle, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { PublicFooter } from '@/components/public-footer'
 
 // Curated editorial dog portrait from Unsplash. Hostname is allowlisted in
 // next.config.mjs. This particular photo is also used in scripts/seed.ts
@@ -17,6 +18,43 @@ const STATS = [
   { value: '180+', label: 'Partner shelters' },
   { value: '4.9', label: 'Avg foster rating', prefix: '★' },
 ] as const
+
+// How-It-Works step definitions. Accent maps to a tint pair: the top
+// strip uses the solid token; the icon tile uses the /10 opacity variant
+// so each card reads as a coordinated block of color without shouting.
+type StepAccent = 'warm' | 'sage' | 'primary'
+interface HowItWorksStep {
+  title: string
+  body: string
+  Icon: typeof Heart
+  accent: StepAccent
+}
+const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
+  {
+    title: 'Shelters list dogs',
+    body: 'Rescue organizations post dogs who need temporary foster homes with full profiles, photos, and medical details.',
+    Icon: Heart,
+    accent: 'warm',
+  },
+  {
+    title: 'Fosters browse & apply',
+    body: 'Foster parents search by location, size, age, and temperament — then apply with a personal note.',
+    Icon: Search,
+    accent: 'sage',
+  },
+  {
+    title: 'Dogs find homes',
+    body: 'Shelters review foster history and ratings, accept the best match, and coordinate every step via in-app messaging.',
+    Icon: CheckCircle,
+    accent: 'primary',
+  },
+]
+
+const ACCENT_CLASSES: Record<StepAccent, { strip: string; tile: string; icon: string; dot: string }> = {
+  warm:    { strip: 'bg-warm',           tile: 'bg-warm/10',          icon: 'text-warm-foreground',    dot: 'bg-warm' },
+  sage:    { strip: 'bg-chart-2/70',     tile: 'bg-chart-2/10',       icon: 'text-chart-2',            dot: 'bg-chart-2/80' },
+  primary: { strip: 'bg-primary',        tile: 'bg-primary/10',       icon: 'text-primary',            dot: 'bg-primary' },
+}
 
 export default function LandingPage() {
   return (
@@ -182,62 +220,74 @@ export default function LandingPage() {
       {/* -------------------------------------------------------------- */}
       {/* How it works                                                    */}
       {/* -------------------------------------------------------------- */}
-      <section className="py-20 px-4 bg-background">
-        <div className="container mx-auto max-w-4xl">
-          <h2 className="text-3xl font-display font-bold text-center mb-12">How it works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Heart className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">1. Shelters list dogs</h3>
-              <p className="text-sm text-muted-foreground">
-                Rescue organizations post dogs who need temporary foster homes, with full profiles
-                and photos.
-              </p>
-            </div>
-
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Search className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">{'2. Fosters browse & apply'}</h3>
-              <p className="text-sm text-muted-foreground">
-                Foster parents search by location, size, age, and temperament — then apply with a
-                personal note.
-              </p>
-            </div>
-
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">3. Dogs find homes</h3>
-              <p className="text-sm text-muted-foreground">
-                Shelters review foster history and ratings, accept the best match, and coordinate
-                via in-app messaging.
-              </p>
-            </div>
+      <section id="how-it-works" className="py-20 md:py-24 px-4 bg-background scroll-mt-20">
+        <div className="container mx-auto max-w-6xl">
+          <div className="max-w-2xl mx-auto text-center mb-14">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-warm-foreground">
+              The flow
+            </p>
+            <h2 className="mt-3 font-display text-3xl md:text-4xl font-extrabold tracking-tight">
+              How it works
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Three steps from listing to placement — with fewer handoffs and more warmth at every
+              stage.
+            </p>
           </div>
+
+          <ol className="grid md:grid-cols-3 gap-6">
+            {HOW_IT_WORKS_STEPS.map((step, index) => {
+              const accent = ACCENT_CLASSES[step.accent]
+              const Icon = step.Icon
+              return (
+                <li
+                  key={step.title}
+                  className="relative overflow-hidden rounded-[1.25rem] border border-border/70 bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 [animation-fill-mode:both] motion-reduce:animate-none"
+                  style={{ animationDelay: `${index * 120}ms` }}
+                >
+                  {/* Top accent strip */}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute inset-x-0 top-0 block h-1.5 ${accent.strip}`}
+                  />
+
+                  {/* Decorative watermark number */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute -top-3 right-5 font-display font-extrabold text-[7rem] leading-none text-foreground/[0.05] select-none"
+                  >
+                    {index + 1}
+                  </span>
+
+                  <div className="relative p-7 pt-8">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className={`relative inline-flex h-12 w-12 items-center justify-center rounded-2xl ${accent.tile}`}>
+                        <Icon className={`h-6 w-6 ${accent.icon}`} aria-hidden="true" />
+                        <span
+                          aria-hidden="true"
+                          className={`absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full ring-2 ring-card ${accent.dot}`}
+                        />
+                      </div>
+                      <span className="font-display font-bold text-sm text-muted-foreground">
+                        Step {index + 1}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-5 font-display font-bold text-xl tracking-tight">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                      {step.body}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
         </div>
       </section>
 
-      {/* -------------------------------------------------------------- */}
-      {/* Footer (Step 38 redesign is a separate commit)                  */}
-      {/* -------------------------------------------------------------- */}
-      <footer className="border-t py-6 text-sm text-muted-foreground">
-        <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>&copy; {new Date().getFullYear()} Fostr Fix. Built with love for dogs.</span>
-          <div className="flex items-center gap-4">
-            <Link href="/terms" className="hover:text-foreground">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-foreground">
-              Privacy
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }

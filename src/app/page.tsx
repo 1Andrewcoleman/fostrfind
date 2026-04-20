@@ -85,49 +85,30 @@ export default function LandingPage() {
       {/* -------------------------------------------------------------- */}
       {/* Hero                                                            */}
       {/* -------------------------------------------------------------- */}
+      {/* Calmer than the pre-redesign hero (see Phase 5-b Commit 3).
+       * Grain overlay removed, italic serif accent dropped, decorative
+       * washes softened to one butter radial tied to the photo corner.
+       * The two CTAs now present as paired doors: peach for shelter,
+       * butter for foster, weighted equally. */}
       <section className="relative overflow-hidden">
-        {/* Layered warm washes — decorative, aria-hidden. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -left-24 h-[32rem] w-[32rem] rounded-full bg-warm/20 blur-3xl"
+          className="pointer-events-none absolute -bottom-32 -right-32 h-[32rem] w-[32rem] rounded-full bg-primary/15 blur-3xl"
         />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -right-32 h-[28rem] w-[28rem] rounded-full bg-primary/10 blur-3xl"
-        />
-        {/* Subtle film-grain overlay for editorial depth. */}
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-[0.035] mix-blend-multiply"
-        >
-          <filter id="landing-hero-grain">
-            <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
-            <feColorMatrix type="saturate" values="0" />
-          </filter>
-          <rect width="100%" height="100%" filter="url(#landing-hero-grain)" />
-        </svg>
 
         <div className="container mx-auto px-4 py-20 md:py-28 lg:py-32 relative">
           <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Text column */}
             <div className="lg:col-span-7 max-w-2xl">
-              <div
-                className="inline-flex items-center gap-2 rounded-full border border-warm/40 bg-warm/10 px-3 py-1 text-xs font-medium text-warm-foreground animate-in fade-in slide-in-from-bottom-3 duration-500 [animation-fill-mode:both] motion-reduce:animate-none"
-              >
-                <span
-                  aria-hidden="true"
-                  className="relative inline-flex h-1.5 w-1.5"
-                >
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-warm opacity-70 animate-ping motion-reduce:animate-none" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-warm" />
-                </span>
+              <div className="inline-flex items-center gap-2 rounded-full border border-warm/40 bg-warm/15 px-3 py-1 text-xs font-medium tracking-wide text-foreground/80 animate-in fade-in slide-in-from-bottom-3 duration-500 [animation-fill-mode:both] motion-reduce:animate-none">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warm" />
                 Open for new fosters
               </div>
 
-              <h1 className="mt-6 font-display font-extrabold tracking-[-0.03em] leading-[0.95] text-5xl md:text-6xl lg:text-7xl animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 [animation-fill-mode:both] motion-reduce:animate-none">
+              <h1 className="mt-6 font-display font-semibold tracking-[-0.02em] leading-[1.02] text-5xl md:text-6xl lg:text-[4.5rem] animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 [animation-fill-mode:both] motion-reduce:animate-none">
                 Find a foster.
                 <br />
-                <span className="italic text-primary">Save a life.</span>
+                Save a life.
               </h1>
 
               <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 [animation-fill-mode:both] motion-reduce:animate-none">
@@ -135,16 +116,15 @@ export default function LandingPage() {
                 dogs the temporary homes they need while they wait for their forever family.
               </p>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300 [animation-fill-mode:both] motion-reduce:animate-none">
-                <Button size="lg" asChild>
-                  <Link href="/signup?role=shelter">I&apos;m a shelter</Link>
-                </Button>
+              <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300 [animation-fill-mode:both] motion-reduce:animate-none">
                 <Button
                   size="lg"
-                  variant="outline"
                   asChild
-                  className="border-2 border-primary/30 hover:border-primary hover:bg-primary/5"
+                  className="h-12 flex-1 bg-peach text-foreground hover:bg-peach/85 shadow-sm"
                 >
+                  <Link href="/signup?role=shelter">I&apos;m a shelter</Link>
+                </Button>
+                <Button size="lg" asChild className="h-12 flex-1 shadow-sm">
                   <Link href="/signup?role=foster">I&apos;m a foster parent</Link>
                 </Button>
               </div>
@@ -153,13 +133,12 @@ export default function LandingPage() {
             {/* Image column */}
             <div className="lg:col-span-5">
               <div className="relative mx-auto w-full max-w-md lg:max-w-none animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200 [animation-fill-mode:both] motion-reduce:animate-none">
-                {/* Offset warm panel — editorial magazine motif. */}
+                {/* Offset butter panel — editorial magazine motif, low alpha */}
                 <div
                   aria-hidden="true"
-                  className="absolute inset-0 translate-x-4 translate-y-4 sm:translate-x-5 sm:translate-y-5 rounded-[1.5rem] bg-warm/25"
+                  className="absolute inset-0 translate-x-4 translate-y-4 sm:translate-x-5 sm:translate-y-5 rounded-[1.5rem] bg-primary/25"
                 />
-                {/* Photo frame */}
-                <div className="relative rounded-[1.5rem] overflow-hidden shadow-xl ring-1 ring-black/5 bg-muted">
+                <div className="relative rounded-[1.5rem] overflow-hidden shadow-xl ring-1 ring-foreground/[0.04] bg-muted">
                   <Image
                     src={HERO_IMAGE_SRC}
                     alt="A foster parent resting at home with a rescued husky mix"

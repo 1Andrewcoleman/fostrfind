@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterSettingsForm } from '@/components/shelter/shelter-settings-form'
+
+export const metadata: Metadata = { title: 'Shelter Settings' }
 import { AccountSettingsForm } from '@/components/account-settings-form'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { DEV_MODE } from '@/lib/constants'

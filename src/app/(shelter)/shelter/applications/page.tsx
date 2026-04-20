@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterApplicationsList } from '@/components/shelter/applications-list'
+
+export const metadata: Metadata = { title: 'Applications' }
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { DEV_MODE } from '@/lib/constants'
 import { isNextControlFlowError } from '@/lib/server-errors'

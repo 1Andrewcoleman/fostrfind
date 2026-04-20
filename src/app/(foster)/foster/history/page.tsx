@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EmptyState } from '@/components/empty-state'
+
+export const metadata: Metadata = { title: 'Foster History' }
 import { FosterHistoryCard } from '@/components/foster/foster-history-card'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { calculateAverageRating } from '@/lib/helpers'

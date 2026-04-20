@@ -1,6 +1,31 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { notFound } from 'next/navigation'
+
+/**
+ * Dynamic tab title — "Edit <Dog Name>" — to help shelter staff keep
+ * multiple open edit tabs straight. Must never throw; falls back to
+ * a generic title on any error path or in DEV_MODE.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string }
+}): Promise<Metadata> {
+  if (DEV_MODE) return { title: 'Edit Dog' }
+  try {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('dogs')
+      .select('name')
+      .eq('id', params.id)
+      .maybeSingle()
+    return { title: data?.name ? `Edit ${data.name}` : 'Edit Dog' }
+  } catch {
+    return { title: 'Edit Dog' }
+  }
+}
 import { Card, CardContent } from '@/components/ui/card'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { DogForm } from '@/components/shelter/dog-form'

@@ -1,6 +1,9 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FosterProfileForm } from '@/components/foster/foster-profile-form'
+
+export const metadata: Metadata = { title: 'Foster Profile' }
 import { AccountSettingsForm } from '@/components/account-settings-form'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { DEV_MODE } from '@/lib/constants'

@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { PawPrint } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { RoleGuard } from '@/components/role-guard'
@@ -5,6 +6,13 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
+
+export const metadata: Metadata = {
+  title: {
+    template: '%s — Fostr Fix',
+    default: 'Shelter Portal — Fostr Fix',
+  },
+}
 
 export default async function ShelterLayout({ children }: { children: React.ReactNode }) {
   const { unreadMessages, identity } = await getPortalLayoutData('shelter')

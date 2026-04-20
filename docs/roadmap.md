@@ -2179,6 +2179,15 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-19 | Step 19 | Zod schema on `/api/account/delete` body — already shipped (`z.literal('DELETE')`) | §28 | Logged for completeness; the route is already validated. §28's schema audit will cover whether the literal should be replaced with a stricter discriminated union when we later gate deletion by additional flags (e.g. re-enter password). |
 | 2026-04-19 | Step 19 | Orphaned dogs when a shelter deletes their account | unscheduled — data-hygiene | `shelters` ON DELETE CASCADE removes dogs automatically, but any actively-fostered dog (`status = 'pending'`) is dropped on the floor. Fostering fosters will see their application turn into a broken join. For MVP that's acceptable because Step 19 cancels pending applications first, but a richer flow would transfer placed dogs to a system-owned shelter or require the user to hand them off before deleting. |
 | 2026-04-19 | Step 19 | Storage orphans: avatar / logo / dog photos remain in the bucket | unscheduled — storage-hygiene | Deleting `auth.users` cascades to DB rows but not to storage objects. A cleanup job (or explicit `storage.from().remove()` pass in the API route) is needed if storage costs matter. Out of scope for MVP; logged for later. |
+| 2026-04-19 | Step 20 (Shelter Ratings) | `shelter_ratings` RLS does not explicitly require `application.status = 'completed'` — only the API route checks it | §27 | The policy requires `foster_id in (select get_my_foster_ids())` + unique-per-application, but a foster could technically insert for a non-completed application if they bypass the API. Acceptable for MVP (no one bypasses the dialog today) but worth tightening to a subquery-joined RLS in Phase 3 hardening. |
+| 2026-04-19 | Step 20 | Shelter rating comments are plain text with no moderation | Phase 3 / §26 | The API caps length at 500 chars but does not filter slurs, doxxing, or shelter names masquerading as fosters. Added to §26's moderation roster. |
+| 2026-04-19 | Step 20 | Browse-card rating stars are an N+1-ish 2nd query per page | acceptable at PAGE_SIZE=24 | Page-scoped so it stays cheap, but once browse moves to server-side filtering the rating aggregate should be a `shelters.avg_rating` materialized column or a join-lateral subquery. Logged so it's on the radar the next time we touch the browse query. |
+| 2026-04-19 | Step 20 | Placement-completed email points at `/foster/history` (rating entry) but not at the specific placement | UX polish | The history page lists all placements; the foster has to find the right one. A deep link (`/foster/history#placement-<id>` with scroll-into-view) would shave a step. Low priority — there's usually only one recent completion to find. |
+| 2026-04-19 | Step 21 (Legal Pages) | TOS / Privacy consent is not persisted | Phase 3 / §28 | The signup checkbox gates form submission but we never record `terms_accepted_at` anywhere. A future migration should add a `terms_accepted_at timestamptz` column to both `foster_parents` and `shelters` (or a consolidated `user_profiles` table) and stamp it at signup. Matters for legal defensibility more than functionality. |
+| 2026-04-19 | Step 21 | Policy pages are hand-rolled, not drafted or reviewed by counsel | out-of-scope for code | The TOS/Privacy text is a reasonable starting draft but should be reviewed by a lawyer before any real launch. Logged as an ops/legal follow-up. |
+| 2026-04-19 | Step 22 (Distance Filter) | Filter is client-side and operates only over currently-loaded dogs | Phase 3 / §27 | Same shape as Step 13's text search — a foster who wants "within 10 miles" with only 24 dogs loaded might see 0 matches even though matches exist further in the feed. The SQL `distance_miles()` function ships alongside to unblock a future server-side filter move. |
+| 2026-04-19 | Step 22 | Permissive distance filter lets unknown-distance dogs through | intentional | If a foster or shelter has no geocode, every dog for that pair has `distance_miles = undefined` and passes the slider. This is the right call for MVP (better false-positives than silent hides), but once geocoding is a required onboarding step the filter can tighten to reject unknown. Captured so the design intent isn't lost. |
+| 2026-04-19 | Step 22 | No live geocoding pipeline for addresses | Phase 3 / §31 infrastructure | `foster_parents.latitude/longitude` and `shelters.latitude/longitude` have to be populated manually today; onboarding captures location text but doesn't geocode it. The distance slider works fine for demo data with seeded coords, but launch needs an onboarding-side Mapbox/Google geocoding call (or a Supabase Edge Function trigger). |
 
 ---
 
@@ -2187,9 +2196,9 @@ These are larger features that can be tackled after the above phases, in any ord
 | Phase | Steps | Status |
 |-------|-------|--------|
 | **Phase 1: Core Features** | Steps 1–12 | **Complete (12/12)** ✅ |
-| **Phase 2: Extended Features** | Steps 13–22 | Not started |
+| **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
 | **Phase 3: Hardening** | Steps 23–30 | Not started |
 | **Phase 4: Infrastructure** | Steps 31–36 | Not started |
 | **Phase 5: Polish** | Steps 37–45 | Not started |
 
-**Last updated:** 2026-04-17
+**Last updated:** 2026-04-19

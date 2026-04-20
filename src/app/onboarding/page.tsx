@@ -56,7 +56,13 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (DEV_MODE) return
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user }, error: authError }) => {
+      if (authError) {
+        console.error('[onboarding] getUser failed:', authError.message)
+        toast.error('Could not check your sign-in status. Please sign in again.')
+        window.location.href = '/login'
+        return
+      }
       if (!user) {
         window.location.href = '/login'
         return
@@ -97,8 +103,15 @@ export default function OnboardingPage() {
 
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+      if (authError) {
+        console.error('[onboarding/shelter] getUser failed:', authError.message)
+        setError('Could not verify your session. Please sign in again.')
+        toast.error('Could not verify your session. Please sign in again.')
+        setLoading(false)
+        return
+      }
       if (!user) {
         setError('You must be logged in.')
         toast.error('You must be logged in.')
@@ -150,8 +163,15 @@ export default function OnboardingPage() {
 
     try {
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+      if (authError) {
+        console.error('[onboarding/foster] getUser failed:', authError.message)
+        setError('Could not verify your session. Please sign in again.')
+        toast.error('Could not verify your session. Please sign in again.')
+        setLoading(false)
+        return
+      }
       if (!user) {
         setError('You must be logged in.')
         toast.error('You must be logged in.')

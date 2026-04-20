@@ -36,7 +36,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   const supabase = await createClient()
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[upload/photo] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

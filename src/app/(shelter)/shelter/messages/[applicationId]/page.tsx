@@ -33,7 +33,9 @@ export default async function ShelterMessageThreadPage({
   const supabase = await createClient()
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) redirect('/login')
 
   // Fetch the application with dog + foster names and verify shelter ownership

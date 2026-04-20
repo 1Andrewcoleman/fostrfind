@@ -34,7 +34,13 @@ export default function VerifyEmailPage() {
     async function handleConfirmed() {
       const {
         data: { user },
+        error: authError,
       } = await supabase.auth.getUser()
+      if (authError) {
+        console.error('[verify-email] getUser (post-confirmation) failed:', authError.message)
+        window.location.href = '/login'
+        return
+      }
       const dest = user ? await getPostAuthDestination(supabase, user.id) : '/login'
       // Hard nav so the session cookie is propagated to the next request.
       window.location.href = dest
@@ -42,8 +48,14 @@ export default function VerifyEmailPage() {
     confirmedHandlerRef.current = handleConfirmed
 
     // Initial check
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user }, error: authError }) => {
       if (unmounted) return
+      if (authError) {
+        console.error('[verify-email] initial getUser failed:', authError.message)
+        toast.error('Could not check your sign-in status. Please sign in again.')
+        window.location.href = '/login'
+        return
+      }
       if (!user) {
         window.location.href = '/signup'
         return
@@ -56,12 +68,24 @@ export default function VerifyEmailPage() {
       setStatus('unconfirmed')
     })
 
-    // Poll — catches confirmation completed in another tab.
+    // Poll — catches confirmation completed in another tab. Poll errors
+    // are logged once and otherwise swallowed (the user sees the stale
+    // unconfirmed page; the next tick or a manual reload recovers).
+    let pollErrorLogged = false
     const pollId = window.setInterval(async () => {
       const {
         data: { user },
+        error: authError,
       } = await supabase.auth.getUser()
-      if (!user || unmounted) return
+      if (unmounted) return
+      if (authError) {
+        if (!pollErrorLogged) {
+          console.error('[verify-email] poll getUser failed:', authError.message)
+          pollErrorLogged = true
+        }
+        return
+      }
+      if (!user) return
       if (user.email_confirmed_at) {
         window.clearInterval(pollId)
         confirmedHandlerRef.current()

@@ -80,8 +80,14 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
       const supabase = createClient()
       const {
         data: { user },
+        error: authError,
       } = await supabase.auth.getUser()
 
+      if (authError) {
+        console.error('[foster-profile-form] getUser failed:', authError.message)
+        toast.error('Could not verify your session. Please sign in again.')
+        return
+      }
       if (!user) {
         toast.error('You must be logged in to save your profile.')
         return

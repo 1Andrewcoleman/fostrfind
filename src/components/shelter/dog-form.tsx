@@ -206,7 +206,12 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
     }
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('[dog-form] getUser failed:', authError.message)
+      setSubmitError('Could not verify your session. Please sign in again.')
+      return
+    }
     if (!user) { setSubmitError('You must be logged in.'); return }
 
     const { data: shelterRow } = await supabase

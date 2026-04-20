@@ -29,7 +29,12 @@ export async function PATCH(
   // 1. Authenticate
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[dogs/status] getUser failed:', authError.message)
+    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
+  }
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }

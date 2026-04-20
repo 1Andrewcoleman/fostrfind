@@ -34,7 +34,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`)
   }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) {
+    console.error('[auth/callback] getUser failed:', authError.message)
+    return NextResponse.redirect(`${origin}/login?error=auth_service_unavailable`)
+  }
   const dest = user ? await getPostAuthDestination(supabase, user.id) : '/onboarding'
   return NextResponse.redirect(`${origin}${dest}`)
 }

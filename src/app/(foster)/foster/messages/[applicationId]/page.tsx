@@ -33,7 +33,9 @@ export default async function FosterMessageThreadPage({
   const supabase = await createClient()
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) redirect('/login')
 
   // Fetch the application with dog + shelter names and verify foster ownership

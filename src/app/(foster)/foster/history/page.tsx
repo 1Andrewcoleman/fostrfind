@@ -20,8 +20,10 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
     const supabase = await createClient()
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
+    if (authError) throw authError
     if (!user) {
       redirect('/login')
     }

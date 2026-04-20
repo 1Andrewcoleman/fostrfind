@@ -33,8 +33,10 @@ export default async function ApplicationDetailPage({
   const supabase = await createClient()
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser()
 
+  if (authError) throw authError
   if (!user) {
     redirect('/login')
   }

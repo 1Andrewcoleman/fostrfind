@@ -11,8 +11,10 @@ export default async function FosterApplicationsPage(): Promise<React.JSX.Elemen
     const supabase = await createClient()
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
+    if (authError) throw authError
     if (!user) {
       redirect('/login')
     }

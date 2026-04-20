@@ -38,7 +38,13 @@ export default function LoginPage() {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('[login] getUser after sign-in failed:', authError.message)
+      toast.error('Signed in, but we could not load your profile. Please try again.')
+      setLoading(false)
+      return
+    }
     const dest = user ? await getPostAuthDestination(supabase, user.id) : '/onboarding'
     window.location.href = dest
   }

@@ -101,7 +101,12 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
       }
 
       // Check whether the current foster has already applied to this dog
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError) {
+        console.error('[foster/dog] getUser failed:', authError.message)
+        setCheckingApplied(false)
+        return
+      }
       if (user) {
         const { data: fosterRow } = await supabase
           .from('foster_parents')
@@ -144,7 +149,13 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
     }
 
     const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.error('[foster/dog/apply] getUser failed:', authError.message)
+      setApplyError('Could not verify your session. Please sign in again.')
+      setApplying(false)
+      return
+    }
     if (!user) { setApplyError('You must be logged in.'); setApplying(false); return }
 
     const { data: fosterRow } = await supabase

@@ -22,6 +22,7 @@ import { DEV_MODE, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/helpers'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
+import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { cn } from '@/lib/utils'
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
@@ -292,6 +293,40 @@ export default function OnboardingPage() {
         toast.error(copy)
         setLoading(false)
         return
+      }
+
+      // Claim any pending shelter-foster invites waiting on this email.
+      // Runs under the new foster's JWT — RLS on shelter_foster_invites
+      // already allows UPDATE when lower(email) matches the caller's
+      // foster_parents.email. Fire-and-forget; a claim failure should
+      // not block the foster from reaching their dashboard — the
+      // invites are still readable by email in /foster/invites and can
+      // be accepted there instead.
+      const newFosterEmail = normalizeInviteEmail(foster.email)
+      if (newFosterEmail) {
+        void (async () => {
+          try {
+            const { data: newFosterRow } = await supabase
+              .from('foster_parents')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle()
+            const newFosterId = (newFosterRow as { id: string } | null)?.id
+            if (newFosterId) {
+              await supabase
+                .from('shelter_foster_invites')
+                .update({ foster_id: newFosterId })
+                .is('foster_id', null)
+                .ilike('email', newFosterEmail)
+                .eq('status', 'pending')
+            }
+          } catch (e) {
+            console.warn(
+              '[onboarding/foster] invite email-claim failed (non-fatal):',
+              e instanceof Error ? e.message : String(e),
+            )
+          }
+        })()
       }
 
       toast.success('Profile created! Redirecting...')

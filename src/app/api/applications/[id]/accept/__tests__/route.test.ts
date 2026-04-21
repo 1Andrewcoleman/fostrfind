@@ -3,6 +3,7 @@ import { buildAuth, buildMockClient } from '@/lib/__tests__/supabase-mock'
 
 // Mock hoisting: vi.mock() calls get lifted above the imports below.
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
+vi.mock('@/lib/supabase/service', () => ({ createServiceClient: vi.fn() }))
 vi.mock('@/lib/rate-limit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/rate-limit')>()
   return {
@@ -16,6 +17,7 @@ vi.mock('@/lib/email', () => ({
 }))
 
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail } from '@/lib/email'
 import { POST } from '@/app/api/applications/[id]/accept/route'
@@ -23,16 +25,42 @@ import { POST } from '@/app/api/applications/[id]/accept/route'
 const SHELTER_USER_ID = 'user-shelter-1'
 const OTHER_USER_ID = 'user-other'
 const APP_ID = 'app-123'
+const SHELTER_ID = 'shelter-1'
+const FOSTER_ID = 'foster-1'
 
 function happyApp(overrides: Record<string, unknown> = {}) {
   return {
     status: 'submitted',
     dog_id: 'dog-1',
+    foster_id: FOSTER_ID,
+    shelter_id: SHELTER_ID,
     dog: { name: 'Buddy' },
     foster: { first_name: 'Jane', last_name: 'Doe', email: 'jane@example.com' },
     shelter: { user_id: SHELTER_USER_ID, name: 'Happy Tails' },
     ...overrides,
   }
+}
+
+/**
+ * Minimal mock for the service client — records upsert calls into the
+ * roster table so tests can assert arguments. `shouldFail` and
+ * `shouldThrow` let individual tests exercise the failure branches.
+ */
+function buildMockServiceClient(opts: { shouldFail?: boolean; shouldThrow?: boolean } = {}) {
+  const upsertSpy = vi.fn(() =>
+    Promise.resolve({
+      data: null,
+      error: opts.shouldFail ? { message: 'permission denied' } : null,
+    }),
+  )
+  const fromSpy = vi.fn(() => ({ upsert: upsertSpy }))
+  const svc = { from: fromSpy }
+  vi.mocked(createServiceClient).mockImplementation(() => {
+    if (opts.shouldThrow) throw new Error('service client unavailable')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return svc as any
+  })
+  return { upsertSpy, fromSpy }
 }
 
 function callRoute(): Promise<Response> {
@@ -49,6 +77,8 @@ beforeEach(() => {
     resetAt: Date.now() + 60_000,
     retryAfter: 0,
   })
+  // Sensible default: service client succeeds. Individual tests override.
+  buildMockServiceClient()
 })
 
 describe('POST /api/applications/[id]/accept', () => {
@@ -148,6 +178,66 @@ describe('POST /api/applications/[id]/accept', () => {
       to: 'jane@example.com',
       subject: expect.stringContaining('Buddy'),
     })
+  })
+
+  it('upserts the foster into the shelter roster on accept', async () => {
+    const { upsertSpy, fromSpy } = buildMockServiceClient()
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: SHELTER_USER_ID }),
+      tableResults: { applications: [{ data: happyApp() }] },
+      rpcResult: { error: null },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute()
+    expect(res.status).toBe(200)
+    expect(fromSpy).toHaveBeenCalledWith('shelter_fosters')
+    expect(upsertSpy).toHaveBeenCalledWith(
+      { shelter_id: SHELTER_ID, foster_id: FOSTER_ID, source: 'application_accepted' },
+      { onConflict: 'shelter_id,foster_id', ignoreDuplicates: true },
+    )
+  })
+
+  it('still returns 200 if the roster upsert errors (idempotent + soft-failure)', async () => {
+    buildMockServiceClient({ shouldFail: true })
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: SHELTER_USER_ID }),
+      tableResults: { applications: [{ data: happyApp() }] },
+      rpcResult: { error: null },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const res = await callRoute()
+      expect(res.status).toBe(200)
+      expect(errSpy).toHaveBeenCalledWith(
+        expect.stringContaining('roster upsert failed'),
+        expect.any(String),
+      )
+    } finally {
+      errSpy.mockRestore()
+    }
+  })
+
+  it('still returns 200 if the service client throws (DEV_MODE / missing env)', async () => {
+    buildMockServiceClient({ shouldThrow: true })
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: SHELTER_USER_ID }),
+      tableResults: { applications: [{ data: happyApp() }] },
+      rpcResult: { error: null },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const res = await callRoute()
+      expect(res.status).toBe(200)
+      expect(errSpy).toHaveBeenCalledWith(
+        expect.stringContaining('roster upsert threw'),
+        expect.any(String),
+      )
+    } finally {
+      errSpy.mockRestore()
+    }
   })
 
   it('does NOT send email when foster email is missing', async () => {

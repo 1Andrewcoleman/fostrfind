@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
@@ -9,6 +10,8 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 interface AcceptedApplicationRow {
   status: string
   dog_id: string
+  foster_id: string
+  shelter_id: string
   dog: { name: string } | null
   foster: { first_name: string | null; last_name: string | null; email: string | null } | null
   shelter: { user_id: string; name: string | null } | null
@@ -43,7 +46,7 @@ export async function POST(
   const { data: application, error: fetchError } = await supabase
     .from('applications')
     .select(
-      'status, dog_id, dog:dogs(name), foster:foster_parents(first_name, last_name, email), shelter:shelters!inner(user_id, name)',
+      'status, dog_id, foster_id, shelter_id, dog:dogs(name), foster:foster_parents(first_name, last_name, email), shelter:shelters!inner(user_id, name)',
     )
     .eq('id', params.id)
     .single<AcceptedApplicationRow>()
@@ -76,6 +79,34 @@ export async function POST(
 
   if (rpcError) {
     return NextResponse.json({ error: 'Failed to accept application' }, { status: 500 })
+  }
+
+  // 5. Auto-add the foster to the shelter's roster (Phase 6.2). Idempotent:
+  //    the composite PK + ignoreDuplicates makes re-acceptance a no-op.
+  //    Wrapped so an RLS / env / network failure logs and DOES NOT fail
+  //    the acceptance — the user-visible action (application accepted)
+  //    has already succeeded via the RPC above, and the roster row is a
+  //    secondary side effect.
+  try {
+    const svc = createServiceClient()
+    const { error: rosterError } = await svc
+      .from('shelter_fosters')
+      .upsert(
+        {
+          shelter_id: application.shelter_id,
+          foster_id: application.foster_id,
+          source: 'application_accepted',
+        },
+        { onConflict: 'shelter_id,foster_id', ignoreDuplicates: true },
+      )
+    if (rosterError) {
+      console.error('[applications/accept] roster upsert failed, continuing:', rosterError.message)
+    }
+  } catch (e) {
+    console.error(
+      '[applications/accept] roster upsert threw, continuing:',
+      e instanceof Error ? e.message : String(e),
+    )
   }
 
   // 6. Fire-and-forget: notify the foster that they were accepted.

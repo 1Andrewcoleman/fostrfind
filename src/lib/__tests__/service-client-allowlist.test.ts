@@ -14,14 +14,20 @@ import { describe, expect, it } from 'vitest'
  * behalf of another user).
  */
 const ALLOWED_IMPORTERS = new Set<string>([
-  // Membership upserts on application acceptance + invite acceptance +
-  // onboarding email-match. These are added in commits 3–5 of the §6.2
-  // plan; the list is pre-populated so the test stays green as the
-  // callers land.
+  // Membership inserts: application acceptance upserts into the roster;
+  // invite acceptance inserts into the roster. These bypass RLS because
+  // `shelter_fosters` has no INSERT policy — the API layer is the one
+  // place that decides when a row can exist.
+  //
+  // Pre-populated so the test stays green as the callers land in the
+  // next commits of the §6.2 plan. Adding a NEW entry requires an
+  // explicit change here, which makes the privilege visible in review.
   'src/app/api/applications/[id]/accept/route.ts',
   'src/app/api/shelter/foster-invites/[id]/accept/route.ts',
-  'src/app/api/shelter/foster-invites/route.ts',
-  'src/app/onboarding/foster/claim-invites.ts',
+  // Onboarding email-match claim is NOT on this list because it runs
+  // under the new foster's JWT; the RLS policy on
+  // shelter_foster_invites already allows UPDATE by email match.
+  //
   // The module itself.
   'src/lib/supabase/service.ts',
 ])

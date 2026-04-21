@@ -228,6 +228,23 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
           )}
         </CardContent>
       </Card>
+
+      {/* Discovery link into the shelter roster surface. Keeps the
+          dashboard the single entry point for every new section. */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-display font-semibold">Your shelters</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            See every shelter that has you on their foster roster and manage
+            your visibility.
+          </p>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/foster/shelters-roster">View roster</Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }

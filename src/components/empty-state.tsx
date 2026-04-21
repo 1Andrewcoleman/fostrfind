@@ -67,24 +67,26 @@ export function EmptyState({
   const Icon = ILLUSTRATION_MAP[illustration] ?? PawPrint
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div
-        aria-hidden
-        className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted"
-      >
-        <Icon className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+      <div className="mx-auto flex w-full max-w-md flex-col items-center">
+        <div
+          aria-hidden
+          className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted"
+        >
+          <Icon className="h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
+        </div>
+        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
+        <p className="mb-6 max-w-sm text-sm text-muted-foreground">{description}</p>
+        {action &&
+          ('href' in action ? (
+            <Button asChild>
+              <Link href={action.href}>{action.label}</Link>
+            </Button>
+          ) : (
+            <Button type="button" onClick={action.onClick}>
+              {action.label}
+            </Button>
+          ))}
       </div>
-      <h3 className="mb-2 text-lg font-semibold">{title}</h3>
-      <p className="mb-6 max-w-sm text-sm text-muted-foreground">{description}</p>
-      {action &&
-        ('href' in action ? (
-          <Button asChild>
-            <Link href={action.href}>{action.label}</Link>
-          </Button>
-        ) : (
-          <Button type="button" onClick={action.onClick}>
-            {action.label}
-          </Button>
-        ))}
     </div>
   )
 }

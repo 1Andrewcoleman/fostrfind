@@ -85,19 +85,28 @@ function NavLinkItem({ item, isActive, unreadMessages, onClick }: NavLinkItemPro
     <Link
       href={href}
       onClick={onClick}
+      title={label}
+      aria-label={label}
       className={cn(
-        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
+        'relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
+        'group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-2',
         isActive
           ? 'bg-warm/25 text-foreground font-semibold'
           : 'text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
     >
       <Icon className="h-4 w-4 flex-shrink-0" />
-      <span className="flex-1">{label}</span>
+      <span className="flex-1 group-data-[collapsed=true]:hidden">{label}</span>
       {badgeCount > 0 && (
-        <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
-          {badgeCount > 99 ? '99+' : badgeCount}
-        </span>
+        <>
+          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground group-data-[collapsed=true]:hidden">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+          <span
+            aria-hidden
+            className="absolute right-1.5 top-1.5 hidden h-2 w-2 rounded-full bg-primary group-data-[collapsed=true]:block"
+          />
+        </>
       )}
     </Link>
   )

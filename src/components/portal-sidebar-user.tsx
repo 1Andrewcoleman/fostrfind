@@ -32,7 +32,7 @@ export function PortalSidebarUser({ identity }: PortalSidebarUserProps) {
 
   return (
     <div className="p-3 border-t shrink-0">
-      <div className="flex items-center gap-2.5 px-1">
+      <div className="flex items-center gap-2.5 px-1 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-2 group-data-[collapsed=true]:px-0">
         <Avatar className="h-8 w-8 shrink-0">
           <AvatarImage src={identity.avatarUrl ?? undefined} />
           <AvatarFallback className="text-xs">
@@ -40,7 +40,7 @@ export function PortalSidebarUser({ identity }: PortalSidebarUserProps) {
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 group-data-[collapsed=true]:hidden">
           <p className="text-sm font-medium truncate">{identity.displayName}</p>
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-normal">
             {identity.roleLabel}

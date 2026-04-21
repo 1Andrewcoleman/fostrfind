@@ -12,12 +12,16 @@ export const metadata: Metadata = {
 }
 
 export default async function FosterLayout({ children }: { children: React.ReactNode }) {
-  const { unreadMessages, identity } = await getPortalLayoutData('foster')
+  const { unreadMessages, pendingInvites, identity } = await getPortalLayoutData('foster')
 
   return (
     <AuthGuard>
       <RoleGuard allowedRole="foster">
-        <FosterPortalShell unreadMessages={unreadMessages} identity={identity}>
+        <FosterPortalShell
+          unreadMessages={unreadMessages}
+          pendingInvites={pendingInvites}
+          identity={identity}
+        >
           {children}
         </FosterPortalShell>
       </RoleGuard>

@@ -21,6 +21,7 @@ import {
   History,
   Menu,
   PawPrint,
+  Mail,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,15 +43,20 @@ interface NavItem {
   href: string
   label: string
   icon: React.ElementType
-  /** If true, the unreadMessages badge is shown on this item. */
-  showUnreadBadge?: boolean
+  /**
+   * Which counter (if any) drives the badge on this item. Kept as a
+   * discriminated key rather than a direct count so the component
+   * receives a single `counts` map and doesn't have to know about every
+   * surface that might grow a badge.
+   */
+  badgeKey?: 'unreadMessages' | 'pendingInvites'
 }
 
 const SHELTER_NAV: NavItem[] = [
   { href: '/shelter/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/shelter/dogs', label: 'Dogs', icon: Dog },
   { href: '/shelter/applications', label: 'Applications', icon: FileText },
-  { href: '/shelter/messages', label: 'Messages', icon: MessageCircle, showUnreadBadge: true },
+  { href: '/shelter/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
   { href: '/shelter/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -58,10 +64,16 @@ const FOSTER_NAV: NavItem[] = [
   { href: '/foster/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/foster/browse', label: 'Browse Dogs', icon: Search },
   { href: '/foster/applications', label: 'My Applications', icon: FileText },
-  { href: '/foster/messages', label: 'Messages', icon: MessageCircle, showUnreadBadge: true },
+  { href: '/foster/invites', label: 'Invites', icon: Mail, badgeKey: 'pendingInvites' },
+  { href: '/foster/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
   { href: '/foster/profile', label: 'My Profile', icon: User },
   { href: '/foster/history', label: 'History', icon: History },
 ]
+
+interface NavCounts {
+  unreadMessages: number
+  pendingInvites: number
+}
 
 type Portal = 'shelter' | 'foster'
 
@@ -72,14 +84,14 @@ type Portal = 'shelter' | 'foster'
 interface NavLinkItemProps {
   item: NavItem
   isActive: boolean
-  unreadMessages: number
+  counts: NavCounts
   /** Called when the link is clicked (e.g. to close a mobile sheet). */
   onClick?: () => void
 }
 
-function NavLinkItem({ item, isActive, unreadMessages, onClick }: NavLinkItemProps) {
-  const { href, label, icon: Icon, showUnreadBadge } = item
-  const badgeCount = showUnreadBadge ? unreadMessages : 0
+function NavLinkItem({ item, isActive, counts, onClick }: NavLinkItemProps) {
+  const { href, label, icon: Icon, badgeKey } = item
+  const badgeCount = badgeKey ? counts[badgeKey] : 0
 
   return (
     <Link
@@ -119,11 +131,17 @@ function NavLinkItem({ item, isActive, unreadMessages, onClick }: NavLinkItemPro
 interface NavLinksProps {
   portal: Portal
   unreadMessages?: number
+  pendingInvites?: number
 }
 
-export function NavLinks({ portal, unreadMessages = 0 }: NavLinksProps) {
+export function NavLinks({
+  portal,
+  unreadMessages = 0,
+  pendingInvites = 0,
+}: NavLinksProps) {
   const pathname = usePathname()
   const items = portal === 'shelter' ? SHELTER_NAV : FOSTER_NAV
+  const counts: NavCounts = { unreadMessages, pendingInvites }
 
   return (
     <>
@@ -132,7 +150,7 @@ export function NavLinks({ portal, unreadMessages = 0 }: NavLinksProps) {
           key={item.href}
           item={item}
           isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-          unreadMessages={unreadMessages}
+          counts={counts}
         />
       ))}
     </>
@@ -147,13 +165,21 @@ interface MobileNavProps {
   portal: Portal
   portalLabel: string
   unreadMessages?: number
+  pendingInvites?: number
   identity?: PortalIdentity
 }
 
-export function MobileNav({ portal, portalLabel, unreadMessages = 0, identity }: MobileNavProps) {
+export function MobileNav({
+  portal,
+  portalLabel,
+  unreadMessages = 0,
+  pendingInvites = 0,
+  identity,
+}: MobileNavProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const items = portal === 'shelter' ? SHELTER_NAV : FOSTER_NAV
+  const counts: NavCounts = { unreadMessages, pendingInvites }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -175,7 +201,7 @@ export function MobileNav({ portal, portalLabel, unreadMessages = 0, identity }:
               key={item.href}
               item={item}
               isActive={pathname === item.href || pathname.startsWith(`${item.href}/`)}
-              unreadMessages={unreadMessages}
+              counts={counts}
               onClick={() => setOpen(false)}
             />
           ))}

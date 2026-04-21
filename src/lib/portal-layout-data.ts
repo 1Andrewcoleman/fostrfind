@@ -94,11 +94,52 @@ async function getUnreadCountForRole(
 }
 
 // ---------------------------------------------------------------------------
+// Pending foster invites — count the caller's pending shelter->foster
+// invites, matched either by foster_id OR case-insensitive email.
+// ---------------------------------------------------------------------------
+
+async function getPendingInvitesForFoster(
+  supabase: SupabaseServerClient,
+  user: AuthUser,
+): Promise<number> {
+  const { data: fosterRow } = await supabase
+    .from('foster_parents')
+    .select('id, email')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!fosterRow) return 0
+
+  const foster = fosterRow as { id: string; email: string | null }
+  const email = typeof foster.email === 'string' ? foster.email.trim().toLowerCase() : ''
+
+  // The OR predicate mirrors the RLS policy's visibility model: either
+  // claimed (foster_id) or still email-pending. Count-exact + head avoids
+  // fetching rows we don't need to render.
+  const filter = email
+    ? `foster_id.eq.${foster.id},email.ilike.${email}`
+    : `foster_id.eq.${foster.id}`
+
+  const { count, error } = await supabase
+    .from('shelter_foster_invites')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .or(filter)
+
+  if (error) {
+    console.error('[portal-layout-data] pending invites count failed:', error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
+// ---------------------------------------------------------------------------
 // Combined fetch — single getUser() per layout render
 // ---------------------------------------------------------------------------
 
 export interface PortalLayoutData {
   unreadMessages: number
+  /** Only populated for the foster portal; always 0 on the shelter side. */
+  pendingInvites: number
   identity: PortalIdentity
 }
 
@@ -106,7 +147,11 @@ export async function getPortalLayoutData(
   portal: 'shelter' | 'foster',
 ): Promise<PortalLayoutData> {
   if (DEV_MODE) {
-    return { unreadMessages: 0, identity: DEV_IDENTITY[portal] }
+    return {
+      unreadMessages: 0,
+      pendingInvites: 0,
+      identity: DEV_IDENTITY[portal],
+    }
   }
 
   // A layout render can't fail the whole page for a transient auth or
@@ -126,12 +171,13 @@ export async function getPortalLayoutData(
       return fallbackLayoutData(portal)
     }
 
-    const [unreadMessages, identity] = await Promise.all([
+    const [unreadMessages, identity, pendingInvites] = await Promise.all([
       getUnreadCountForRole(supabase, user, portal),
       getPortalIdentityForUser(portal, supabase, user),
+      portal === 'foster' ? getPendingInvitesForFoster(supabase, user) : Promise.resolve(0),
     ])
 
-    return { unreadMessages, identity }
+    return { unreadMessages, pendingInvites, identity }
   } catch (e) {
     // Re-throw Next control-flow errors (redirect / notFound / dynamic
     // server usage during build-time static analysis) so Next can do its
@@ -146,6 +192,7 @@ function fallbackLayoutData(portal: 'shelter' | 'foster'): PortalLayoutData {
   const roleLabel = portal === 'shelter' ? 'Shelter' as const : 'Foster' as const
   return {
     unreadMessages: 0,
+    pendingInvites: 0,
     identity: { displayName: 'Account', avatarUrl: null, roleLabel },
   }
 }

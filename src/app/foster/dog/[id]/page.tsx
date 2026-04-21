@@ -262,7 +262,7 @@ async function renderFullView({
     .maybeSingle()
   const initialApplied = !!existingApp
 
-  const { unreadMessages, identity } = await getPortalLayoutData('foster')
+  const { unreadMessages, pendingInvites, identity } = await getPortalLayoutData('foster')
 
   const fosterName = [fosterRow.first_name, fosterRow.last_name]
     .filter(Boolean)
@@ -270,7 +270,11 @@ async function renderFullView({
     .trim()
 
   return (
-    <FosterPortalShell unreadMessages={unreadMessages} identity={identity}>
+    <FosterPortalShell
+      unreadMessages={unreadMessages}
+      pendingInvites={pendingInvites}
+      identity={identity}
+    >
       <DogDetailFull
         dog={dog}
         shelter={shelter}

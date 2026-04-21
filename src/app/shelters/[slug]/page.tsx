@@ -13,53 +13,11 @@ import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { calculateAverageRating, getInitials } from '@/lib/helpers'
 import { isNextControlFlowError } from '@/lib/server-errors'
+import { PLACEHOLDER_SHELTERS } from '@/lib/placeholder-shelters'
 import type { Dog, DogWithShelter, Shelter } from '@/types/database'
 
 interface PageProps {
   params: { slug: string }
-}
-
-// DEV_MODE placeholder so the route is browsable without a live Supabase.
-// Mirrors the two shelter slugs seeded in the browse page's PLACEHOLDER_DOGS.
-// Exported so the `/shelters` index can reuse the same fixtures in DEV_MODE
-// without duplicating the data or drifting when we tweak it.
-export const PLACEHOLDER_SHELTERS: Record<string, Shelter> = {
-  'happy-paws-rescue': {
-    id: 's1',
-    created_at: new Date().toISOString(),
-    user_id: 'dev-shelter-1',
-    name: 'Happy Paws Rescue',
-    slug: 'happy-paws-rescue',
-    email: 'hello@happypaws.example',
-    phone: '(555) 123-4567',
-    location: 'Austin, TX',
-    latitude: null,
-    longitude: null,
-    logo_url: null,
-    ein: null,
-    bio: 'Happy Paws is a volunteer-run rescue that pairs dogs with loving foster families while we find their forever homes.',
-    website: 'https://happypaws.example',
-    instagram: 'happypawsrescue',
-    is_verified: true,
-  },
-  'austin-animal-rescue': {
-    id: 's2',
-    created_at: new Date().toISOString(),
-    user_id: 'dev-shelter-2',
-    name: 'Austin Animal Rescue',
-    slug: 'austin-animal-rescue',
-    email: 'team@austinrescue.example',
-    phone: null,
-    location: 'Austin, TX',
-    latitude: null,
-    longitude: null,
-    logo_url: null,
-    ein: null,
-    bio: 'Serving central Texas since 2014.',
-    website: null,
-    instagram: null,
-    is_verified: false,
-  },
 }
 
 interface ShelterPayload {

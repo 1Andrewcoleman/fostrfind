@@ -8,6 +8,13 @@ import type { PortalIdentity } from '@/types/portal'
 
 interface FosterPortalShellProps {
   unreadMessages: number
+  /**
+   * Count of pending shelter->foster invites awaiting this foster's
+   * response. Drives the badge on the /foster/invites nav item. Default
+   * 0 keeps the prop optional for callers (e.g. the public dog teaser)
+   * that don't have a logged-in foster context.
+   */
+  pendingInvites?: number
   identity: PortalIdentity
   children: React.ReactNode
 }
@@ -30,6 +37,7 @@ interface FosterPortalShellProps {
  */
 export function FosterPortalShell({
   unreadMessages,
+  pendingInvites = 0,
   identity,
   children,
 }: FosterPortalShellProps) {
@@ -43,7 +51,11 @@ export function FosterPortalShell({
             <span className="group-data-[collapsed=true]:hidden">Fostr Fix</span>
           </div>
           <nav className="flex-1 py-4 px-3 space-y-1">
-            <NavLinks portal="foster" unreadMessages={unreadMessages} />
+            <NavLinks
+              portal="foster"
+              unreadMessages={unreadMessages}
+              pendingInvites={pendingInvites}
+            />
           </nav>
           <PortalSidebarUser identity={identity} />
         </PortalSidebar>
@@ -68,6 +80,7 @@ export function FosterPortalShell({
               portal="foster"
               portalLabel="Foster Portal"
               unreadMessages={unreadMessages}
+              pendingInvites={pendingInvites}
               identity={identity}
             />
             <div className="flex items-center gap-2 font-display font-bold text-base">

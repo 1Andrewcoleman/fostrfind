@@ -355,6 +355,10 @@ export default function BrowsePage() {
       if (filters.maxDistance !== null && dog.distance_miles !== undefined) {
         if (dog.distance_miles > filters.maxDistance) return false
       }
+      // Shelter deep-link filter: only included dogs whose shelter slug
+      // matches. Applied client-side against the same `shelter` nested
+      // join the page already pulls through, so no extra query.
+      if (filters.shelter && dog.shelter_slug !== filters.shelter) return false
       return true
     })
   }, [dogs, filters])
@@ -378,6 +382,9 @@ export default function BrowsePage() {
   }
   function removeMaxDistance() {
     handleFilterChange({ ...filters, maxDistance: null })
+  }
+  function removeShelter() {
+    handleFilterChange({ ...filters, shelter: null })
   }
 
   return (
@@ -466,6 +473,20 @@ export default function BrowsePage() {
                 </Badge>
               )}
 
+              {filters.shelter && (
+                <Badge variant="secondary" className="gap-1 pr-1">
+                  <span className="sr-only">Filtered to shelter: </span>
+                  Shelter: {filters.shelter}
+                  <button
+                    onClick={removeShelter}
+                    className="ml-0.5 rounded-full hover:bg-foreground/10 p-0.5"
+                  >
+                    <X className="h-3 w-3" />
+                    <span className="sr-only">Remove shelter filter</span>
+                  </button>
+                </Badge>
+              )}
+
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
@@ -539,7 +560,8 @@ export default function BrowsePage() {
               (filters.gender ? 1 : 0) +
               (filters.medicalOk ? 1 : 0) +
               (filters.search.trim() ? 1 : 0) +
-              (filters.maxDistance !== null ? 1 : 0)}
+              (filters.maxDistance !== null ? 1 : 0) +
+              (filters.shelter ? 1 : 0)}
           </span>
         )}
       </Button>

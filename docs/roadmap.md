@@ -2354,17 +2354,18 @@ These are larger features that can be tackled after the above phases, in any ord
 
 These were scoped into the Phase 5-b plan but intentionally deferred from Commit 6 to keep that commit reviewable. Pick up in any order; each is independent.
 
-| Follow-up | Origin | Notes |
-|-----------|--------|-------|
-| Filter pill selectors (replaces §25e checkboxes) | Step 39 | `src/components/foster/filter-sidebar.tsx`. Active pill uses butter. Medical-needs stays a checkbox. |
-| Illustrated empty states | Step 40 | `src/components/empty-state.tsx` + all call sites. Line-art SVG only, per principle 1. Each illustration must map clearly to the emptiness shown (no generic "sad dog" across every empty state). |
-| Form polish — section headers, validation marks, sticky save | Step 41 | Replace Step 41's "colored left-border accent" (violates principle 1's stripe ban) with small-caps eyebrow + butter-yellow check icons on valid fields. |
-| Incoming message avatars + bubble palette | Step 42 | `src/components/messages/message-thread.tsx`. Incoming = neutral surface, outgoing = butter at low alpha. |
-| Onboarding role cards | Step 43 | Two large pastel tiles: peach = shelter, butter = foster. |
-| Page transitions + card entrance motion | Step 44 | Must pass principle 5: ≤500ms total, max 3 staggered, `motion-reduce:animate-none`, never stacked with other motion. |
-| Responsive polish + content centering | Step 45 | No palette impact. Can ship anytime. |
-| `og:image` asset | Commit 5 note | Deferred until a real brand hero photo exists — empty `og:image` is worse than no tag. |
-| Dark mode contrast sweep | Commit 6 | Dark tokens shipped, but a real pass through every portal component in dark needs a visual audit for edge cases (e.g. toast tints against dark surfaces, shadcn dialog overlays). |
+| Follow-up | Origin | Notes | Status |
+|-----------|--------|-------|--------|
+| Filter pill selectors (replaces §25e checkboxes) | Step 39 | `src/components/foster/filter-sidebar.tsx`. Active pill uses cherry-blossom. Medical-needs stays a checkbox. | ✅ Shipped 2026-04-20 (session 6) |
+| Illustrated empty states | Step 40 | `src/components/empty-state.tsx` + all call sites. Lucide line-art glyphs (`paw`/`dog`/`messages`/`applications`/`search`/`history`/`shelter`), each mapped per call site; no generic glyph reused across unrelated emptiness. | ✅ Shipped 2026-04-20 (session 6) |
+| Form polish — section headers, validation marks, sticky save | Step 41 | Small-caps `FormEyebrow` + hairline divider replaces the banned left-border accent; `useDirtyState` hook drives a reusable `StickySaveBar`; inline `ValidIndicator` (small check icon) on valid fields. Applied to `foster-profile-form`, `shelter-settings-form`, `dog-form`, and `profile-completeness` palette alignment. | ✅ Shipped 2026-04-20 (session 6) |
+| Incoming message avatars + bubble palette | Step 42 | `src/components/messages/message-thread.tsx` plus Supabase query extensions in both `messages/[applicationId]/page.tsx` (`shelters.logo_url` / `foster_parents.avatar_url`). Outgoing bubble = `bg-primary/25`, incoming = `bg-card border`, avatar renders on last incoming bubble of a run. | ✅ Shipped 2026-04-20 (session 6) |
+| Onboarding role cards | Step 43 | New `RoleTile` + `StepIndicator` components. Peach tile = shelter, primary (cherry-blossom) tile = foster. Page-level `h1` + `FormEyebrow` sections replace `CardHeader/CardTitle`. | ✅ Shipped 2026-04-20 (session 6) |
+| Page transitions + card entrance motion | Step 44 | New `StaggerItem` wrapper: caps at first three items, `motion-safe:animate-in fade-in slide-in-from-bottom-1` (320ms, 60ms stagger). Applied to browse grid, foster + shelter applications lists, both dashboards, and the shelter dogs tabs. | ✅ Shipped 2026-04-20 (session 6) |
+| Responsive polish + content centering | Step 45 | Main pane now wraps children in `mx-auto max-w-6xl` at both portals. New `PortalSidebar` collapsible wrapper (localStorage-persisted, `group-data-[collapsed]`-driven labels). Print stylesheet in `globals.css` forces a light palette and hides sidebar/nav/`[data-print-hide]` chrome. `EmptyState` gained an inner `max-w-md` wrapper. | ✅ Shipped 2026-04-20 (session 6) |
+| Dark mode contrast sweep | Commit 6 | Re-derived `.dark` OKLCH tokens from the cherry-blossom palette (hues 9/147/46 across primary/warm/accent-peach) in `globals.css` **and** `.impeccable.md`. New `PublicThemeLock` strips the `dark` class on public routes so `/`, `/terms`, `/privacy`, auth + onboarding stay light even after a portal session. `StickySaveBar` shadow switched from hardcoded black to `oklch(var(--foreground)/0.18)` so it reads on dark surfaces. | ✅ Shipped 2026-04-20 (session 6) |
+| `sitemap.xml` + `robots.txt` | Step 35 / 38 Deferred Log | `src/app/sitemap.ts` emits `/`, `/terms`, `/privacy` only (dynamic shelter profiles intentionally excluded until we have an SEO story for them). `src/app/robots.ts` disallows `/foster/`, `/shelter/`, `/auth/`, `/login`, `/signup`, `/onboarding`, `/api/`. | ✅ Shipped 2026-04-20 (session 6) |
+| `og:image` asset | Commit 5 note | Deferred until a real brand hero photo exists — empty `og:image` is worse than no tag. | Deferred (brand-asset gated) |
 
 ---
 
@@ -2376,7 +2377,7 @@ These were scoped into the Phase 5-b plan but intentionally deferred from Commit
 | **Phase 2: Extended Features** | Steps 13–22 | **Complete (10/10)** ✅ |
 | **Phase 3: Hardening** | Steps 23–30 | **Complete (8/8)** ✅ |
 | **Phase 4: Infrastructure** | Steps 31–36 | **Complete (6/6)** ✅ |
-| **Phase 5: Polish** | Steps 37–38 shipped (then restyled under 5-b); Steps 39–45 folded into 5-b follow-ups | Partial, superseded |
-| **Phase 5-b: Visual Migration & Landing Redesign** | Commits 0–7 | **Complete (7/7)** ✅ |
+| **Phase 5: Polish** | Steps 37–38 shipped (then restyled under 5-b); Steps 39–45 shipped via 5-b follow-ups | **Complete** ✅ |
+| **Phase 5-b: Visual Migration & Landing Redesign** | Commits 0–7 + 9 follow-ups | **Complete (7/7 + 9/9)** ✅ |
 
-**Last updated:** 2026-04-20 (Phase 5-b complete, session 3; **Phase 6 backlog** added — discovery, trust, saves, share, map, verification)
+**Last updated:** 2026-04-20 (Phase 5-b follow-ups complete, session 6 — filter pills, empty states, form polish, message avatars, onboarding tiles, StaggerItem motion, responsive + print + centering, dark mode contrast sweep with cherry-blossom re-derivation and PublicThemeLock, sitemap + robots)

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -16,10 +16,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { FormEyebrow } from '@/components/ui/form-eyebrow'
+import { Separator } from '@/components/ui/separator'
 import { DEV_MODE, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/helpers'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
+import { cn } from '@/lib/utils'
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
 
@@ -31,20 +34,101 @@ const STEP_META: Record<Step, { index: number; label: string }> = {
 
 const TOTAL_STEPS = Math.max(...Object.values(STEP_META).map((s) => s.index))
 
+/**
+ * Two-step progress header: eyebrow label on top, dot-and-line ruler
+ * below. Replaces the original filled-bar indicator which read as a
+ * loading spinner. Keeps to .impeccable.md principle 3 (typography
+ * leads) — the wording carries more weight than the bar.
+ */
 function StepIndicator({ step }: { step: Step }) {
   const { index, label } = STEP_META[step]
   return (
-    <div className="w-full max-w-lg mb-6 space-y-2">
-      <p className="text-sm text-muted-foreground text-center">
-        Step {index} of {TOTAL_STEPS} — {label}
+    <div className="w-full max-w-lg mb-8 space-y-3">
+      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground text-center">
+        Step {index} of {TOTAL_STEPS} · {label}
       </p>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${(index / TOTAL_STEPS) * 100}%` }}
-        />
+      <div className="flex items-center gap-2" aria-hidden>
+        {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
+          const stepIdx = i + 1
+          const done = stepIdx < index
+          const active = stepIdx === index
+          return (
+            <div key={stepIdx} className="flex-1 flex items-center gap-2">
+              <span
+                className={cn(
+                  'h-2 w-2 rounded-full transition-colors',
+                  done && 'bg-primary',
+                  active && 'bg-primary ring-4 ring-primary/20',
+                  !done && !active && 'bg-border',
+                )}
+              />
+              {stepIdx < TOTAL_STEPS && (
+                <span
+                  className={cn(
+                    'h-px flex-1 transition-colors',
+                    done ? 'bg-primary' : 'bg-border',
+                  )}
+                />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
+  )
+}
+
+/**
+ * Large pastel-tiled role picker. Each tile is a big touchable panel —
+ * peach for shelter (mirrors the "pending/trust" pastel used on
+ * applications and the profile-completeness nudge) and primary
+ * (cherry-blossom) for foster (the app's brand pastel). The role
+ * choice itself is the highest-stake decision in onboarding, so the
+ * tiles deliberately lean into colour while the rest of the flow stays
+ * calm.
+ */
+function RoleTile({
+  tone,
+  icon: Icon,
+  title,
+  description,
+  onClick,
+}: {
+  tone: 'shelter' | 'foster'
+  icon: typeof Building2
+  title: string
+  description: string
+  onClick: () => void
+}) {
+  const toneClasses =
+    tone === 'shelter'
+      ? 'bg-peach/60 hover:bg-peach text-peach-foreground border-peach-foreground/15'
+      : 'bg-primary/25 hover:bg-primary/35 text-foreground border-primary/30'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group relative flex flex-col items-start gap-4 rounded-2xl border p-6 sm:p-7 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none',
+        toneClasses,
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-12 w-12 items-center justify-center rounded-full bg-background/60 shadow-sm',
+        )}
+        aria-hidden
+      >
+        <Icon className="h-6 w-6" strokeWidth={1.6} />
+      </span>
+      <div className="space-y-1.5">
+        <h2 className="font-display text-lg font-semibold leading-tight">{title}</h2>
+        <p className="text-sm opacity-80 leading-relaxed">{description}</p>
+      </div>
+      <span className="mt-auto text-xs font-medium opacity-70 group-hover:opacity-100 transition-opacity">
+        Continue →
+      </span>
+    </button>
   )
 }
 
@@ -80,12 +164,10 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Shelter form state
   const [shelter, setShelter] = useState({
     name: '', email: '', phone: '', location: '', ein: '', bio: '', website: '', instagram: '',
   })
 
-  // Foster form state
   const [foster, setFoster] = useState({
     first_name: '', last_name: '', email: '', phone: '', location: '',
     housing_type: '', has_yard: false, has_other_pets: false, other_pets_info: '',
@@ -223,7 +305,7 @@ export default function OnboardingPage() {
 
   if (authChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
@@ -231,39 +313,34 @@ export default function OnboardingPage() {
 
   if (step === 'role') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-muted/30">
-        <div className="flex items-center gap-2 font-bold text-xl mb-8">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
+        <div className="flex items-center gap-2 font-display font-bold text-xl mb-10">
           <PawPrint className="h-7 w-7 text-primary" />
           Fostr Fix
         </div>
         <StepIndicator step={step} />
-        <h1 className="text-2xl font-bold mb-2 text-center">How will you use Fostr Fix?</h1>
-        <p className="text-muted-foreground mb-8 text-center">Choose your role to get started</p>
+        <h1 className="font-display text-3xl font-semibold mb-2 text-center tracking-tight">
+          How will you use Fostr Fix?
+        </h1>
+        <p className="text-muted-foreground mb-10 text-center">
+          Pick the role that fits — you can always add another account later.
+        </p>
 
-        <div className="grid sm:grid-cols-2 gap-4 w-full max-w-lg">
-          <button onClick={() => setStep('shelter-form')} className="text-left">
-            <Card className="h-full hover:border-primary hover:shadow-md transition-all cursor-pointer">
-              <CardContent className="p-6 space-y-3">
-                <Building2 className="h-8 w-8 text-primary" />
-                <h2 className="font-semibold text-lg">I&apos;m a Shelter / Rescue</h2>
-                <p className="text-sm text-muted-foreground">
-                  List dogs that need foster homes and manage incoming applications.
-                </p>
-              </CardContent>
-            </Card>
-          </button>
-
-          <button onClick={() => setStep('foster-form')} className="text-left">
-            <Card className="h-full hover:border-primary hover:shadow-md transition-all cursor-pointer">
-              <CardContent className="p-6 space-y-3">
-                <Heart className="h-8 w-8 text-primary" />
-                <h2 className="font-semibold text-lg">I&apos;m a Foster Parent</h2>
-                <p className="text-sm text-muted-foreground">
-                  Browse dogs near you and apply to provide a temporary loving home.
-                </p>
-              </CardContent>
-            </Card>
-          </button>
+        <div className="grid sm:grid-cols-2 gap-4 w-full max-w-2xl">
+          <RoleTile
+            tone="shelter"
+            icon={Building2}
+            title="I'm a Shelter / Rescue"
+            description="List dogs that need foster homes and manage applications from foster parents."
+            onClick={() => setStep('shelter-form')}
+          />
+          <RoleTile
+            tone="foster"
+            icon={Heart}
+            title="I'm a Foster Parent"
+            description="Browse dogs near you and apply to provide a temporary loving home."
+            onClick={() => setStep('foster-form')}
+          />
         </div>
       </div>
     )
@@ -271,18 +348,25 @@ export default function OnboardingPage() {
 
   if (step === 'shelter-form') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted/30">
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
         <StepIndicator step={step} />
-        <Card className="w-full max-w-lg">
-          <CardHeader>
-            <CardTitle>Tell us about your shelter</CardTitle>
-            <CardDescription>This info will be shown to foster parents</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleShelterSubmit} className="space-y-4">
+        <Card className="w-full max-w-xl">
+          <CardContent className="pt-6">
+            <div className="mb-6 space-y-1.5">
+              <h1 className="font-display text-2xl font-semibold tracking-tight">
+                Tell us about your shelter
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                This info is visible to foster parents on your public shelter page.
+              </p>
+            </div>
+            <form onSubmit={handleShelterSubmit} className="space-y-6">
               {error && (
                 <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
               )}
+
+              <FormEyebrow>Identity</FormEyebrow>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2 space-y-1">
                   <Label>Shelter / Rescue Name *</Label>
@@ -291,24 +375,6 @@ export default function OnboardingPage() {
                     value={shelter.name}
                     onChange={(e) => setShelter({ ...shelter, name: e.target.value })}
                     required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="info@shelter.org"
-                    value={shelter.email}
-                    onChange={(e) => setShelter({ ...shelter, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Phone</Label>
-                  <Input
-                    placeholder="(555) 000-0000"
-                    value={shelter.phone}
-                    onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
                   />
                 </div>
                 <div className="col-span-2 space-y-1">
@@ -328,6 +394,31 @@ export default function OnboardingPage() {
                     onChange={(e) => setShelter({ ...shelter, ein: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <Separator />
+
+              <FormEyebrow>Contact</FormEyebrow>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    placeholder="info@shelter.org"
+                    value={shelter.email}
+                    onChange={(e) => setShelter({ ...shelter, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Phone</Label>
+                  <Input
+                    placeholder="(555) 000-0000"
+                    value={shelter.phone}
+                    onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
+                  />
+                </div>
                 <div className="space-y-1">
                   <Label>Website</Label>
                   <Input
@@ -336,7 +427,7 @@ export default function OnboardingPage() {
                     onChange={(e) => setShelter({ ...shelter, website: e.target.value })}
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
+                <div className="space-y-1">
                   <Label>Instagram Handle</Label>
                   <Input
                     placeholder="@happypaws"
@@ -344,19 +435,27 @@ export default function OnboardingPage() {
                     onChange={(e) => setShelter({ ...shelter, instagram: e.target.value })}
                   />
                 </div>
-                <div className="col-span-2 space-y-1">
-                  <Label>Short Bio</Label>
-                  <Textarea
-                    placeholder="Tell foster parents about your organization..."
-                    value={shelter.bio}
-                    onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
-                    rows={3}
-                  />
-                </div>
               </div>
-              <div className="flex gap-3">
+
+              <Separator />
+
+              <FormEyebrow description="Optional. A short mission statement helps fosters trust you faster.">
+                About
+              </FormEyebrow>
+
+              <div className="space-y-1">
+                <Label>Short Bio</Label>
+                <Textarea
+                  placeholder="Tell foster parents about your organization..."
+                  value={shelter.bio}
+                  onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
                 <Button type="submit" disabled={loading}>
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up...</> : 'Complete Setup'}
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => setStep('role')}>
                   Back
@@ -371,18 +470,25 @@ export default function OnboardingPage() {
 
   // Foster form
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-muted/30">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
       <StepIndicator step={step} />
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Tell us about yourself</CardTitle>
-          <CardDescription>Help shelters get to know you as a foster parent</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleFosterSubmit} className="space-y-4">
+      <Card className="w-full max-w-xl">
+        <CardContent className="pt-6">
+          <div className="mb-6 space-y-1.5">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Tell us about yourself
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Helps shelters get to know you as a foster parent.
+            </p>
+          </div>
+          <form onSubmit={handleFosterSubmit} className="space-y-6">
             {error && (
               <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
             )}
+
+            <FormEyebrow>Identity</FormEyebrow>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>First Name *</Label>
@@ -425,6 +531,15 @@ export default function OnboardingPage() {
                   required
                 />
               </div>
+            </div>
+
+            <Separator />
+
+            <FormEyebrow description="Helps shelters match dogs to your home.">
+              Home & experience
+            </FormEyebrow>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Housing Type</Label>
                 <Select onValueChange={(v) => setFoster({ ...foster, housing_type: v })}>
@@ -452,7 +567,7 @@ export default function OnboardingPage() {
                 </Select>
               </div>
 
-              <div className="col-span-2 flex gap-6">
+              <div className="col-span-2 flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="yard"
@@ -478,21 +593,27 @@ export default function OnboardingPage() {
                   <Label htmlFor="kids" className="font-normal cursor-pointer">Has children</Label>
                 </div>
               </div>
-
-              <div className="col-span-2 space-y-1">
-                <Label>About You</Label>
-                <Textarea
-                  placeholder="Tell shelters about yourself and your fostering experience..."
-                  value={foster.bio}
-                  onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
-                  rows={3}
-                />
-              </div>
             </div>
 
-            <div className="flex gap-3">
+            <Separator />
+
+            <FormEyebrow description="Optional. A short intro helps shelters say yes.">
+              About you
+            </FormEyebrow>
+
+            <div className="space-y-1">
+              <Label>About You</Label>
+              <Textarea
+                placeholder="Tell shelters about yourself and your fostering experience..."
+                value={foster.bio}
+                onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
               <Button type="submit" disabled={loading}>
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up...</> : 'Complete Setup'}
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setStep('role')}>
                 Back

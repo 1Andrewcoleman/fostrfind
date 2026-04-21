@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label'
 import { DEV_MODE, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { sanitizeMultiline } from '@/lib/sanitize'
+import { ShareButton } from '@/components/foster/share-button'
 
 // Slim projection of `Dog` — we only need the fields this view renders.
 // Keeping a local shape (rather than pulling the full DB type) means the
@@ -61,6 +62,10 @@ interface DogDetailFullProps {
   fosterName: string
   /** Row id in `foster_parents` for the current user. */
   fosterId: string
+  /** Canonical absolute URL for this dog, built server-side. Fed into
+   * the Share button so native share sheets + the clipboard fallback
+   * both produce a link anyone (logged in or not) can open. */
+  canonicalUrl: string
 }
 
 /**
@@ -87,6 +92,7 @@ export function DogDetailFull({
   initialApplied,
   fosterName,
   fosterId,
+  canonicalUrl,
 }: DogDetailFullProps) {
   const [note, setNote] = useState('')
   const [applying, setApplying] = useState(false)
@@ -154,13 +160,20 @@ export function DogDetailFull({
 
   return (
     <div className="max-w-2xl space-y-6">
-      <Link
-        href="/foster/browse"
-        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to Browse
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/foster/browse"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Browse
+        </Link>
+        <ShareButton
+          url={canonicalUrl}
+          title={dog.name}
+          text={`Meet ${dog.name} on Fostr Fix${dog.breed ? ` — ${dog.breed}` : ''}`}
+        />
+      </div>
 
       {/* Photo carousel placeholder */}
       <div className="h-72 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">

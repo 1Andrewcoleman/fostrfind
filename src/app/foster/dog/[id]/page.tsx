@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
 import { isNextControlFlowError } from '@/lib/server-errors'
+import { getAppUrl } from '@/lib/email'
 
 interface DogDetailPageProps {
   params: { id: string }
@@ -93,6 +94,7 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
           initialApplied={false}
           fosterName="Jane Foster"
           fosterId="dev-foster-1"
+          canonicalUrl={`${getAppUrl()}/foster/dog/${params.id}`}
         />
       </FosterPortalShell>
     )
@@ -206,6 +208,7 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
         initialApplied={initialApplied}
         fosterName={fosterName}
         fosterId={fosterRow.id}
+        canonicalUrl={`${getAppUrl()}/foster/dog/${dog.id}`}
       />
     </FosterPortalShell>
   )

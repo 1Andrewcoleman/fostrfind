@@ -21,7 +21,9 @@ interface PageProps {
 
 // DEV_MODE placeholder so the route is browsable without a live Supabase.
 // Mirrors the two shelter slugs seeded in the browse page's PLACEHOLDER_DOGS.
-const PLACEHOLDER_SHELTERS: Record<string, Shelter> = {
+// Exported so the `/shelters` index can reuse the same fixtures in DEV_MODE
+// without duplicating the data or drifting when we tweak it.
+export const PLACEHOLDER_SHELTERS: Record<string, Shelter> = {
   'happy-paws-rescue': {
     id: 's1',
     created_at: new Date().toISOString(),

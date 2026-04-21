@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { PawPrint } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { RoleGuard } from '@/components/role-guard'
@@ -6,6 +7,7 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
+import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
 
@@ -17,6 +19,30 @@ export const metadata: Metadata = {
 }
 
 export default async function ShelterLayout({ children }: { children: React.ReactNode }) {
+  // Gate at the layout level so an unauth visitor gets redirected before
+  // any children render. The inner AuthGuard/RoleGuard still run as a
+  // defense-in-depth measure but this early exit makes the redirect
+  // payload clean (no skeleton flicker, no page data fetches firing in
+  // parallel against a missing session). Mirrors (foster)/layout.tsx.
+  if (!DEV_MODE) {
+    const supabase = await createClient()
+    let userId: string | null = null
+    try {
+      const { data, error: authError } = await supabase.auth.getUser()
+      if (authError) {
+        console.warn('[shelter-layout] getUser returned error:', authError.message)
+      } else {
+        userId = data.user?.id ?? null
+      }
+    } catch (e) {
+      console.warn(
+        '[shelter-layout] getUser threw:',
+        e instanceof Error ? e.message : String(e),
+      )
+    }
+    if (!userId) redirect('/login')
+  }
+
   const { unreadMessages, identity } = await getPortalLayoutData('shelter')
 
   return (

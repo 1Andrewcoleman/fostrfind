@@ -109,6 +109,47 @@ export interface Message {
   read: boolean
 }
 
+// Phase 6.2 — roster tables.
+
+/**
+ * Source of truth for "which fosters this shelter works with." Composite key
+ * (shelter_id, foster_id); future Herds membership FKs to this same pair.
+ */
+export interface ShelterFoster {
+  shelter_id: string
+  foster_id: string
+  added_at: string
+  source: 'application_accepted' | 'invite_accepted'
+}
+
+/**
+ * Shelter-initiated invite for a foster. `email` is what the shelter typed;
+ * `foster_id` is populated either at creation (if the email already resolves
+ * to a foster) or at onboarding (if the foster signs up later and the email
+ * matches case-insensitively).
+ */
+export interface ShelterFosterInvite {
+  id: string
+  created_at: string
+  responded_at: string | null
+  shelter_id: string
+  email: string
+  foster_id: string | null
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled'
+  message: string | null
+}
+
+/** Private, shelter-staff-only note tied to a (shelter, foster) pair. */
+export interface ShelterFosterNote {
+  id: string
+  created_at: string
+  updated_at: string
+  shelter_id: string
+  foster_id: string
+  author_user: string
+  body: string
+}
+
 // Composite types for UI
 
 export interface DogWithShelter extends Dog {

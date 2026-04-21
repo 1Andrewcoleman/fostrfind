@@ -22,6 +22,7 @@ import {
   Menu,
   PawPrint,
   Mail,
+  Users,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -56,6 +57,7 @@ const SHELTER_NAV: NavItem[] = [
   { href: '/shelter/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/shelter/dogs', label: 'Dogs', icon: Dog },
   { href: '/shelter/applications', label: 'Applications', icon: FileText },
+  { href: '/shelter/fosters', label: 'Fosters', icon: Users },
   { href: '/shelter/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
   { href: '/shelter/settings', label: 'Settings', icon: Settings },
 ]

@@ -38,7 +38,7 @@ export interface QueryShape {
 function makeChain(shape: QueryShape) {
   const chain: Record<string, (...args: unknown[]) => unknown> = {}
   // Chainable filter methods return the same chain
-  for (const method of ['select', 'eq', 'in', 'order', 'limit']) {
+  for (const method of ['select', 'eq', 'in', 'order', 'limit', 'ilike', 'is', 'neq', 'not', 'or', 'gte', 'lte', 'range']) {
     chain[method] = () => chain
   }
   chain.single = () =>

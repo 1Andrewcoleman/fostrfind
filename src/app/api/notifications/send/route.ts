@@ -8,6 +8,7 @@ import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
 import { ApplicationDeclinedEmail } from '@/emails/application-declined'
 import { PlacementCompletedEmail } from '@/emails/placement-completed'
 import { NewMessageEmail } from '@/emails/new-message'
+import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 
 /**
  * POST /api/notifications/send
@@ -34,6 +35,7 @@ const TYPES = [
   'application-declined',
   'placement-completed',
   'new-message',
+  'shelter-foster-invite',
 ] as const
 type NotificationType = (typeof TYPES)[number]
 
@@ -145,6 +147,22 @@ function renderNotification(
           dogName,
           messagePreview,
           threadUrl,
+        }),
+      }
+    }
+    case 'shelter-foster-invite': {
+      const shelterName = assertString(data.shelterName, 'shelterName')
+      const fosterEmail = assertString(data.fosterEmail, 'fosterEmail')
+      const signinUrl = assertString(data.signinUrl, 'signinUrl')
+      // `message` is optional free text
+      const message = typeof data.message === 'string' ? data.message : null
+      return {
+        subject: `${shelterName} invited you to their foster roster`,
+        react: ShelterFosterInviteEmail({
+          shelterName,
+          fosterEmail,
+          message,
+          signinUrl,
         }),
       }
     }

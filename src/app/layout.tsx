@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Source_Serif_4 } from 'next/font/google'
 import localFont from 'next/font/local'
 import { Toaster } from '@/components/ui/sonner'
+import { PublicThemeLock } from '@/components/public-theme-lock'
 import { validateEnv } from '@/lib/env'
 import './globals.css'
 
@@ -89,6 +90,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans">
+        <PublicThemeLock />
         {children}
         <Toaster />
       </body>

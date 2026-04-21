@@ -62,44 +62,49 @@
 
   /*
    * Dark mode — authenticated portals only. Public pages stay light.
-   * Per `.impeccable.md`: --background is a deep warm-navy (not black);
-   * the three pastels drop ~10 lightness and gain ~3 chroma so they
-   * stay visible on the darker ground; borders remain whispers (within
-   * ~10 lightness points of surfaces). Dark tokens are scoped to the
-   * `next-themes` class="dark" on <html>.
+   * Derived from the cherry-blossom palette (session 4). Surfaces are a
+   * deep warm-navy (not black); the three pastels keep their light-mode
+   * hues (cherry-blossom 9°, ash-grey 147°, powder-petal 46°) but drop
+   * ~10 lightness and gain a touch of chroma so they read as pastels
+   * against a dark ground without turning saturated. Borders remain
+   * whispers (within ~10 lightness points of surfaces). Scoped to the
+   * `next-themes` class="dark" on <html>, mounted only by
+   * `PortalThemeProvider` in the foster + shelter layouts.
    */
   .dark {
-    /* Surfaces */
+    /* Surfaces — deep warm-navy */
     --background:             20%   0.015 250;
-    --foreground:             90%   0.010 80;
+    --foreground:             90%   0.010 92;    /* bone, dust-grey hue family */
     --card:                   23%   0.018 250;
-    --card-foreground:        90%   0.010 80;
+    --card-foreground:        90%   0.010 92;
     --popover:                23%   0.018 250;
-    --popover-foreground:     90%   0.010 80;
+    --popover-foreground:     90%   0.010 92;
 
     /* Neutrals */
     --muted:                  26%   0.015 250;
-    --muted-foreground:       65%   0.015 80;
+    --muted-foreground:       65%   0.012 92;
     --border:                 30%   0.012 250;
     --input:                  30%   0.012 250;
     --secondary:              26%   0.015 250;
-    --secondary-foreground:   90%   0.010 80;
-    --accent:                 28%   0.018 250;
-    --accent-foreground:      90%   0.010 80;
+    --secondary-foreground:   90%   0.010 92;
+    --accent:                 28%   0.018 46;    /* leans powder-petal, mirrors light */
+    --accent-foreground:      90%   0.010 92;
 
-    /* Three pastels — same hues, shifted for dark surfaces. */
-    --primary:                75%   0.100 85;
-    --primary-foreground:     15%   0.020 250;
-    --warm:                   72%   0.080 155;
-    --warm-foreground:        15%   0.020 250;
-    --accent-peach:           74%   0.090 35;
-    --accent-peach-foreground: 15%  0.020 250;
+    /* Three pastels — cherry-blossom, ash-grey, powder-petal hues,
+       shifted for dark surfaces. Foreground flips to the deep navy so
+       tinted surfaces don't fight the bone body text. */
+    --primary:                72%   0.090 9;     /* cherry-blossom (dark) */
+    --primary-foreground:     18%   0.020 250;
+    --warm:                   70%   0.055 147;   /* ash-grey (dark) */
+    --warm-foreground:        18%   0.020 250;
+    --accent-peach:           78%   0.060 46;    /* powder-petal (dark) */
+    --accent-peach-foreground: 18%  0.020 250;
 
-    /* Status */
-    --destructive:            55%   0.150 25;
-    --destructive-foreground: 90%   0.010 80;
+    /* Status — red stays outside the palette, but calmed for dark. */
+    --destructive:            58%   0.150 25;
+    --destructive-foreground: 90%   0.010 92;
 
-    --ring:                   75%   0.100 85;
+    --ring:                   72%   0.090 9;     /* matches --primary */
   }
 }
 
@@ -114,5 +119,53 @@
   }
   body {
     @apply bg-background text-foreground font-sans;
+  }
+}
+
+/*
+ * Print styles — keep printed pages readable and save ink. We force a light
+ * palette regardless of active theme, strip sticky chrome, hide portal nav
+ * and interactive affordances, and let card surfaces collapse so printed
+ * records (applications, foster profiles, dog details) read as a clean
+ * document.
+ */
+@media print {
+  :root,
+  .dark {
+    --background:         100%  0      0;
+    --foreground:         20%   0.015  80;
+    --card:               100%  0      0;
+    --card-foreground:    20%   0.015  80;
+    --muted:              96%   0.005  80;
+    --muted-foreground:   45%   0.015  80;
+    --border:             85%   0.005  80;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  aside,
+  header,
+  nav,
+  [data-print-hide],
+  .print\:hidden {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+  .shadow,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

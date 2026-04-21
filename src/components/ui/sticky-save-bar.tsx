@@ -53,7 +53,7 @@ export function StickySaveBar({
       className={cn(
         'sticky bottom-0 z-20 -mx-6 md:-mx-8 mt-6',
         '-mb-6 md:-mb-8 border-t border-border bg-card/95 backdrop-blur',
-        'px-6 md:px-8 py-3 flex items-center gap-3 shadow-[0_-4px_12px_-8px_rgba(0,0,0,0.15)]',
+        'px-6 md:px-8 py-3 flex items-center gap-3 shadow-[0_-4px_12px_-8px_oklch(var(--foreground)/0.18)]',
       )}
       data-print-hide
     >

@@ -1,10 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -16,8 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { FormEyebrow } from '@/components/ui/form-eyebrow'
+import { StickySaveBar } from '@/components/ui/sticky-save-bar'
 import {
   AvatarLogoField,
   type AvatarLogoFieldHandle,
@@ -35,10 +36,47 @@ import {
 } from '@/lib/constants'
 import { fosterProfileSchema } from '@/lib/schemas'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
+import { useDirtyState } from '@/lib/use-dirty-state'
 import type { FosterParent } from '@/types/database'
 
 interface FosterProfileFormProps {
   initialData: FosterParent | null
+}
+
+/** Fallback used when a brand-new foster has no row yet. Defined outside
+ * the component so it shares identity across renders (matters for the
+ * useDirtyState snapshot). */
+const EMPTY_FOSTER: Partial<FosterParent> = {
+  first_name: '',
+  last_name: '',
+  email: '',
+  phone: '',
+  location: '',
+  housing_type: undefined,
+  has_yard: false,
+  has_other_pets: false,
+  has_children: false,
+  experience: undefined,
+  bio: '',
+  avatar_url: null,
+  pref_size: [],
+  pref_age: [],
+  pref_medical: false,
+  max_distance: 25,
+}
+
+/** Renders a small warm-tinted check next to a field label once the
+ * user has supplied a non-empty value and there's no error for it.
+ * Purely decorative — the actual validation lives in the zod schema. */
+function ValidIndicator({ show }: { show: boolean }) {
+  if (!show) return null
+  return (
+    <Check
+      aria-hidden
+      className="h-3.5 w-3.5 text-warm-foreground/70"
+      strokeWidth={2.5}
+    />
+  )
 }
 
 export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
@@ -50,26 +88,12 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
   // Follow-ups for the full RHF migration of this form.
   const [errors, setErrors] = useState<Record<string, string>>({})
   const avatarFieldRef = useRef<AvatarLogoFieldHandle>(null)
-  const [foster, setFoster] = useState<Partial<FosterParent>>(
-    initialData ?? {
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      location: '',
-      housing_type: undefined,
-      has_yard: false,
-      has_other_pets: false,
-      has_children: false,
-      experience: undefined,
-      bio: '',
-      avatar_url: null,
-      pref_size: [],
-      pref_age: [],
-      pref_medical: false,
-      max_distance: 25,
-    },
+  const initialFoster = useMemo<Partial<FosterParent>>(
+    () => initialData ?? EMPTY_FOSTER,
+    [initialData],
   )
+  const [foster, setFoster] = useState<Partial<FosterParent>>(initialFoster)
+  const isDirty = useDirtyState(foster, initialFoster)
 
   function togglePref(key: 'pref_size' | 'pref_age', value: string): void {
     const arr = foster[key] ?? []
@@ -77,6 +101,11 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
       ...foster,
       [key]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value],
     })
+  }
+
+  function handleDiscard(): void {
+    setFoster(initialFoster)
+    setErrors({})
   }
 
   async function handleSave(e: React.FormEvent): Promise<void> {
@@ -192,16 +221,23 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
     }
   }
 
+  // Field-level validity helpers used by the inline ValidIndicator. A
+  // field reads as "valid" if it has a non-empty value and didn't show
+  // up in the last parse pass.
+  const v = (field: string, value: string | null | undefined): boolean =>
+    !errors[field] && !!value && value.trim().length > 0
+
   return (
     <>
       <ProfileCompleteness foster={foster} />
 
-      <form onSubmit={handleSave} className="space-y-6">
+      <form onSubmit={handleSave} className="space-y-8">
         <Card>
-          <CardHeader>
-            <CardTitle>Personal Info</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 pt-6">
+            <FormEyebrow description="How you appear to shelters and fosters.">
+              Identity
+            </FormEyebrow>
+
             <AvatarLogoField
               ref={avatarFieldRef}
               initialUrl={initialData?.avatar_url ?? null}
@@ -215,7 +251,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>First Name</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>First Name</Label>
+                  <ValidIndicator show={v('first_name', foster.first_name)} />
+                </div>
                 <Input
                   value={foster.first_name ?? ''}
                   onChange={(e) => setFoster({ ...foster, first_name: e.target.value })}
@@ -226,7 +265,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 )}
               </div>
               <div className="space-y-1">
-                <Label>Last Name</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Last Name</Label>
+                  <ValidIndicator show={v('last_name', foster.last_name)} />
+                </div>
                 <Input
                   value={foster.last_name ?? ''}
                   onChange={(e) => setFoster({ ...foster, last_name: e.target.value })}
@@ -237,7 +279,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 )}
               </div>
               <div className="space-y-1">
-                <Label>Email</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Email</Label>
+                  <ValidIndicator show={v('email', foster.email)} />
+                </div>
                 <Input
                   type="email"
                   value={foster.email ?? ''}
@@ -249,7 +294,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 )}
               </div>
               <div className="space-y-1">
-                <Label>Phone</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Phone</Label>
+                  <ValidIndicator show={v('phone', foster.phone)} />
+                </div>
                 <Input
                   value={foster.phone ?? ''}
                   onChange={(e) => setFoster({ ...foster, phone: e.target.value })}
@@ -260,7 +308,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 )}
               </div>
               <div className="col-span-2 space-y-1">
-                <Label>Location</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Location</Label>
+                  <ValidIndicator show={v('location', foster.location)} />
+                </div>
                 <Input
                   placeholder="City, State"
                   value={foster.location ?? ''}
@@ -271,12 +322,24 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   <p className="text-xs text-destructive">{errors.location}</p>
                 )}
               </div>
+            </div>
+
+            <Separator />
+
+            <FormEyebrow description="Helps shelters match dogs to your home.">
+              Home & experience
+            </FormEyebrow>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label>Housing Type</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Housing Type</Label>
+                  <ValidIndicator show={!!foster.housing_type} />
+                </div>
                 <Select
                   value={foster.housing_type ?? ''}
-                  onValueChange={(v) =>
-                    setFoster({ ...foster, housing_type: v as FosterParent['housing_type'] })
+                  onValueChange={(val) =>
+                    setFoster({ ...foster, housing_type: val as FosterParent['housing_type'] })
                   }
                 >
                   <SelectTrigger>
@@ -292,11 +355,14 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label>Experience</Label>
+                <div className="flex items-center gap-1.5">
+                  <Label>Experience</Label>
+                  <ValidIndicator show={!!foster.experience} />
+                </div>
                 <Select
                   value={foster.experience ?? ''}
-                  onValueChange={(v) =>
-                    setFoster({ ...foster, experience: v as FosterParent['experience'] })
+                  onValueChange={(val) =>
+                    setFoster({ ...foster, experience: val as FosterParent['experience'] })
                   }
                 >
                   <SelectTrigger>
@@ -311,7 +377,7 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="col-span-2 flex gap-6">
+              <div className="col-span-2 flex flex-wrap gap-6">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="yard"
@@ -343,27 +409,36 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
                   </Label>
                 </div>
               </div>
-              <div className="col-span-2 space-y-1">
-                <Label>About Me</Label>
-                <Textarea
-                  rows={4}
-                  value={foster.bio ?? ''}
-                  onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
-                  aria-invalid={errors.bio ? 'true' : undefined}
-                />
-                {errors.bio && (
-                  <p className="text-xs text-destructive">{errors.bio}</p>
-                )}
+            </div>
+
+            <Separator />
+
+            <FormEyebrow description="Optional. A short intro goes a long way.">
+              About you
+            </FormEyebrow>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Bio</Label>
+                <ValidIndicator show={v('bio', foster.bio)} />
               </div>
+              <Textarea
+                rows={4}
+                value={foster.bio ?? ''}
+                onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
+                aria-invalid={errors.bio ? 'true' : undefined}
+              />
+              {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Foster Preferences</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6 pt-6">
+            <FormEyebrow description="Used to match dogs to you when shelters post new listings.">
+              Foster preferences
+            </FormEyebrow>
+
             <div>
               <Label className="mb-2 block">Preferred Dog Sizes</Label>
               <div className="flex flex-wrap gap-3">
@@ -413,9 +488,12 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
           </CardContent>
         </Card>
 
-        <Button type="submit" disabled={loading}>
-          {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Profile'}
-        </Button>
+        <StickySaveBar
+          loading={loading}
+          dirty={isDirty}
+          onDiscard={handleDiscard}
+          saveLabel="Save profile"
+        />
       </form>
     </>
   )

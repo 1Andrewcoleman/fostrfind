@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { FormEyebrow } from '@/components/ui/form-eyebrow'
+import { StickySaveBar } from '@/components/ui/sticky-save-bar'
 import {
   AvatarLogoField,
   type AvatarLogoFieldHandle,
@@ -19,10 +21,22 @@ import { createClient } from '@/lib/supabase/client'
 import { STORAGE_BUCKETS } from '@/lib/constants'
 import { shelterSettingsSchema } from '@/lib/schemas'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
+import { useDirtyState } from '@/lib/use-dirty-state'
 import type { Shelter } from '@/types/database'
 
 interface ShelterSettingsFormProps {
   initialData: Shelter
+}
+
+function ValidIndicator({ show }: { show: boolean }) {
+  if (!show) return null
+  return (
+    <Check
+      aria-hidden
+      className="h-3.5 w-3.5 text-warm-foreground/70"
+      strokeWidth={2.5}
+    />
+  )
 }
 
 export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
@@ -32,16 +46,27 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
   // comment in FosterProfileForm for why we aren't fully on RHF yet.
   const [errors, setErrors] = useState<Record<string, string>>({})
   const logoFieldRef = useRef<AvatarLogoFieldHandle>(null)
-  const [shelter, setShelter] = useState({
-    name: initialData.name,
-    slug: initialData.slug,
-    email: initialData.email,
-    phone: initialData.phone ?? '',
-    location: initialData.location,
-    bio: initialData.bio ?? '',
-    website: initialData.website ?? '',
-    instagram: initialData.instagram ?? '',
-  })
+
+  const initialShelter = useMemo(
+    () => ({
+      name: initialData.name,
+      slug: initialData.slug,
+      email: initialData.email,
+      phone: initialData.phone ?? '',
+      location: initialData.location,
+      bio: initialData.bio ?? '',
+      website: initialData.website ?? '',
+      instagram: initialData.instagram ?? '',
+    }),
+    [initialData],
+  )
+  const [shelter, setShelter] = useState(initialShelter)
+  const isDirty = useDirtyState(shelter, initialShelter)
+
+  function handleDiscard(): void {
+    setShelter(initialShelter)
+    setErrors({})
+  }
 
   async function handleSave(e: React.FormEvent): Promise<void> {
     e.preventDefault()
@@ -106,6 +131,9 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
     }
   }
 
+  const v = (field: string, value: string): boolean =>
+    !errors[field] && !!value && value.trim().length > 0
+
   return (
     <Tabs defaultValue="shelter">
       <TabsList>
@@ -120,7 +148,11 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
             <CardDescription>This information is visible to foster parents</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-6">
+              <FormEyebrow description="Upload a square logo used on listings and the public shelter page.">
+                Branding
+              </FormEyebrow>
+
               <AvatarLogoField
                 ref={logoFieldRef}
                 initialUrl={initialData.logo_url ?? null}
@@ -132,9 +164,16 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
 
               <Separator />
 
+              <FormEyebrow description="What fosters will see first on your public profile.">
+                Identity
+              </FormEyebrow>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
-                  <Label>Shelter Name</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>Shelter Name</Label>
+                    <ValidIndicator show={v('name', shelter.name)} />
+                  </div>
                   <Input
                     value={shelter.name}
                     onChange={(e) => setShelter({ ...shelter, name: e.target.value })}
@@ -143,7 +182,10 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
                   {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                 </div>
                 <div className="space-y-1">
-                  <Label>URL Slug</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>URL Slug</Label>
+                    <ValidIndicator show={v('slug', shelter.slug)} />
+                  </div>
                   <Input
                     value={shelter.slug}
                     onChange={(e) => setShelter({ ...shelter, slug: e.target.value })}
@@ -153,7 +195,33 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
                   {errors.slug && <p className="text-xs text-destructive">{errors.slug}</p>}
                 </div>
                 <div className="space-y-1">
-                  <Label>Email</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>Location</Label>
+                    <ValidIndicator show={v('location', shelter.location)} />
+                  </div>
+                  <Input
+                    value={shelter.location}
+                    onChange={(e) => setShelter({ ...shelter, location: e.target.value })}
+                    aria-invalid={errors.location ? 'true' : undefined}
+                  />
+                  {errors.location && (
+                    <p className="text-xs text-destructive">{errors.location}</p>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              <FormEyebrow description="How shelters and fosters reach you about placements.">
+                Contact
+              </FormEyebrow>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <Label>Email</Label>
+                    <ValidIndicator show={v('email', shelter.email)} />
+                  </div>
                   <Input
                     type="email"
                     value={shelter.email}
@@ -163,7 +231,10 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
                 <div className="space-y-1">
-                  <Label>Phone</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>Phone</Label>
+                    <ValidIndicator show={v('phone', shelter.phone)} />
+                  </div>
                   <Input
                     value={shelter.phone}
                     onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
@@ -172,25 +243,24 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
                   {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
                 <div className="space-y-1">
-                  <Label>Location</Label>
-                  <Input
-                    value={shelter.location}
-                    onChange={(e) => setShelter({ ...shelter, location: e.target.value })}
-                    aria-invalid={errors.location ? 'true' : undefined}
-                  />
-                  {errors.location && <p className="text-xs text-destructive">{errors.location}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label>Website</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>Website</Label>
+                    <ValidIndicator show={v('website', shelter.website)} />
+                  </div>
                   <Input
                     value={shelter.website}
                     onChange={(e) => setShelter({ ...shelter, website: e.target.value })}
                     aria-invalid={errors.website ? 'true' : undefined}
                   />
-                  {errors.website && <p className="text-xs text-destructive">{errors.website}</p>}
+                  {errors.website && (
+                    <p className="text-xs text-destructive">{errors.website}</p>
+                  )}
                 </div>
                 <div className="space-y-1">
-                  <Label>Instagram</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label>Instagram</Label>
+                    <ValidIndicator show={v('instagram', shelter.instagram)} />
+                  </div>
                   <Input
                     value={shelter.instagram}
                     onChange={(e) => setShelter({ ...shelter, instagram: e.target.value })}
@@ -201,21 +271,33 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
                     <p className="text-xs text-destructive">{errors.instagram}</p>
                   )}
                 </div>
-                <div className="col-span-2 space-y-1">
-                  <Label>Bio</Label>
-                  <Textarea
-                    rows={4}
-                    value={shelter.bio}
-                    onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
-                    aria-invalid={errors.bio ? 'true' : undefined}
-                  />
-                  {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
-                </div>
               </div>
 
-              <Button type="submit" disabled={loading}>
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Changes'}
-              </Button>
+              <Separator />
+
+              <FormEyebrow description="Optional. A short mission statement helps fosters understand your work.">
+                About
+              </FormEyebrow>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <Label>Bio</Label>
+                  <ValidIndicator show={v('bio', shelter.bio)} />
+                </div>
+                <Textarea
+                  rows={4}
+                  value={shelter.bio}
+                  onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
+                  aria-invalid={errors.bio ? 'true' : undefined}
+                />
+                {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
+              </div>
+
+              <StickySaveBar
+                loading={loading}
+                dirty={isDirty}
+                onDiscard={handleDiscard}
+              />
             </form>
           </CardContent>
         </Card>

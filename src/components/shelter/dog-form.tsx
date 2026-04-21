@@ -6,9 +6,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRouter } from 'next/navigation'
-import { Loader2, Upload, X } from 'lucide-react'
+import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -27,6 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FormEyebrow } from '@/components/ui/form-eyebrow'
+import { StickySaveBar } from '@/components/ui/sticky-save-bar'
+import { Check } from 'lucide-react'
 import type { Dog } from '@/types/database'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import {
@@ -279,13 +281,26 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
     router.push('/shelter/dogs')
   }
 
+  // Photo changes aren't tracked by react-hook-form, so fold them into
+  // dirty-state manually: any pending upload or any removed existing
+  // photo counts as a change.
+  const initialPhotoCount = initialData?.photos?.length ?? 0
+  const photosChanged =
+    pendingFiles.length > 0 || existingPhotos.length !== initialPhotoCount
+  const isDirty = form.formState.isDirty || photosChanged || mode === 'create'
+  const isBusy = uploading || form.formState.isSubmitting
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {submitError && (
           <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{submitError}</p>
         )}
-        {/* Photo Upload */}
+
+        <FormEyebrow description="Up to six photos. First photo is the hero on the dog card.">
+          Photos
+        </FormEyebrow>
+
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
             <Label>Photos (max {MAX_DOG_PHOTOS})</Label>
@@ -343,13 +358,26 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
           )}
         </div>
 
+        <FormEyebrow description="Name is required; everything else is optional but helps match fosters.">
+          Basics
+        </FormEyebrow>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="name"
-            render={({ field }) => (
+            render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Dog Name *</FormLabel>
+                <FormLabel className="flex items-center gap-1.5">
+                  Dog Name *
+                  {!fieldState.error && field.value && field.value.trim().length > 0 && (
+                    <Check
+                      aria-hidden
+                      className="h-3.5 w-3.5 text-warm-foreground/70"
+                      strokeWidth={2.5}
+                    />
+                  )}
+                </FormLabel>
                 <FormControl>
                   <Input placeholder="e.g. Buddy" {...field} />
                 </FormControl>
@@ -448,6 +476,10 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
           />
         </div>
 
+        <FormEyebrow description="Optional notes that help match the right foster.">
+          Notes
+        </FormEyebrow>
+
         <FormField
           control={form.control}
           name="temperament"
@@ -520,33 +552,13 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
           )}
         />
 
-        <div className="flex gap-3">
-          <Button type="submit" disabled={uploading || form.formState.isSubmitting}>
-            {uploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading photos…
-              </>
-            ) : form.formState.isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving…
-              </>
-            ) : mode === 'create' ? (
-              'Add Dog'
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.back()}
-            disabled={uploading || form.formState.isSubmitting}
-          >
-            Cancel
-          </Button>
-        </div>
+        <StickySaveBar
+          loading={isBusy}
+          dirty={isDirty}
+          savingLabel={uploading ? 'Uploading photos…' : 'Saving…'}
+          onDiscard={() => router.back()}
+          saveLabel={mode === 'create' ? 'Add Dog' : 'Save changes'}
+        />
       </form>
     </Form>
   )

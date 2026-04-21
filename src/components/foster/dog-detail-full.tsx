@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ChevronLeft, MapPin, Star } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
   DialogContent,
@@ -17,127 +16,82 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { DEV_MODE, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
-import { EmptyState } from '@/components/empty-state'
 import { createClient } from '@/lib/supabase/client'
 import { sanitizeMultiline } from '@/lib/sanitize'
 
-interface DogDetailPageProps {
-  params: { id: string }
+// Slim projection of `Dog` — we only need the fields this view renders.
+// Keeping a local shape (rather than pulling the full DB type) means the
+// server page can massage the payload before handing it down without
+// type-friction from optional DB columns.
+export interface DogDetailDog {
+  id: string
+  shelter_id: string
+  name: string
+  breed: string | null
+  age: 'puppy' | 'young' | 'adult' | 'senior' | null
+  size: 'small' | 'medium' | 'large' | 'xl' | null
+  gender: 'male' | 'female' | null
+  temperament: string | null
+  medical_status: string | null
+  special_needs: string | null
+  description: string | null
+  photos: string[]
 }
 
-const PLACEHOLDER_DOG = {
-  id: '0', created_at: '', updated_at: '', shelter_id: 's1', status: 'available' as const,
-  name: 'Buddy', breed: 'Labrador Mix', age: 'adult' as const, size: 'large' as const,
-  gender: 'male' as const, temperament: 'Friendly, playful, great with kids.',
-  medical_status: 'Vaccinated, neutered, heartworm negative.',
-  special_needs: null as string | null,
-  description: 'Buddy is a 3-year-old lab mix who loves fetch and long walks. He does well with other dogs but prefers to be the only dog at meal times.',
-  photos: [] as string[],
-}
-
-const PLACEHOLDER_SHELTER: {
+export interface DogDetailShelter {
+  id: string
   name: string
   location: string
   email: string | null
   slug: string | null
-} = { name: 'Happy Paws Rescue', location: 'Austin, TX', email: null, slug: 'happy-paws-rescue' }
+}
 
-export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
+export interface DogDetailShelterRating {
+  avg: number
+  count: number
+}
+
+interface DogDetailFullProps {
+  dog: DogDetailDog
+  shelter: DogDetailShelter
+  shelterRating: DogDetailShelterRating | null
+  /** True when the current foster already has an application on this dog. */
+  initialApplied: boolean
+  /** The current foster's display name (for notification email payloads). */
+  fosterName: string
+  /** Row id in `foster_parents` for the current user. */
+  fosterId: string
+}
+
+/**
+ * Authenticated-foster dog detail view.
+ *
+ * Extracted from the original \`/foster/dog/[id]/page.tsx\` so the route
+ * can live outside the \`(foster)\` route group — the route now branches
+ * server-side between this "full" view and a public teaser. All
+ * preloaded data is passed in as props, replacing the original page's
+ * useEffect-based fetches; this also means the "already applied"
+ * indicator is correct on first paint instead of flashing "Apply" and
+ * then swapping.
+ *
+ * The apply handler is near-identical to the original: insert into
+ * applications, fire-and-forget the shelter notification, flip local
+ * state to "applied". No re-fetch of \`getUser()\` on apply — we already
+ * have the foster id from the server render, and RLS enforces the
+ * foster owning the row.
+ */
+export function DogDetailFull({
+  dog,
+  shelter,
+  shelterRating,
+  initialApplied,
+  fosterName,
+  fosterId,
+}: DogDetailFullProps) {
   const [note, setNote] = useState('')
   const [applying, setApplying] = useState(false)
-  const [applied, setApplied] = useState(false)
-  const [checkingApplied, setCheckingApplied] = useState(!DEV_MODE)
+  const [applied, setApplied] = useState(initialApplied)
   const [applyError, setApplyError] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
-
-  const [dog, setDog] = useState(DEV_MODE ? PLACEHOLDER_DOG : null)
-  const [shelter, setShelter] = useState(DEV_MODE ? PLACEHOLDER_SHELTER : null)
-  const [shelterRating, setShelterRating] = useState<{ avg: number; count: number } | null>(null)
-  const [fosterName, setFosterName] = useState('')
-
-  useEffect(() => {
-    if (DEV_MODE) return
-    async function load() {
-      const supabase = createClient()
-
-      const { data } = await supabase
-        .from('dogs')
-        .select('*, shelter:shelters(id, name, location, email, slug)')
-        .eq('id', params.id)
-        .maybeSingle()
-
-      if (!data) {
-        setNotFound(true)
-        setCheckingApplied(false)
-        return
-      }
-
-      const shelterData = data.shelter as
-        | { id: string; name: string; location: string; email: string | null; slug: string | null }
-        | null
-      setDog(data as typeof PLACEHOLDER_DOG)
-      setShelter(
-        shelterData
-          ? {
-              name: shelterData.name,
-              location: shelterData.location,
-              email: shelterData.email,
-              slug: shelterData.slug,
-            }
-          : PLACEHOLDER_SHELTER,
-      )
-
-      // Fetch shelter rating aggregate; silently ignored if the table is
-      // empty or RLS blocks (unlikely — shelter_ratings has public select).
-      if (shelterData?.id) {
-        const { data: ratingRows } = await supabase
-          .from('shelter_ratings')
-          .select('score')
-          .eq('shelter_id', shelterData.id)
-        if (ratingRows && ratingRows.length > 0) {
-          const scores = ratingRows.map((r) => r.score as number)
-          const sum = scores.reduce((a, b) => a + b, 0)
-          setShelterRating({ avg: sum / scores.length, count: scores.length })
-        }
-      }
-
-      // Check whether the current foster has already applied to this dog
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError) {
-        console.error('[foster/dog] getUser failed:', authError.message)
-        setCheckingApplied(false)
-        return
-      }
-      if (user) {
-        const { data: fosterRow } = await supabase
-          .from('foster_parents')
-          .select('id, first_name, last_name')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        if (fosterRow) {
-          setFosterName(
-            `${fosterRow.first_name ?? ''} ${fosterRow.last_name ?? ''}`.trim(),
-          )
-
-          const { data: existingApp } = await supabase
-            .from('applications')
-            .select('id')
-            .eq('dog_id', params.id)
-            .eq('foster_id', fosterRow.id)
-            .limit(1)
-            .maybeSingle()
-
-          if (existingApp) {
-            setApplied(true)
-          }
-        }
-      }
-
-      setCheckingApplied(false)
-    }
-    load()
-  }, [params.id])
 
   async function handleApply() {
     setApplying(true)
@@ -150,29 +104,13 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
     }
 
     const supabase = createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) {
-      console.error('[foster/dog/apply] getUser failed:', authError.message)
-      setApplyError('Could not verify your session. Please sign in again.')
-      setApplying(false)
-      return
-    }
-    if (!user) { setApplyError('You must be logged in.'); setApplying(false); return }
-
-    const { data: fosterRow } = await supabase
-      .from('foster_parents')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (!fosterRow) { setApplyError('Complete your foster profile first.'); setApplying(false); return }
-
     const cleanNote = note ? sanitizeMultiline(note) : ''
     const { data: inserted, error } = await supabase
       .from('applications')
       .insert({
-        dog_id: params.id,
-        foster_id: fosterRow.id,
-        shelter_id: dog!.shelter_id,
+        dog_id: dog.id,
+        foster_id: fosterId,
+        shelter_id: dog.shelter_id,
         status: 'submitted',
         note: cleanNote || null,
       })
@@ -191,7 +129,7 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
     // Resend SDK can't be imported into a 'use client' bundle. Silently
     // swallows failure — a slow mailer should never block the user's
     // "I applied!" confirmation.
-    if (shelter?.email && dog) {
+    if (shelter.email) {
       void fetch('/api/notifications/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -212,47 +150,6 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
     setApplied(true)
     setApplying(false)
-  }
-
-  if (notFound) {
-    return (
-      <EmptyState
-        illustration="search"
-        title="Dog not found"
-        description="This dog may have been removed or the link is invalid."
-        action={{ label: 'Browse Dogs', href: '/foster/browse' }}
-      />
-    )
-  }
-
-  if (!dog || !shelter) {
-    return (
-      <div className="max-w-2xl space-y-6">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-72 w-full rounded-xl" />
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-          <Skeleton className="h-10 w-36 rounded-md" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-          <Skeleton className="h-5 w-16 rounded-full" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-24" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-        </div>
-        <div className="rounded-lg border p-4 space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -280,8 +177,6 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
 
         {applied ? (
           <Button disabled variant="outline">Application Sent &#10003;</Button>
-        ) : checkingApplied ? (
-          <Button disabled variant="outline" size="lg">Loading&hellip;</Button>
         ) : (
           <Dialog>
             <DialogTrigger asChild>
@@ -305,7 +200,9 @@ export default function FosterDogDetailPage({ params }: DogDetailPageProps) {
                   />
                 </div>
                 {applyError && (
-                  <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{applyError}</p>
+                  <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+                    {applyError}
+                  </p>
                 )}
                 <Button onClick={handleApply} disabled={applying} className="w-full">
                   {applying ? 'Submitting...' : 'Submit Application'}

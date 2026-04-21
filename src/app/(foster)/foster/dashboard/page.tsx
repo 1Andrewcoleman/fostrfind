@@ -7,6 +7,7 @@ import { FileText, Heart, MessageCircle, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
+import { StaggerItem } from '@/components/ui/stagger-item'
 import { ApplicationStatusCard } from '@/components/foster/application-status-card'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
@@ -149,47 +150,53 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-peach/25 text-foreground/80">
-                <FileText className="h-4 w-4" />
-              </span>
-              Active Applications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-extrabold">{stats.activeApplications}</p>
-          </CardContent>
-        </Card>
+        <StaggerItem index={0}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-peach/25 text-foreground/80">
+                  <FileText className="h-4 w-4" />
+                </span>
+                Active Applications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-extrabold">{stats.activeApplications}</p>
+            </CardContent>
+          </Card>
+        </StaggerItem>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warm/25 text-foreground/80">
-                <Heart className="h-4 w-4" />
-              </span>
-              Currently Fostering
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-extrabold">{stats.currentlyFostering}</p>
-          </CardContent>
-        </Card>
+        <StaggerItem index={1}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-warm/25 text-foreground/80">
+                  <Heart className="h-4 w-4" />
+                </span>
+                Currently Fostering
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-extrabold">{stats.currentlyFostering}</p>
+            </CardContent>
+          </Card>
+        </StaggerItem>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/25 text-foreground/80">
-                <MessageCircle className="h-4 w-4" />
-              </span>
-              Unread Messages
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-extrabold">{stats.unreadMessages}</p>
-          </CardContent>
-        </Card>
+        <StaggerItem index={2}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/25 text-foreground/80">
+                  <MessageCircle className="h-4 w-4" />
+                </span>
+                Unread Messages
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-extrabold">{stats.unreadMessages}</p>
+            </CardContent>
+          </Card>
+        </StaggerItem>
       </div>
 
       {/* Recent Applications */}
@@ -212,8 +219,10 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
             />
           ) : (
             <div className="space-y-3">
-              {recentApplications.map((app) => (
-                <ApplicationStatusCard key={app.id} application={app} />
+              {recentApplications.map((app, i) => (
+                <StaggerItem key={app.id} index={i}>
+                  <ApplicationStatusCard application={app} />
+                </StaggerItem>
               ))}
             </div>
           )}

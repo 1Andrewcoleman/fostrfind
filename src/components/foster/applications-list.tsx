@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/empty-state'
+import { StaggerItem } from '@/components/ui/stagger-item'
 import { ApplicationStatusCard } from '@/components/foster/application-status-card'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -50,8 +51,10 @@ export function FosterApplicationsList({ applications }: FosterApplicationsListP
         />
       ) : (
         <div className="space-y-3">
-          {filtered.map((application) => (
-            <ApplicationStatusCard key={application.id} application={application} />
+          {filtered.map((application, i) => (
+            <StaggerItem key={application.id} index={i}>
+              <ApplicationStatusCard application={application} />
+            </StaggerItem>
           ))}
         </div>
       )}

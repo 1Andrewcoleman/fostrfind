@@ -11,6 +11,7 @@ import {
 } from '@/components/foster/filter-sidebar'
 import { BrowseDogCard } from '@/components/foster/browse-dog-card'
 import { EmptyState } from '@/components/empty-state'
+import { StaggerItem } from '@/components/ui/stagger-item'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -527,8 +528,10 @@ export default function BrowsePage() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredDogs.map((dog) => (
-                  <BrowseDogCard key={dog.id} dog={dog} />
+                {filteredDogs.map((dog, i) => (
+                  <StaggerItem key={dog.id} index={i}>
+                    <BrowseDogCard dog={dog} />
+                  </StaggerItem>
                 ))}
               </div>
               {hasMore && !loadingDogs && (

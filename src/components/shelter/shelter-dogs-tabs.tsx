@@ -2,6 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/empty-state'
+import { StaggerItem } from '@/components/ui/stagger-item'
 import { DogCard } from '@/components/shelter/dog-card'
 import type { Dog } from '@/types/database'
 
@@ -33,8 +34,10 @@ export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeDogs.map((dog) => (
-              <DogCard key={dog.id} dog={dog} />
+            {activeDogs.map((dog, i) => (
+              <StaggerItem key={dog.id} index={i}>
+                <DogCard dog={dog} />
+              </StaggerItem>
             ))}
           </div>
         )}
@@ -49,8 +52,10 @@ export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {placedDogs.map(({ dog, fosterName }) => (
-              <DogCard key={dog.id} dog={dog} fosteredBy={fosterName} />
+            {placedDogs.map(({ dog, fosterName }, i) => (
+              <StaggerItem key={dog.id} index={i}>
+                <DogCard dog={dog} fosteredBy={fosterName} />
+              </StaggerItem>
             ))}
           </div>
         )}

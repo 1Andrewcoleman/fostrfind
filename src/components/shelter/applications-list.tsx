@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/empty-state'
+import { StaggerItem } from '@/components/ui/stagger-item'
 import { ApplicationCard } from '@/components/shelter/application-card'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -56,8 +57,10 @@ export function ShelterApplicationsList({ applications }: ShelterApplicationsLis
         />
       ) : (
         <div className="space-y-3">
-          {filtered.map((application) => (
-            <ApplicationCard key={application.id} application={application} />
+          {filtered.map((application, i) => (
+            <StaggerItem key={application.id} index={i}>
+              <ApplicationCard application={application} />
+            </StaggerItem>
           ))}
         </div>
       )}

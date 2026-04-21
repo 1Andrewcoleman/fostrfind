@@ -99,3 +99,48 @@ From the deferred follow-ups logged against §6.2 (see the end of the `Deferred 
 - **Invite token links** — if we later want branded magic-link URLs, add `/i/<token>`.
 
 Every one of those can ship independently of any other Phase 6 slice.
+
+---
+
+## Post-write addendum — after pushing
+
+After the nine commits above landed, the user asked to see the new surfaces on the dev server. Two follow-up items fell out of that session and landed as a tenth commit before the push to `origin/main`. Documenting here so the next agent has the full picture.
+
+### `26bf9bf` — `fix(auth): redirect stale-session visitors from portal layouts`
+
+**Symptom** the user hit: every new §6.2 route in the browser either showed the red Next dev overlay with `Auth session missing!` or rendered a blank / white portal page, depending on how each page's own try/catch handled auth failure.
+
+**Root cause**
+
+`supabase.auth.getUser()` can *reject* with `AuthSessionMissingError` instead of returning `{ error }` — common right after sign-out or when cookies expire. The old `AuthGuard` and `RoleGuard` destructured the return value synchronously, so a rejection propagated past the `if (authError)` branch entirely and bubbled to the dev overlay.
+
+The deeper issue in App Router: `AuthGuard` sits mid-tree. In Next 14's parallel RSC rendering, sibling server components (the layout's own data fetch, the page's own data fetch) run **concurrently** with AuthGuard. They each hit the same rejection, each catch it with their own try/catch, and each render a fallback. By the time AuthGuard's `redirect('/login')` throws, the siblings have already produced content — Next emits the redirect payload *alongside* the rendered skeleton/server-error panel, and the client-side router sometimes honors one or the other depending on timing.
+
+**Fix, at two levels**
+
+1. **`(foster)/layout.tsx` and `(shelter)/layout.tsx`** now each do an early `getUser()` check *before* returning any JSX. If the call returns error, rejects, or yields a null user → `redirect('/login')`. Because this fires at the top of the layout, before any children render, Next emits a clean redirect-only RSC payload with no sibling content.
+2. **`AuthGuard` and `RoleGuard`** were hardened with the same try/catch-then-redirect shape, as belt-and-braces. They resolve to `user | null` inside a try/catch and call `redirect()` *outside* the catch — so a future `NEXT_REDIRECT` throw can't be accidentally caught by our own try/catch.
+
+**Why both layers instead of one**
+
+The layout-level check is authoritative: it runs on every portal request and is the one emitting the redirect that the user actually sees. The guards stay as a second line of defense — if a future layout or route forgets to do the early check, the guards still fail closed rather than rendering an error overlay.
+
+**Architectural note worth preserving**
+
+If you ever need to gate a protected route, put the `redirect()` at the **top of the layout** (before the return), not mid-tree inside a component like `AuthGuard`. The reason is the same one Next's own docs sometimes understate: redirect from a nested server component during RSC streaming is a race with siblings rendering in parallel. Gating at the layout eliminates the race.
+
+### Also done this push
+
+- `npm run build` was run and passes — all 54 routes compile, 6 new §6.2 ones included. The pre-existing `PLACEHOLDER_SHELTERS` route-file-export violation was caught and fixed during commit 6 (the const moved to `src/lib/placeholder-shelters.ts`).
+- `scripts/verify-phase-6-62-migrations.sql` was handed to the user to run against their Supabase project; the migration itself had already been applied by them.
+- Pushed to `origin/main` at SHA `26bf9bf`. Branch is in sync with origin.
+
+### Final tallies
+
+- **10 commits** total this session (9 §6.2 + 1 auth hotfix).
+- **149 tests passing.**
+- **`npm run build` clean.**
+- **`tsc --noEmit` clean.**
+- **Migration applied** against live Supabase; verify script available for re-runs.
+- **Every protected portal route** confirmed to redirect to `/login` via NEXT_REDIRECT RSC payload when the visitor has no session.
+

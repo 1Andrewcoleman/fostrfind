@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { FosterPortalShell } from '@/components/foster-portal-shell'
 import {
   DogDetailFull,
@@ -6,6 +6,7 @@ import {
   type DogDetailShelter,
   type DogDetailShelterRating,
 } from '@/components/foster/dog-detail-full'
+import { DogDetailTeaser } from '@/components/foster/dog-detail-teaser'
 import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
@@ -40,45 +41,103 @@ const PLACEHOLDER_SHELTER: DogDetailShelter = {
   slug: 'happy-paws-rescue',
 }
 
-// Supabase row fetch isolated so the page component's type narrowing
-// around \`notFound()\` stays clean. Returns the joined row or null; on
-// unexpected exceptions we log and treat as not-found so an outage of
-// the DB doesn't surface a generic error boundary.
-async function loadDogRow<TRow>(
+type FullDogRow = {
+  id: string
+  shelter_id: string
+  status: string
+  name: string
+  breed: string | null
+  age: DogDetailDog['age']
+  size: DogDetailDog['size']
+  gender: DogDetailDog['gender']
+  temperament: string | null
+  medical_status: string | null
+  special_needs: string | null
+  description: string | null
+  photos: string[] | null
+  shelter:
+    | { id: string; name: string; location: string; email: string | null; slug: string | null }
+    | null
+}
+
+type TeaserDogRow = {
+  id: string
+  status: string
+  name: string
+  breed: string | null
+  age: DogDetailDog['age']
+  size: DogDetailDog['size']
+  gender: DogDetailDog['gender']
+  description: string | null
+  shelter: { name: string; location: string; slug: string | null } | null
+}
+
+async function loadFullDogRow(
   supabase: Awaited<ReturnType<typeof createClient>>,
   id: string,
-): Promise<TRow | null> {
+): Promise<FullDogRow | null> {
   try {
     const { data } = await supabase
       .from('dogs')
       .select(
-        'id, shelter_id, name, breed, age, size, gender, temperament, medical_status, special_needs, description, photos, shelter:shelters(id, name, location, email, slug)',
+        'id, shelter_id, status, name, breed, age, size, gender, temperament, medical_status, special_needs, description, photos, shelter:shelters(id, name, location, email, slug)',
       )
       .eq('id', id)
       .maybeSingle()
-    return (data as TRow) ?? null
+    return (data as FullDogRow | null) ?? null
   } catch (e) {
     if (isNextControlFlowError(e)) throw e
-    console.error('[foster/dog] load failed:', e instanceof Error ? e.message : String(e))
+    console.error('[foster/dog] full load failed:', e instanceof Error ? e.message : String(e))
+    return null
+  }
+}
+
+async function loadTeaserDogRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+): Promise<TeaserDogRow | null> {
+  try {
+    const { data } = await supabase
+      .from('dogs')
+      .select(
+        'id, status, name, breed, age, size, gender, description, shelter:shelters(name, location, slug)',
+      )
+      .eq('id', id)
+      .eq('status', 'available')
+      .maybeSingle()
+    return (data as TeaserDogRow | null) ?? null
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error('[foster/dog] teaser load failed:', e instanceof Error ? e.message : String(e))
     return null
   }
 }
 
 /**
- * \`/foster/dog/[id]\` — server component.
+ * \`/foster/dog/[id]\` — server component that dispatches between two
+ * renders on the same canonical URL:
  *
- * This route used to live inside the \`(foster)\` route group, which wrapped
- * every descendant in AuthGuard + RoleGuard. We moved it to a non-grouped
- * path so the same URL can serve a public teaser to logged-out visitors
- * later (see the follow-up commit that replaces the redirects below).
- * Every other foster route remains inside \`(foster)\` with its guards
- * intact.
+ *   - Authenticated foster: full detail inside the portal shell, with
+ *     the apply dialog, temperament, medical notes, shelter rating,
+ *     "already applied" indicator, and a share button.
+ *   - Anyone else (logged out, logged-in shelter staff, logged-in user
+ *     mid-onboarding): a public teaser with a clamped description,
+ *     basic badges, shelter link, share button, and a sign-up CTA.
  *
- * For this commit, the page still behaves like the old version for end
- * users: authenticated fosters see the full detail inside the portal
- * shell; anyone else bounces to \`/login\` (logged out) or \`/onboarding\`
- * (logged in without a foster profile). The teaser lands in the next
- * step.
+ * Moving the route out of the \`(foster)\` group was a prerequisite —
+ * that group's layout wraps every descendant in AuthGuard + RoleGuard
+ * and App Router layouts cannot be escaped by child routes. Every
+ * *other* foster route stays grouped with its guards intact.
+ *
+ * RLS details that make the teaser safe:
+ *
+ *   - \`dogs\` has a "fosters can read available" policy with
+ *     \`USING (status = 'available')\` and no auth predicate, so the
+ *     Supabase anon key can read available dogs.
+ *   - Shelters are readable by everyone.
+ *   - The full-view branch can still return \`pending\` / \`placed\` rows
+ *     for fosters who already have an application on the dog (that
+ *     flow is preserved via their own RLS policy).
  */
 export default async function FosterDogDetailPage({ params }: DogDetailPageProps) {
   if (DEV_MODE) {
@@ -102,45 +161,42 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
 
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-  // AuthGuard equivalent: not logged in → /login, preserving the pre-move
-  // UX. The teaser variant replaces this branch in the follow-up commit.
   if (authError) throw authError
-  if (!user) {
-    redirect(`/login?next=/foster/dog/${params.id}`)
+
+  // Foster dispatch: only authenticated users *with a foster profile*
+  // get the full view. Everyone else — anon visitors, users between
+  // signup and onboarding, shelter staff — lands on the teaser.
+  let fosterRow:
+    | { id: string; first_name: string | null; last_name: string | null }
+    | null = null
+  if (user) {
+    const { data } = await supabase
+      .from('foster_parents')
+      .select('id, first_name, last_name')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    fosterRow = data as typeof fosterRow
   }
 
-  const { data: fosterRow } = await supabase
-    .from('foster_parents')
-    .select('id, first_name, last_name')
-    .eq('user_id', user.id)
-    .maybeSingle()
-
-  // RoleGuard equivalent: logged in but no foster profile. Preserves the
-  // old behavior until the teaser takes over this branch.
-  if (!fosterRow) {
-    redirect('/onboarding')
+  if (user && fosterRow) {
+    return renderFullView({ supabase, params, fosterRow })
   }
 
-  type DogRow = {
-    id: string
-    shelter_id: string
-    name: string
-    breed: string | null
-    age: DogDetailDog['age']
-    size: DogDetailDog['size']
-    gender: DogDetailDog['gender']
-    temperament: string | null
-    medical_status: string | null
-    special_needs: string | null
-    description: string | null
-    photos: string[] | null
-    shelter:
-      | { id: string; name: string; location: string; email: string | null; slug: string | null }
-      | null
-  }
+  return renderTeaser({ supabase, params })
+}
 
-  const dogRow = await loadDogRow<DogRow>(supabase, params.id)
+// ---------------------------------------------------------------------------
+
+async function renderFullView({
+  supabase,
+  params,
+  fosterRow,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  params: { id: string }
+  fosterRow: { id: string; first_name: string | null; last_name: string | null }
+}) {
+  const dogRow = await loadFullDogRow(supabase, params.id)
   if (!dogRow || !dogRow.shelter) {
     notFound()
   }
@@ -167,8 +223,6 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
     slug: dogRow.shelter.slug,
   }
 
-  // Shelter rating aggregate — silently tolerates empty / RLS-blocked
-  // reads, same as the original client-side load.
   let shelterRating: DogDetailShelterRating | null = null
   const { data: ratingRows } = await supabase
     .from('shelter_ratings')
@@ -180,7 +234,6 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
     shelterRating = { avg: sum / scores.length, count: scores.length }
   }
 
-  // Already applied? Server-check so the first paint is correct.
   const { data: existingApp } = await supabase
     .from('applications')
     .select('id')
@@ -190,8 +243,6 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
     .maybeSingle()
   const initialApplied = !!existingApp
 
-  // Portal chrome data (sidebar identity + unread count). Uses the shared
-  // helper so we match exactly what the (foster)/ layout renders.
   const { unreadMessages, identity } = await getPortalLayoutData('foster')
 
   const fosterName = [fosterRow.first_name, fosterRow.last_name]
@@ -211,5 +262,34 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
         canonicalUrl={`${getAppUrl()}/foster/dog/${dog.id}`}
       />
     </FosterPortalShell>
+  )
+}
+
+async function renderTeaser({
+  supabase,
+  params,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  params: { id: string }
+}) {
+  const row = await loadTeaserDogRow(supabase, params.id)
+  if (!row || !row.shelter) {
+    notFound()
+  }
+
+  return (
+    <DogDetailTeaser
+      dog={{
+        id: row.id,
+        name: row.name,
+        breed: row.breed,
+        age: row.age,
+        size: row.size,
+        gender: row.gender,
+        description: row.description,
+      }}
+      shelter={row.shelter}
+      canonicalUrl={`${getAppUrl()}/foster/dog/${row.id}`}
+    />
   )
 }

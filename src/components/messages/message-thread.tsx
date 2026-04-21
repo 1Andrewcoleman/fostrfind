@@ -13,9 +13,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { MessageCircle, Send } from 'lucide-react'
 import { toast } from 'sonner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/client'
+import { getInitials } from '@/lib/helpers'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import type { Message } from '@/types/database'
 
@@ -26,12 +28,13 @@ import type { Message } from '@/types/database'
 
 function TypingIndicator() {
   return (
-    <div className="flex justify-start">
-      <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+    <div className="flex items-end gap-2 justify-start">
+      <div className="w-8 shrink-0" aria-hidden />
+      <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            className="block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce"
+            className="block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 motion-safe:animate-bounce"
             style={{ animationDelay: `${i * 150}ms`, animationDuration: '0.8s' }}
           />
         ))}
@@ -49,6 +52,9 @@ interface MessageThreadProps {
   initialMessages: Message[]
   dogName: string
   otherPartyName: string
+  /** Logo / profile-photo URL for the other party. `null` falls back to
+   * initials in the avatar. */
+  otherPartyAvatarUrl?: string | null
   /** Show animated typing indicator (wire to Realtime presence later). */
   showTypingIndicator?: boolean
 }
@@ -60,6 +66,7 @@ export function MessageThread({
   initialMessages,
   dogName,
   otherPartyName,
+  otherPartyAvatarUrl = null,
   showTypingIndicator = false,
 }: MessageThreadProps) {
   // Single browser Supabase client per mount — creating it inside render would
@@ -216,30 +223,48 @@ export function MessageThread({
           </div>
         )}
 
-        {messages.map((msg) => {
+        {messages.map((msg, idx) => {
           const isMine = msg.sender_role === myRole
           const isOptimistic = msg.id.startsWith('optimistic-')
+          // Render the avatar only on the LAST bubble of each incoming
+          // run — keeps the column quiet when the other party sends a
+          // burst while still anchoring ownership for the reader.
+          const next = messages[idx + 1]
+          const isLastInRun = !next || next.sender_role !== msg.sender_role
+          const showAvatar = !isMine && isLastInRun
 
           return (
             <div
               key={msg.id}
-              className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+              className={`flex items-end gap-2 ${
+                isMine ? 'justify-end' : 'justify-start'
+              }`}
             >
+              {!isMine && (
+                <div className="w-8 shrink-0">
+                  {showAvatar && (
+                    <Avatar className="h-8 w-8">
+                      {otherPartyAvatarUrl ? (
+                        <AvatarImage src={otherPartyAvatarUrl} alt={otherPartyName} />
+                      ) : null}
+                      <AvatarFallback className="text-[10px] font-medium">
+                        {getInitials(otherPartyName)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              )}
               <div
                 className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl text-sm transition-opacity ${
                   isOptimistic ? 'opacity-60' : 'opacity-100'
                 } ${
                   isMine
-                    ? 'bg-primary text-primary-foreground rounded-br-sm'
-                    : 'bg-muted rounded-bl-sm'
+                    ? 'bg-primary/25 text-foreground rounded-br-sm'
+                    : 'bg-card border border-border rounded-bl-sm'
                 }`}
               >
-                <p>{msg.body}</p>
-                <p
-                  className={`text-xs mt-1 ${
-                    isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                  }`}
-                >
+                <p className="whitespace-pre-wrap">{msg.body}</p>
+                <p className="text-xs mt-1 text-muted-foreground">
                   {new Date(msg.created_at).toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',

@@ -38,6 +38,7 @@ export default async function ShelterMessageThreadPage({
   let userId = ''
   let dogName = ''
   let fosterName = ''
+  let fosterAvatarUrl: string | null = null
   let markedMessages: Message[] = []
   let fetchError = false
 
@@ -67,7 +68,7 @@ export default async function ShelterMessageThreadPage({
     const { data: application, error: appError } = await supabase
       .from('applications')
       .select(
-        'id, status, shelter_id, dog:dogs(name), foster:foster_parents(first_name, last_name)',
+        'id, status, shelter_id, dog:dogs(name), foster:foster_parents(first_name, last_name, avatar_url)',
       )
       .eq('id', params.applicationId)
       .eq('shelter_id', shelterRow.id)
@@ -104,9 +105,14 @@ export default async function ShelterMessageThreadPage({
         : initialMessages
 
     const dog = application.dog as unknown as { name: string }
-    const foster = application.foster as unknown as { first_name: string; last_name: string }
+    const foster = application.foster as unknown as {
+      first_name: string
+      last_name: string
+      avatar_url: string | null
+    }
     dogName = dog.name
     fosterName = `${foster.first_name} ${foster.last_name}`
+    fosterAvatarUrl = foster.avatar_url ?? null
   } catch (e) {
     if (isNextControlFlowError(e)) throw e
     console.error('[shelter/messages/:id] load failed:', e instanceof Error ? e.message : String(e))
@@ -133,6 +139,7 @@ export default async function ShelterMessageThreadPage({
           initialMessages={markedMessages}
           dogName={dogName}
           otherPartyName={fosterName}
+          otherPartyAvatarUrl={fosterAvatarUrl}
         />
       )}
     </div>

@@ -38,6 +38,7 @@ export default async function FosterMessageThreadPage({
   let userId = ''
   let dogName = ''
   let shelterName = ''
+  let shelterLogoUrl: string | null = null
   let markedMessages: Message[] = []
   let fetchError = false
 
@@ -67,7 +68,7 @@ export default async function FosterMessageThreadPage({
     const { data: application, error: appError } = await supabase
       .from('applications')
       .select(
-        'id, status, foster_id, dog:dogs(name), shelter:shelters(name)',
+        'id, status, foster_id, dog:dogs(name), shelter:shelters(name, logo_url)',
       )
       .eq('id', params.applicationId)
       .eq('foster_id', fosterRow.id)
@@ -104,9 +105,13 @@ export default async function FosterMessageThreadPage({
         : initialMessages
 
     const dog = application.dog as unknown as { name: string }
-    const shelter = application.shelter as unknown as { name: string }
+    const shelter = application.shelter as unknown as {
+      name: string
+      logo_url: string | null
+    }
     dogName = dog.name
     shelterName = shelter.name
+    shelterLogoUrl = shelter.logo_url ?? null
   } catch (e) {
     if (isNextControlFlowError(e)) throw e
     console.error('[foster/messages/:id] load failed:', e instanceof Error ? e.message : String(e))
@@ -133,6 +138,7 @@ export default async function FosterMessageThreadPage({
           initialMessages={markedMessages}
           dogName={dogName}
           otherPartyName={shelterName}
+          otherPartyAvatarUrl={shelterLogoUrl}
         />
       )}
     </div>

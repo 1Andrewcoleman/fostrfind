@@ -160,8 +160,27 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
   }
 
   const supabase = await createClient()
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError) throw authError
+
+  // This route is publicly reachable, so "no session" and "auth service
+  // hiccup" must both fall through to the teaser render rather than
+  // throwing. getUser() can *reject* with AuthSessionMissingError when
+  // cookies are stale/cleared (e.g. right after sign-out), so we wrap
+  // the call and treat any failure as an anonymous visit.
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  try {
+    const { data, error: authError } = await supabase.auth.getUser()
+    if (authError) {
+      console.warn('[foster/dog] getUser returned error, rendering teaser:', authError.message)
+    } else {
+      user = data.user
+    }
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.warn(
+      '[foster/dog] getUser threw, rendering teaser:',
+      e instanceof Error ? e.message : String(e),
+    )
+  }
 
   // Foster dispatch: only authenticated users *with a foster profile*
   // get the full view. Everyone else — anon visitors, users between

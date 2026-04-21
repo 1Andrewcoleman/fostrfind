@@ -6,9 +6,14 @@ import { X, SlidersHorizontal, Loader2 } from 'lucide-react'
 import {
   FilterSidebar,
   BrowseFilterForm,
-  DEFAULT_FILTERS,
-  type FilterState,
 } from '@/components/foster/filter-sidebar'
+import {
+  DEFAULT_FILTERS,
+  filtersToParams,
+  isFilterActive,
+  parseFiltersFromParams,
+  type FilterState,
+} from '@/lib/browse-filters'
 import { BrowseDogCard } from '@/components/foster/browse-dog-card'
 import { EmptyState } from '@/components/empty-state'
 import { StaggerItem } from '@/components/ui/stagger-item'
@@ -56,33 +61,6 @@ const PLACEHOLDER_DOGS: DogWithShelter[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// URL <-> FilterState helpers
-// ---------------------------------------------------------------------------
-
-function parseFiltersFromParams(params: URLSearchParams): FilterState {
-  const sizes = params.get('sizes')?.split(',').filter(Boolean) ?? []
-  const ages = params.get('ages')?.split(',').filter(Boolean) ?? []
-  const gender = params.get('gender') || null
-  const medicalOk = params.get('medicalOk') === '1'
-  const search = params.get('q') ?? ''
-  const rawDist = params.get('maxDist')
-  const parsed = rawDist == null ? NaN : Number(rawDist)
-  const maxDistance = Number.isFinite(parsed) && parsed > 0 ? parsed : null
-  return { sizes, ages, gender, medicalOk, search, maxDistance }
-}
-
-function filtersToParams(filters: FilterState): string {
-  const params = new URLSearchParams()
-  if (filters.sizes.length > 0) params.set('sizes', filters.sizes.join(','))
-  if (filters.ages.length > 0) params.set('ages', filters.ages.join(','))
-  if (filters.gender) params.set('gender', filters.gender)
-  if (filters.medicalOk) params.set('medicalOk', '1')
-  if (filters.search.trim()) params.set('q', filters.search.trim())
-  if (filters.maxDistance !== null) params.set('maxDist', String(filters.maxDistance))
-  return params.toString()
-}
-
-// ---------------------------------------------------------------------------
 // Browse grid skeleton shown while dogs are loading
 // ---------------------------------------------------------------------------
 
@@ -118,13 +96,7 @@ export default function BrowsePage() {
     [],
   )
   const initialHadParams = useMemo(
-    () =>
-      initialFilters.sizes.length > 0 ||
-      initialFilters.ages.length > 0 ||
-      !!initialFilters.gender ||
-      initialFilters.medicalOk ||
-      initialFilters.search.trim().length > 0 ||
-      initialFilters.maxDistance !== null,
+    () => isFilterActive(initialFilters),
     [initialFilters],
   )
 
@@ -387,13 +359,7 @@ export default function BrowsePage() {
     })
   }, [dogs, filters])
 
-  const hasActiveFilters =
-    filters.sizes.length > 0 ||
-    filters.ages.length > 0 ||
-    !!filters.gender ||
-    filters.medicalOk ||
-    filters.search.trim().length > 0 ||
-    filters.maxDistance !== null
+  const hasActiveFilters = isFilterActive(filters)
 
   function removeSize(value: string) {
     handleFilterChange({ ...filters, sizes: filters.sizes.filter((s) => s !== value) })

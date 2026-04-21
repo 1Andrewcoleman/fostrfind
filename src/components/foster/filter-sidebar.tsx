@@ -11,6 +11,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
 import { DOG_SIZES, DOG_AGES, DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import { DEFAULT_FILTERS as SHARED_DEFAULT_FILTERS, type FilterState as SharedFilterState } from '@/lib/browse-filters'
+
+// Re-export through this module so existing import paths
+// (`@/components/foster/filter-sidebar`) continue to work for callers
+// that grabbed the type / default from here before the extraction.
+export type FilterState = SharedFilterState
+export const DEFAULT_FILTERS = SHARED_DEFAULT_FILTERS
 
 // Multi-select pill used for Size + Age. Behaviour mirrors a checkbox
 // (role="checkbox", aria-checked), rendered as a pastel-filled chip when
@@ -45,32 +52,9 @@ function FilterPill({ id, checked, onToggle, label }: FilterPillProps) {
   )
 }
 
-export interface FilterState {
-  sizes: string[]
-  ages: string[]
-  gender: string | null
-  medicalOk: boolean
-  search: string
-  /**
-   * Maximum shelter distance in miles. null = filter disabled. Range values
-   * above DISTANCE_UNLIMITED_THRESHOLD are also treated as "no limit" so
-   * the slider has a sane "∞" stop at the top.
-   */
-  maxDistance: number | null
-}
-
 export const DISTANCE_MIN = 5
 export const DISTANCE_MAX = 250
 export const DISTANCE_UNLIMITED_THRESHOLD = DISTANCE_MAX
-
-export const DEFAULT_FILTERS: FilterState = {
-  sizes: [],
-  ages: [],
-  gender: null,
-  medicalOk: false,
-  search: '',
-  maxDistance: null,
-}
 
 // ---------------------------------------------------------------------------
 // Reusable filter form — rendered in both the desktop Card and mobile Sheet

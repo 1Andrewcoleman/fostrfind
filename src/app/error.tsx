@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RotateCcw, Home } from 'lucide-react'
+import * as Sentry from '@sentry/nextjs'
 import { Button } from '@/components/ui/button'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 
@@ -16,6 +17,14 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
     console.error('[error-boundary:root]', {
       message: error.message,
       digest: error.digest,
+    })
+    // Sentry auto-captures uncaught errors, but errors that hit a
+    // route's error.tsx have already been "handled" by Next, so we
+    // re-emit them explicitly here. The `scope` tag lets us filter
+    // root-vs-portal errors in the dashboard.
+    Sentry.captureException(error, {
+      tags: { scope: 'root' },
+      extra: { digest: error.digest },
     })
   }, [error])
 

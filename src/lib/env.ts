@@ -42,15 +42,23 @@ const PROD_HARD_VARS = [
 
 /**
  * Soft-required in production. Missing any of these logs a loud warning
- * but does not throw, because `src/lib/email.ts` and the app-URL helper
- * fall back to known-safe defaults (Resend's sandbox sender and
- * localhost respectively). Fix them before public launch — email
- * deep-links will point at the wrong host and outbound email will only
- * reach the Resend account owner's inbox until they're set.
+ * but does not throw, because the affected features fall back to a
+ * known-safe degraded mode:
+ *   - `RESEND_FROM` falls back to Resend's sandbox sender (`src/lib/email.ts`).
+ *   - `NEXT_PUBLIC_APP_URL` falls back to localhost (email deep links break).
+ *   - `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN` (Phase 7 Step 47):
+ *     missing DSN means no error events ship to Sentry; missing auth
+ *     token means source maps don't upload (events still arrive, just
+ *     with minified stack traces). Both are pilot-blockers, not
+ *     build-blockers, so we warn rather than throw.
+ *
+ * Fix them before public launch.
  */
 const PROD_SOFT_VARS = [
   'RESEND_FROM',
   'NEXT_PUBLIC_APP_URL',
+  'NEXT_PUBLIC_SENTRY_DSN',
+  'SENTRY_AUTH_TOKEN',
 ] as const
 
 function missing(keys: readonly string[]): string[] {

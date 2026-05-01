@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, RotateCcw, PawPrint } from 'lucide-react'
+import * as Sentry from '@sentry/nextjs'
 import { Button } from '@/components/ui/button'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 
@@ -23,6 +24,10 @@ export default function FosterErrorPage({ error, reset }: ErrorPageProps) {
     console.error('[error-boundary:foster]', {
       message: error.message,
       digest: error.digest,
+    })
+    Sentry.captureException(error, {
+      tags: { scope: 'foster' },
+      extra: { digest: error.digest },
     })
   }, [error])
 

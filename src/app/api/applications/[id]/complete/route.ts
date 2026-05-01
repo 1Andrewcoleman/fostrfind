@@ -3,12 +3,18 @@ import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { PlacementCompletedEmail } from '@/emails/placement-completed'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
 
 interface CompletedApplicationRow {
   status: string
   dog_id: string
   dog: { name: string } | null
-  foster: { first_name: string | null; last_name: string | null; email: string | null } | null
+  foster: {
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+    email: string | null
+  } | null
   shelter: { user_id: string; name: string | null; email: string | null } | null
 }
 
@@ -39,7 +45,7 @@ export async function POST(
   const { data: application, error: fetchError } = await supabase
     .from('applications')
     .select(
-      'status, dog_id, dog:dogs(name), foster:foster_parents(first_name, last_name, email), shelter:shelters!inner(user_id, name, email)',
+      'status, dog_id, dog:dogs(name), foster:foster_parents(user_id, first_name, last_name, email), shelter:shelters!inner(user_id, name, email)',
     )
     .eq('id', params.id)
     .single<CompletedApplicationRow>()
@@ -82,6 +88,25 @@ export async function POST(
   const shelterName = application.shelter?.name ?? 'Shelter'
   const dogName = application.dog?.name
   const appUrl = getAppUrl()
+
+  if (application.foster?.user_id) {
+    void createNotification({
+      userId: application.foster.user_id,
+      type: 'application_completed',
+      title: `Your foster placement for ${dogName || 'this dog'} is complete`,
+      link: '/foster/history',
+      metadata: { applicationId: params.id, dogId: application.dog_id },
+    })
+  }
+  if (application.shelter?.user_id) {
+    void createNotification({
+      userId: application.shelter.user_id,
+      type: 'application_completed',
+      title: `${fosterName}'s foster placement for ${dogName || 'this dog'} is complete`,
+      link: `/shelter/applications/${params.id}`,
+      metadata: { applicationId: params.id, dogId: application.dog_id },
+    })
+  }
 
   if (dogName) {
     if (application.foster?.email) {

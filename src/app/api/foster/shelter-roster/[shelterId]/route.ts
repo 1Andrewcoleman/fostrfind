@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * DELETE /api/foster/shelter-roster/[shelterId]
@@ -50,13 +51,14 @@ export async function DELETE(
   // table when the row doesn't exist.
   const { data: fosterRow } = await supabase
     .from('foster_parents')
-    .select('id')
+    .select('id, first_name, last_name')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!fosterRow) {
     return NextResponse.json({ error: 'Caller is not a foster' }, { status: 403 })
   }
-  const fosterId = (fosterRow as { id: string }).id
+  const foster = fosterRow as { id: string; first_name: string | null; last_name: string | null }
+  const fosterId = foster.id
 
   // Precheck: does a row exist for this (shelter, foster) pair? The
   // extra round-trip is worth it so we can return a deterministic 404
@@ -75,6 +77,16 @@ export async function DELETE(
     )
   }
 
+  const { data: shelterRow, error: shelterErr } = await supabase
+    .from('shelters')
+    .select('user_id')
+    .eq('id', params.shelterId)
+    .maybeSingle()
+
+  if (shelterErr) {
+    console.error('[shelter-roster/delete] shelter fetch failed:', shelterErr.message)
+  }
+
   const { error: deleteErr } = await supabase
     .from('shelter_fosters')
     .delete()
@@ -84,6 +96,19 @@ export async function DELETE(
   if (deleteErr) {
     console.error('[shelter-roster/delete] delete failed:', deleteErr.message)
     return NextResponse.json({ error: 'Failed to leave roster' }, { status: 500 })
+  }
+
+  const shelter = shelterRow as { user_id: string } | null
+  if (shelter?.user_id) {
+    const fosterName =
+      [foster.first_name, foster.last_name].filter(Boolean).join(' ').trim() || 'A foster'
+    void createNotification({
+      userId: shelter.user_id,
+      type: 'roster_left',
+      title: `${fosterName} left your foster roster`,
+      link: '/shelter/fosters',
+      metadata: { shelterId: params.shelterId, fosterId },
+    })
   }
 
   return NextResponse.json({ success: true })

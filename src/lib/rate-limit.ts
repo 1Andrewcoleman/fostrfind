@@ -32,6 +32,7 @@
 //   - 'applications:complete' (POST /api/applications/[id]/complete)
 //   - 'applications:withdraw' (POST /api/applications/[id]/withdraw)
 //   - 'applications:review'   (POST /api/applications/[id]/review)
+//   - 'messages:create'       (POST /api/messages)
 //   - 'ratings'               (POST /api/ratings)
 //   - 'reports'               (POST /api/reports)
 // Keep this list in sync when adding new mutation routes so future

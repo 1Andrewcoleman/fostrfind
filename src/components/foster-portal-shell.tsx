@@ -8,6 +8,7 @@ import type { PortalIdentity } from '@/types/portal'
 
 interface FosterPortalShellProps {
   unreadMessages: number
+  unreadNotifications?: number
   /**
    * Count of pending shelter->foster invites awaiting this foster's
    * response. Drives the badge on the /foster/invites nav item. Default
@@ -37,6 +38,7 @@ interface FosterPortalShellProps {
  */
 export function FosterPortalShell({
   unreadMessages,
+  unreadNotifications = 0,
   pendingInvites = 0,
   identity,
   children,
@@ -54,6 +56,7 @@ export function FosterPortalShell({
             <NavLinks
               portal="foster"
               unreadMessages={unreadMessages}
+              unreadNotifications={unreadNotifications}
               pendingInvites={pendingInvites}
             />
           </nav>
@@ -80,6 +83,7 @@ export function FosterPortalShell({
               portal="foster"
               portalLabel="Foster Portal"
               unreadMessages={unreadMessages}
+              unreadNotifications={unreadNotifications}
               pendingInvites={pendingInvites}
               identity={identity}
             />

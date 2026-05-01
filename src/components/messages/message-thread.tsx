@@ -163,18 +163,13 @@ export function MessageThread({
     setIsSending(true)
 
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          application_id: applicationId,
-          sender_id: myUserId,
-          sender_role: myRole,
-          body,
-        })
-        .select()
-        .single()
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId, body }),
+      })
 
-      if (error) {
+      if (!res.ok) {
         // Roll back the optimistic message and restore the input
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
         setInputValue(body)
@@ -182,9 +177,11 @@ export function MessageThread({
         return
       }
 
+      const data = (await res.json()) as Message
+
       // Replace the optimistic placeholder with the confirmed server row
       setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticId ? (data as Message) : m)),
+        prev.map((m) => (m.id === optimisticId ? data : m)),
       )
     } catch {
       setMessages((prev) => prev.filter((m) => m.id !== optimisticId))

@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
+
+interface WithdrawApplicationRow {
+  status: string
+  dog: { name: string | null } | null
+  foster: {
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+  } | null
+  shelter: { user_id: string } | null
+}
+
+function displayName(firstName: string | null | undefined, lastName: string | null | undefined): string {
+  return [firstName, lastName].filter(Boolean).join(' ').trim()
+}
 
 /**
  * Foster withdrawal of their own application.
@@ -36,15 +52,17 @@ export async function POST(
   // 2. Fetch application and verify FOSTER ownership (not shelter — this is the foster's action)
   const { data: application, error: fetchError } = await supabase
     .from('applications')
-    .select('*, foster:foster_parents!inner(user_id)')
+    .select(
+      'status, dog:dogs(name), foster:foster_parents!inner(user_id, first_name, last_name), shelter:shelters!inner(user_id)',
+    )
     .eq('id', params.id)
-    .single()
+    .single<WithdrawApplicationRow>()
 
   if (fetchError || !application) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 })
   }
 
-  if (application.foster.user_id !== user.id) {
+  if (application.foster?.user_id !== user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -64,6 +82,19 @@ export async function POST(
 
   if (deleteError) {
     return NextResponse.json({ error: 'Failed to withdraw application' }, { status: 500 })
+  }
+
+  if (application.shelter?.user_id) {
+    const fosterName =
+      displayName(application.foster?.first_name, application.foster?.last_name) || 'A foster'
+    const dogName = application.dog?.name || 'this dog'
+    void createNotification({
+      userId: application.shelter.user_id,
+      type: 'application_withdrawn',
+      title: `${fosterName} withdrew their application for ${dogName}`,
+      link: '/shelter/applications',
+      metadata: { applicationId: params.id },
+    })
   }
 
   return NextResponse.json({ success: true, applicationId: params.id })

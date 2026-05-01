@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * POST /api/shelter/foster-invites/[id]/cancel
@@ -39,7 +40,7 @@ export async function POST(
   // maybeSingle() returns null and we surface 404 without leaking existence.
   const { data: invite, error: fetchErr } = await supabase
     .from('shelter_foster_invites')
-    .select('id, status')
+    .select('id, status, foster_id, shelter:shelters(name)')
     .eq('id', params.id)
     .maybeSingle()
 
@@ -51,7 +52,18 @@ export async function POST(
     return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
   }
 
-  const inviteRow = invite as { id: string; status: string }
+  const rawInvite = invite as {
+    id: string
+    status: string
+    foster_id: string | null
+    shelter: { name: string | null } | Array<{ name: string | null }> | null
+  }
+  const inviteRow = {
+    ...rawInvite,
+    shelter: Array.isArray(rawInvite.shelter)
+      ? rawInvite.shelter[0] ?? null
+      : rawInvite.shelter,
+  }
 
   if (inviteRow.status !== 'pending') {
     return NextResponse.json(
@@ -69,6 +81,29 @@ export async function POST(
   if (updateErr) {
     console.error('[foster-invites/cancel] update failed:', updateErr.message)
     return NextResponse.json({ error: 'Failed to cancel invite' }, { status: 500 })
+  }
+
+  if (inviteRow.foster_id) {
+    const { data: fosterRow, error: fosterErr } = await supabase
+      .from('foster_parents')
+      .select('user_id')
+      .eq('id', inviteRow.foster_id)
+      .maybeSingle()
+
+    if (fosterErr) {
+      console.error('[foster-invites/cancel] foster fetch failed:', fosterErr.message)
+    }
+
+    const foster = fosterRow as { user_id: string } | null
+    if (foster?.user_id) {
+      void createNotification({
+        userId: foster.user_id,
+        type: 'invite_cancelled',
+        title: `Your invitation from ${inviteRow.shelter?.name || 'a shelter'} was cancelled`,
+        link: '/foster/invites',
+        metadata: { inviteId: inviteRow.id, fosterId: inviteRow.foster_id },
+      })
+    }
   }
 
   return NextResponse.json({ success: true })

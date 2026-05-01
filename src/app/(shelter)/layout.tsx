@@ -43,7 +43,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
     if (!userId) redirect('/login')
   }
 
-  const { unreadMessages, identity } = await getPortalLayoutData('shelter')
+  const { unreadMessages, unreadNotifications, identity } = await getPortalLayoutData('shelter')
 
   return (
     <AuthGuard>
@@ -57,7 +57,11 @@ export default async function ShelterLayout({ children }: { children: React.Reac
               <span className="group-data-[collapsed=true]:hidden">Fostr Fix</span>
             </div>
             <nav className="flex-1 py-4 px-3 space-y-1">
-              <NavLinks portal="shelter" unreadMessages={unreadMessages} />
+              <NavLinks
+                portal="shelter"
+                unreadMessages={unreadMessages}
+                unreadNotifications={unreadNotifications}
+              />
             </nav>
             <PortalSidebarUser identity={identity} />
           </PortalSidebar>
@@ -72,7 +76,13 @@ export default async function ShelterLayout({ children }: { children: React.Reac
 
             {/* Mobile header (hamburger + wordmark) */}
             <header className="flex md:hidden items-center gap-3 px-4 h-14 border-b bg-background sticky top-0 z-50" data-print-hide>
-              <MobileNav portal="shelter" portalLabel="Shelter Portal" unreadMessages={unreadMessages} identity={identity} />
+              <MobileNav
+                portal="shelter"
+                portalLabel="Shelter Portal"
+                unreadMessages={unreadMessages}
+                unreadNotifications={unreadNotifications}
+                identity={identity}
+              />
               <div className="flex items-center gap-2 font-display font-bold text-base">
                 <PawPrint className="h-5 w-5 text-primary" />
                 Fostr Fix

@@ -1,5 +1,7 @@
 // Database types matching Supabase schema
 
+import type { NotificationType } from '@/lib/notifications'
+
 export interface Shelter {
   id: string
   created_at: string
@@ -116,6 +118,20 @@ export interface Message {
   sender_role: 'shelter' | 'foster'
   body: string
   read: boolean
+}
+
+// Phase 7 Step 48 — Notification Center foundation.
+export interface Notification {
+  id: string
+  created_at: string
+  user_id: string
+  type: NotificationType
+  title: string
+  body: string | null
+  link: string | null
+  read: boolean
+  read_at: string | null
+  metadata: Record<string, unknown> | null
 }
 
 // Phase 6.2 — roster tables.

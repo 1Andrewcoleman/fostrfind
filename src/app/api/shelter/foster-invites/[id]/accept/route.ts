@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * POST /api/shelter/foster-invites/[id]/accept
@@ -52,15 +53,21 @@ export async function POST(
   // Resolve the caller's foster row.
   const { data: fosterRow } = await supabase
     .from('foster_parents')
-    .select('id, email')
+    .select('id, email, first_name, last_name')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!fosterRow) {
     return NextResponse.json({ error: 'Caller is not a foster' }, { status: 403 })
   }
-  const fosterId = (fosterRow as { id: string; email: string }).id
+  const foster = fosterRow as {
+    id: string
+    email: string
+    first_name: string | null
+    last_name: string | null
+  }
+  const fosterId = foster.id
   const fosterEmail = normalizeInviteEmail(
-    (fosterRow as { id: string; email: string }).email,
+    foster.email,
   )
 
   // Fetch the invite with RLS already applied; if the caller can't see it
@@ -106,6 +113,16 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  const { data: shelterRow, error: shelterErr } = await supabase
+    .from('shelters')
+    .select('user_id, name')
+    .eq('id', inviteRow.shelter_id)
+    .maybeSingle()
+
+  if (shelterErr) {
+    console.error('[foster-invites/accept] shelter fetch failed:', shelterErr.message)
+  }
+
   // Update invite — foster-side RLS permits this path.
   const now = new Date().toISOString()
   const { error: updateErr } = await supabase
@@ -147,6 +164,19 @@ export async function POST(
       '[foster-invites/accept] roster upsert threw, continuing:',
       e instanceof Error ? e.message : String(e),
     )
+  }
+
+  const shelter = shelterRow as { user_id: string; name: string | null } | null
+  if (shelter?.user_id) {
+    const fosterName =
+      [foster.first_name, foster.last_name].filter(Boolean).join(' ').trim() || 'A foster'
+    void createNotification({
+      userId: shelter.user_id,
+      type: 'invite_accepted',
+      title: `${fosterName} accepted your roster invitation`,
+      link: '/shelter/fosters',
+      metadata: { inviteId: inviteRow.id, fosterId, shelterId: inviteRow.shelter_id },
+    })
   }
 
   return NextResponse.json({ success: true })

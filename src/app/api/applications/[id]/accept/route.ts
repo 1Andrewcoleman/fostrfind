@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
 
 /** Minimal shape of the joined application fetch used below. Typed
  *  narrowly so the email-payload field access stays lint-clean. */
@@ -13,7 +14,12 @@ interface AcceptedApplicationRow {
   foster_id: string
   shelter_id: string
   dog: { name: string } | null
-  foster: { first_name: string | null; last_name: string | null; email: string | null } | null
+  foster: {
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+    email: string | null
+  } | null
   shelter: { user_id: string; name: string | null } | null
 }
 
@@ -46,7 +52,7 @@ export async function POST(
   const { data: application, error: fetchError } = await supabase
     .from('applications')
     .select(
-      'status, dog_id, foster_id, shelter_id, dog:dogs(name), foster:foster_parents(first_name, last_name, email), shelter:shelters!inner(user_id, name)',
+      'status, dog_id, foster_id, shelter_id, dog:dogs(name), foster:foster_parents(user_id, first_name, last_name, email), shelter:shelters!inner(user_id, name)',
     )
     .eq('id', params.id)
     .single<AcceptedApplicationRow>()
@@ -87,6 +93,7 @@ export async function POST(
   //    the acceptance — the user-visible action (application accepted)
   //    has already succeeded via the RPC above, and the roster row is a
   //    secondary side effect.
+  let rosterJoined = false
   try {
     const svc = createServiceClient()
     const { error: rosterError } = await svc
@@ -101,6 +108,8 @@ export async function POST(
       )
     if (rosterError) {
       console.error('[applications/accept] roster upsert failed, continuing:', rosterError.message)
+    } else {
+      rosterJoined = true
     }
   } catch (e) {
     console.error(
@@ -115,8 +124,34 @@ export async function POST(
   const fosterEmail = application.foster?.email
   const dogName = application.dog?.name
   const shelterName = application.shelter?.name
+  const fosterName = `${application.foster?.first_name ?? ''} ${application.foster?.last_name ?? ''}`.trim()
+  const fosterUserId = application.foster?.user_id
+  if (fosterUserId) {
+    const notificationDogName = dogName || 'this dog'
+    void createNotification({
+      userId: fosterUserId,
+      type: 'application_accepted',
+      title: `Your application for ${notificationDogName} was accepted!`,
+      link: `/foster/messages/${params.id}`,
+      metadata: { applicationId: params.id, dogId: application.dog_id },
+    })
+
+    if (rosterJoined && shelterName) {
+      void createNotification({
+        userId: fosterUserId,
+        type: 'roster_joined',
+        title: `You've been added to ${shelterName}'s foster roster`,
+        link: '/foster/shelters-roster',
+        metadata: {
+          applicationId: params.id,
+          shelterId: application.shelter_id,
+          fosterId: application.foster_id,
+        },
+      })
+    }
+  }
+
   if (fosterEmail && dogName && shelterName) {
-    const fosterName = `${application.foster?.first_name ?? ''} ${application.foster?.last_name ?? ''}`.trim()
     void sendEmail({
       to: fosterEmail,
       subject: `Great news — your application for ${dogName} was accepted`,

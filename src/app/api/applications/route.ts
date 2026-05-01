@@ -3,6 +3,19 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { applicationCreateSchema } from '@/lib/schemas'
+import { createNotification } from '@/lib/notifications'
+
+interface ApplicationDogRow {
+  id: string
+  shelter_id: string
+  status: string
+  name: string | null
+  shelter: { user_id: string } | null
+}
+
+function displayName(firstName: string | null | undefined, lastName: string | null | undefined): string {
+  return [firstName, lastName].filter(Boolean).join(' ').trim()
+}
 
 /**
  * POST /api/applications — submit a structured foster application.
@@ -50,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // a profile get a clear 404 instead of a generic validation error.
   const { data: foster, error: fosterError } = await supabase
     .from('foster_parents')
-    .select('id')
+    .select('id, first_name, last_name')
     .eq('user_id', user.id)
     .maybeSingle()
 
@@ -84,9 +97,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   // actionable for the client than a generic 500/permission error.
   const { data: dog, error: dogError } = await supabase
     .from('dogs')
-    .select('id, shelter_id, status')
+    .select('id, shelter_id, status, name, shelter:shelters!inner(user_id)')
     .eq('id', data.dog_id)
-    .maybeSingle()
+    .maybeSingle<ApplicationDogRow>()
 
   if (dogError) {
     console.error('[applications/create] dog lookup failed:', dogError.message)
@@ -163,7 +176,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 })
   }
 
-  // Step 48 will fire a service-role notification + email here.
+  const shelterUserId = dog.shelter?.user_id
+  if (shelterUserId) {
+    const fosterName = displayName(foster.first_name, foster.last_name) || 'A foster'
+    const dogName = dog.name || 'this dog'
+    void createNotification({
+      userId: shelterUserId,
+      type: 'application_submitted',
+      title: `New application from ${fosterName} for ${dogName}`,
+      link: `/shelter/applications/${application.id}`,
+      metadata: { applicationId: application.id, dogId: data.dog_id, fosterId: foster.id },
+    })
+  }
 
   return NextResponse.json(application, { status: 201 })
 }

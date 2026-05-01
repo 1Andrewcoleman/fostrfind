@@ -5,6 +5,7 @@ import { getAppUrl, sendEmail } from '@/lib/email'
 import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
+import { createNotification } from '@/lib/notifications'
 
 /**
  * POST /api/shelter/foster-invites
@@ -100,10 +101,11 @@ export async function POST(request: Request): Promise<NextResponse> {
   // and we can also detect the "already on the roster" case cheaply.
   const { data: existingFoster } = await supabase
     .from('foster_parents')
-    .select('id')
+    .select('id, user_id')
     .ilike('email', normalizedEmail)
     .maybeSingle()
-  const existingFosterId = (existingFoster as { id: string } | null)?.id ?? null
+  const existingFosterRow = existingFoster as { id: string; user_id: string } | null
+  const existingFosterId = existingFosterRow?.id ?? null
 
   if (existingFosterId) {
     const { data: alreadyInRoster } = await supabase
@@ -162,6 +164,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       signinUrl: `${getAppUrl()}/foster/invites`,
     }),
   })
+
+  if (existingFosterRow?.user_id) {
+    void createNotification({
+      userId: existingFosterRow.user_id,
+      type: 'invite_received',
+      title: `${shelterName} has invited you to join their foster roster`,
+      link: '/foster/invites',
+      metadata: { inviteId: inserted.id, shelterId: shelterRow.id },
+    })
+  }
 
   return NextResponse.json({ success: true, invite: inserted })
 }

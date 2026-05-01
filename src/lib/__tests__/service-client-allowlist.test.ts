@@ -29,6 +29,7 @@ const ALLOWED_IMPORTERS = new Set<string>([
   // shelter_foster_invites already allows UPDATE by email match.
   //
   // The module itself.
+  'src/lib/notifications.ts',
   'src/lib/supabase/service.ts',
 ])
 

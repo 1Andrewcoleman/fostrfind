@@ -144,6 +144,7 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
     return (
       <FosterPortalShell
         unreadMessages={0}
+        unreadNotifications={0}
         identity={{ displayName: 'Jane Foster', avatarUrl: null, roleLabel: 'Foster' }}
       >
         <DogDetailFull
@@ -286,11 +287,13 @@ async function renderFullView({
     .maybeSingle()
   const initialSaved = !!existingSave
 
-  const { unreadMessages, pendingInvites, identity } = await getPortalLayoutData('foster')
+  const { unreadMessages, unreadNotifications, pendingInvites, identity } =
+    await getPortalLayoutData('foster')
 
   return (
     <FosterPortalShell
       unreadMessages={unreadMessages}
+      unreadNotifications={unreadNotifications}
       pendingInvites={pendingInvites}
       identity={identity}
     >

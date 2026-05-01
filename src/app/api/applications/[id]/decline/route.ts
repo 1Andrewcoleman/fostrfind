@@ -3,11 +3,17 @@ import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationDeclinedEmail } from '@/emails/application-declined'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { createNotification } from '@/lib/notifications'
 
 interface DeclinedApplicationRow {
   status: string
   dog: { name: string } | null
-  foster: { first_name: string | null; last_name: string | null; email: string | null } | null
+  foster: {
+    user_id: string
+    first_name: string | null
+    last_name: string | null
+    email: string | null
+  } | null
   shelter: { user_id: string; name: string | null } | null
 }
 
@@ -38,7 +44,7 @@ export async function POST(
   const { data: application, error: fetchError } = await supabase
     .from('applications')
     .select(
-      'status, dog:dogs(name), foster:foster_parents(first_name, last_name, email), shelter:shelters!inner(user_id, name)',
+      'status, dog:dogs(name), foster:foster_parents(user_id, first_name, last_name, email), shelter:shelters!inner(user_id, name)',
     )
     .eq('id', params.id)
     .single<DeclinedApplicationRow>()
@@ -73,6 +79,16 @@ export async function POST(
   const fosterEmail = application.foster?.email
   const dogName = application.dog?.name
   const shelterName = application.shelter?.name
+  if (application.foster?.user_id) {
+    void createNotification({
+      userId: application.foster.user_id,
+      type: 'application_declined',
+      title: `Your application for ${dogName || 'this dog'} was not accepted`,
+      link: `/foster/applications/${params.id}`,
+      metadata: { applicationId: params.id },
+    })
+  }
+
   if (fosterEmail && dogName && shelterName) {
     const fosterName = `${application.foster?.first_name ?? ''} ${application.foster?.last_name ?? ''}`.trim()
     void sendEmail({

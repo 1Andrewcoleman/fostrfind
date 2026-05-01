@@ -38,13 +38,15 @@ export default async function FosterLayout({ children }: { children: React.React
     if (!userId) redirect('/login')
   }
 
-  const { unreadMessages, pendingInvites, identity } = await getPortalLayoutData('foster')
+  const { unreadMessages, unreadNotifications, pendingInvites, identity } =
+    await getPortalLayoutData('foster')
 
   return (
     <AuthGuard>
       <RoleGuard allowedRole="foster">
         <FosterPortalShell
           unreadMessages={unreadMessages}
+          unreadNotifications={unreadNotifications}
           pendingInvites={pendingInvites}
           identity={identity}
         >

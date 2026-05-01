@@ -75,6 +75,7 @@ const FOSTER_NAV: NavItem[] = [
 interface NavCounts {
   unreadMessages: number
   pendingInvites: number
+  unreadNotifications: number
 }
 
 type Portal = 'shelter' | 'foster'
@@ -134,16 +135,18 @@ interface NavLinksProps {
   portal: Portal
   unreadMessages?: number
   pendingInvites?: number
+  unreadNotifications?: number
 }
 
 export function NavLinks({
   portal,
   unreadMessages = 0,
   pendingInvites = 0,
+  unreadNotifications = 0,
 }: NavLinksProps) {
   const pathname = usePathname()
   const items = portal === 'shelter' ? SHELTER_NAV : FOSTER_NAV
-  const counts: NavCounts = { unreadMessages, pendingInvites }
+  const counts: NavCounts = { unreadMessages, pendingInvites, unreadNotifications }
 
   return (
     <>
@@ -168,6 +171,7 @@ interface MobileNavProps {
   portalLabel: string
   unreadMessages?: number
   pendingInvites?: number
+  unreadNotifications?: number
   identity?: PortalIdentity
 }
 
@@ -176,12 +180,13 @@ export function MobileNav({
   portalLabel,
   unreadMessages = 0,
   pendingInvites = 0,
+  unreadNotifications = 0,
   identity,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const items = portal === 'shelter' ? SHELTER_NAV : FOSTER_NAV
-  const counts: NavCounts = { unreadMessages, pendingInvites }
+  const counts: NavCounts = { unreadMessages, pendingInvites, unreadNotifications }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>

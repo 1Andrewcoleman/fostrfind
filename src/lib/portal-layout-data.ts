@@ -132,12 +132,30 @@ async function getPendingInvitesForFoster(
   return count ?? 0
 }
 
+async function getUnreadNotificationCount(
+  supabase: SupabaseServerClient,
+  user: AuthUser,
+): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('read', false)
+
+  if (error) {
+    console.error('[portal-layout-data] unread notifications count failed:', error.message)
+    return 0
+  }
+  return count ?? 0
+}
+
 // ---------------------------------------------------------------------------
 // Combined fetch — single getUser() per layout render
 // ---------------------------------------------------------------------------
 
 export interface PortalLayoutData {
   unreadMessages: number
+  unreadNotifications: number
   /** Only populated for the foster portal; always 0 on the shelter side. */
   pendingInvites: number
   identity: PortalIdentity
@@ -149,6 +167,7 @@ export async function getPortalLayoutData(
   if (DEV_MODE) {
     return {
       unreadMessages: 0,
+      unreadNotifications: 0,
       pendingInvites: 0,
       identity: DEV_IDENTITY[portal],
     }
@@ -171,13 +190,14 @@ export async function getPortalLayoutData(
       return fallbackLayoutData(portal)
     }
 
-    const [unreadMessages, identity, pendingInvites] = await Promise.all([
+    const [unreadMessages, identity, pendingInvites, unreadNotifications] = await Promise.all([
       getUnreadCountForRole(supabase, user, portal),
       getPortalIdentityForUser(portal, supabase, user),
       portal === 'foster' ? getPendingInvitesForFoster(supabase, user) : Promise.resolve(0),
+      getUnreadNotificationCount(supabase, user),
     ])
 
-    return { unreadMessages, pendingInvites, identity }
+    return { unreadMessages, unreadNotifications, pendingInvites, identity }
   } catch (e) {
     // Re-throw Next control-flow errors (redirect / notFound / dynamic
     // server usage during build-time static analysis) so Next can do its
@@ -192,6 +212,7 @@ function fallbackLayoutData(portal: 'shelter' | 'foster'): PortalLayoutData {
   const roleLabel = portal === 'shelter' ? 'Shelter' as const : 'Foster' as const
   return {
     unreadMessages: 0,
+    unreadNotifications: 0,
     pendingInvites: 0,
     identity: { displayName: 'Account', avatarUrl: null, roleLabel },
   }

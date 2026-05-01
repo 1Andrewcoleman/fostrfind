@@ -24,6 +24,7 @@ interface CompletedAppRow {
 export default async function ShelterDogsPage() {
   let activeDogs: Dog[] = []
   let placedDogs: PlacedDogEntry[] = []
+  let saveCountByDog: Record<string, number> = {}
   let hasAnyDogs = false
   let fetchError = false
 
@@ -93,6 +94,25 @@ export default async function ShelterDogsPage() {
               fosterName: fosterByDog.get(dog.id) ?? 'a foster parent',
             }))
           }
+
+          // Phase 6.5 — aggregate save counts per dog for the active tab.
+          // Single SECURITY DEFINER RPC that scopes to the caller's own
+          // shelters. Failure here must not break the dogs list — fall
+          // back to zero counts and log.
+          const { data: saveCounts, error: saveCountsError } = await supabase.rpc(
+            'get_save_counts_for_my_dogs',
+          )
+          if (saveCountsError) {
+            console.error(
+              '[shelter/dogs] save counts RPC failed:',
+              saveCountsError.message,
+            )
+          } else if (saveCounts) {
+            const rows = saveCounts as Array<{ dog_id: string; save_count: number }>
+            saveCountByDog = Object.fromEntries(
+              rows.map((r) => [r.dog_id, Number(r.save_count) || 0]),
+            )
+          }
         }
       }
     } catch (e) {
@@ -124,7 +144,11 @@ export default async function ShelterDogsPage() {
           action={{ label: 'Add Dog', href: '/shelter/dogs/new' }}
         />
       ) : (
-        <ShelterDogsTabs activeDogs={activeDogs} placedDogs={placedDogs} />
+        <ShelterDogsTabs
+          activeDogs={activeDogs}
+          placedDogs={placedDogs}
+          saveCountByDog={saveCountByDog}
+        />
       )}
     </div>
   )

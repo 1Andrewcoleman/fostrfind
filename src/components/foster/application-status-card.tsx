@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/status-badge'
 import { ApplicationStepper } from '@/components/foster/application-stepper'
 import { WithdrawApplicationButton } from '@/components/foster/withdraw-application-button'
+import { ReportApplicationDialog } from '@/components/report-application-dialog'
 import { formatDate } from '@/lib/helpers'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -79,6 +80,11 @@ export function ApplicationStatusCard({ application }: ApplicationStatusCardProp
                 dogName={dogName}
               />
             )}
+            <ReportApplicationDialog
+              applicationId={application.id}
+              subjectLabel={shelterName}
+              compact
+            />
           </div>
         </div>
       </CardContent>

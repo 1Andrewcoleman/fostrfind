@@ -23,6 +23,7 @@ import {
   PawPrint,
   Mail,
   Users,
+  Heart,
   Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,7 @@ const SHELTER_NAV: NavItem[] = [
 const FOSTER_NAV: NavItem[] = [
   { href: '/foster/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/foster/browse', label: 'Browse Dogs', icon: Search },
+  { href: '/foster/saved', label: 'Saved', icon: Heart },
   { href: '/foster/applications', label: 'My Applications', icon: FileText },
   { href: '/foster/invites', label: 'Invites', icon: Mail, badgeKey: 'pendingInvites' },
   { href: '/foster/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },

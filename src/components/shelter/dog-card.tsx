@@ -13,9 +13,20 @@ interface DogCardProps {
    * label. Used on the Placed tab of the shelter dogs list.
    */
   fosteredBy?: string
+  /**
+   * Phase 6.5 — aggregate count of fosters who hearted this dog. Real DB
+   * aggregate; pass 0 (the default) when the count is unknown or when
+   * the dog row should not surface saves.
+   */
+  saveCount?: number
 }
 
-export function DogCard({ dog, applicationCount = 0, fosteredBy }: DogCardProps) {
+export function DogCard({
+  dog,
+  applicationCount = 0,
+  fosteredBy,
+  saveCount = 0,
+}: DogCardProps) {
   return (
     <Link href={`/shelter/dogs/${dog.id}`}>
       <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
@@ -47,10 +58,14 @@ export function DogCard({ dog, applicationCount = 0, fosteredBy }: DogCardProps)
               <span>Fostered by {fosteredBy}</span>
             </div>
           ) : (
-            <div className="mt-3 flex items-center gap-1 text-sm text-muted-foreground">
-              <FileText className="h-4 w-4" />
-              <span>
+            <div className="mt-3 flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
                 {applicationCount} application{applicationCount !== 1 ? 's' : ''}
+              </span>
+              <span className="flex items-center gap-1" aria-label={`${saveCount} foster${saveCount === 1 ? '' : 's'} saved`}>
+                <Heart className="h-4 w-4" />
+                {saveCount} save{saveCount !== 1 ? 's' : ''}
               </span>
             </div>
           )}

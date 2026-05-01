@@ -14,9 +14,15 @@ export interface PlacedDogEntry {
 interface ShelterDogsTabsProps {
   activeDogs: Dog[]
   placedDogs: PlacedDogEntry[]
+  /** Phase 6.5 — aggregate save count per dog id, real DB aggregate. */
+  saveCountByDog?: Record<string, number>
 }
 
-export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps) {
+export function ShelterDogsTabs({
+  activeDogs,
+  placedDogs,
+  saveCountByDog = {},
+}: ShelterDogsTabsProps) {
   return (
     <Tabs defaultValue="active" className="space-y-6">
       <TabsList>
@@ -36,7 +42,7 @@ export function ShelterDogsTabs({ activeDogs, placedDogs }: ShelterDogsTabsProps
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeDogs.map((dog, i) => (
               <StaggerItem key={dog.id} index={i}>
-                <DogCard dog={dog} />
+                <DogCard dog={dog} saveCount={saveCountByDog[dog.id] ?? 0} />
               </StaggerItem>
             ))}
           </div>

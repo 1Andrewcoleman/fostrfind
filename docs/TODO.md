@@ -346,10 +346,10 @@ On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/
 
 > **Source of truth:** [`docs/roadmap.md`](./roadmap.md) — section **“Phase 6: Discovery, Trust & Safety (Backlog)”**. This block is a quick checkbox list for agents who live in TODO.md first; specs, ordering, and “relationship to Step X” notes stay in the roadmap.
 
-- [ ] **6.1** Browse / directory: search **listings by shelter name** (extends Step 13; optional `/shelters` index)
-- [ ] **6.2** Shelter UI: **foster lookup & past-foster history** (scoped to that shelter’s applications)
-- [ ] **6.3** Dog detail: **share** link (Web Share API + copy fallback; align with `og` metadata)
-- [ ] **6.4** **Mutual reporting** foster ↔ shelter (reports table, RLS, triage queue)
-- [ ] **6.5** Foster **saved dogs** + shelter-visible **save counts** per dog (`dog_saves` or equivalent)
-- [ ] **6.6** **Map view** of shelters in radius (after geocoding pipeline; extends Step 22 list-only distance filter)
+- [x] **6.1** Browse / directory: search **listings by shelter name** (extends Step 13; optional `/shelters` index)
+- [x] **6.2** Shelter UI: **foster lookup & past-foster history** (scoped to that shelter’s applications)
+- [x] **6.3** Dog detail: **share** link (Web Share API + copy fallback; align with `og` metadata)
+- [x] **6.4** **Mutual reporting** foster ↔ shelter — `reports` table + RLS + `POST /api/reports` + shared `ReportApplicationDialog` wired into both portals (admin triage queue still deferred)
+- [x] **6.5** Foster **saved dogs** + shelter-visible **save counts** per dog — `dog_saves` table, `get_save_counts_for_my_dogs()` RPC, `/api/dogs/[id]/save` (POST/DELETE), `/foster/saved` page, heart on dog detail, real aggregate count on shelter dog cards
+- [ ] **6.6** **Map view** of shelters in radius — **deferred**: gated on a geocoding pipeline + map provider/key (see roadmap Deferred Follow-ups Log 2026-04-29)
 - [ ] **6.7** **Verification playbook** — consolidate email (Step 7), shelter `is_verified` workflow ([§22](./TODO.md#22-two-way-trust--ratings)), and any future foster trust-tier (product/legal TBD)

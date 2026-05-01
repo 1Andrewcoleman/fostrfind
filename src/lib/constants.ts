@@ -50,6 +50,22 @@ export const APPLICATION_STATUS_LABELS: Record<string, string> = {
   completed: 'Completed',
 }
 
+export const REPORT_CATEGORIES = [
+  'safety',
+  'harassment',
+  'misrepresentation',
+  'no_show',
+  'other',
+] as const
+
+export const REPORT_CATEGORY_LABELS: Record<(typeof REPORT_CATEGORIES)[number], string> = {
+  safety: 'Safety concern',
+  harassment: 'Harassment or abuse',
+  misrepresentation: 'Misrepresentation or dishonesty',
+  no_show: 'No-show or unresponsive',
+  other: 'Something else',
+}
+
 export const DOG_STATUS_LABELS: Record<string, string> = {
   available: 'Available',
   pending: 'Pending',

@@ -396,7 +396,7 @@ async function resetSeedData() {
   if (shelterIds.length > 0) {
     // ratings first (no cascade back to dogs → ratings path on delete)
     await admin.from('ratings').delete().in('shelter_id', shelterIds)
-    // dogs cascade to applications → messages via FK
+    // dogs cascade to applications → messages and dog_saves via FK
     await admin.from('dogs').delete().in('shelter_id', shelterIds)
     await admin.from('shelters').delete().in('id', shelterIds)
   }
@@ -591,6 +591,28 @@ async function main() {
   const { error: ratErr } = await admin.from('ratings').insert(ratingRows)
   if (ratErr) throw ratErr
   console.log(`[seed] inserted ${ratingRows.length} ratings`)
+
+  // --- dog saves (Phase 6.5) — every foster hearts the first dog of each
+  // shelter, so the shelter list shows real aggregate counts > 0 in QA.
+  const saveRows: Array<{ foster_id: string; dog_id: string }> = []
+  for (let f = 0; f < FOSTERS.length; f++) {
+    const fosterId = fosterIdByIdx.get(f)
+    if (!fosterId) continue
+    for (let s = 0; s < SHELTERS.length; s++) {
+      const dogIdx = DOGS.findIndex((d) => d.shelterIdx === s)
+      if (dogIdx === -1) continue
+      const dogId = dogIdByIdx.get(dogIdx)
+      if (!dogId) continue
+      saveRows.push({ foster_id: fosterId, dog_id: dogId })
+    }
+  }
+  if (saveRows.length > 0) {
+    const { error: saveErr } = await admin
+      .from('dog_saves')
+      .upsert(saveRows, { onConflict: 'foster_id,dog_id', ignoreDuplicates: true })
+    if (saveErr) throw saveErr
+    console.log(`[seed] inserted ${saveRows.length} dog saves`)
+  }
 
   // --- summary
   console.log('\n[seed] ===== summary =====')

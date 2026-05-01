@@ -151,8 +151,7 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
           shelter={PLACEHOLDER_SHELTER}
           shelterRating={null}
           initialApplied={false}
-          fosterName="Jane Foster"
-          fosterId="dev-foster-1"
+          initialSaved={false}
           canonicalUrl={`${getAppUrl()}/foster/dog/${params.id}`}
         />
       </FosterPortalShell>
@@ -185,13 +184,11 @@ export default async function FosterDogDetailPage({ params }: DogDetailPageProps
   // Foster dispatch: only authenticated users *with a foster profile*
   // get the full view. Everyone else — anon visitors, users between
   // signup and onboarding, shelter staff — lands on the teaser.
-  let fosterRow:
-    | { id: string; first_name: string | null; last_name: string | null }
-    | null = null
+  let fosterRow: { id: string } | null = null
   if (user) {
     const { data } = await supabase
       .from('foster_parents')
-      .select('id, first_name, last_name')
+      .select('id')
       .eq('user_id', user.id)
       .maybeSingle()
     fosterRow = data as typeof fosterRow
@@ -213,7 +210,7 @@ async function renderFullView({
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>
   params: { id: string }
-  fosterRow: { id: string; first_name: string | null; last_name: string | null }
+  fosterRow: { id: string }
 }) {
   const dogRow = await loadFullDogRow(supabase, params.id)
   if (!dogRow || !dogRow.shelter) {
@@ -253,21 +250,43 @@ async function renderFullView({
     shelterRating = { avg: sum / scores.length, count: scores.length }
   }
 
-  const { data: existingApp } = await supabase
-    .from('applications')
-    .select('id')
+  // Resilient duplicate check: a transient query failure here must
+  // never surface as a 500 on the dog page. Worst case we render the
+  // apply button enabled and the API/DB unique constraint catches a
+  // duplicate submit downstream.
+  let initialApplied = false
+  try {
+    const { data: existingApp, error } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('dog_id', dog.id)
+      .eq('foster_id', fosterRow.id)
+      .limit(1)
+      .maybeSingle()
+    if (error) {
+      console.error('[foster/dog] existingApp lookup failed:', error.message)
+    } else {
+      initialApplied = !!existingApp
+    }
+  } catch (e) {
+    if (isNextControlFlowError(e)) throw e
+    console.error(
+      '[foster/dog] existingApp lookup threw:',
+      e instanceof Error ? e.message : String(e),
+    )
+  }
+
+  // Phase 6.5 — initial saved state for the heart toggle. RLS scopes the
+  // read to the caller's own foster_id, so this is a single fast lookup.
+  const { data: existingSave } = await supabase
+    .from('dog_saves')
+    .select('dog_id')
     .eq('dog_id', dog.id)
     .eq('foster_id', fosterRow.id)
-    .limit(1)
     .maybeSingle()
-  const initialApplied = !!existingApp
+  const initialSaved = !!existingSave
 
   const { unreadMessages, pendingInvites, identity } = await getPortalLayoutData('foster')
-
-  const fosterName = [fosterRow.first_name, fosterRow.last_name]
-    .filter(Boolean)
-    .join(' ')
-    .trim()
 
   return (
     <FosterPortalShell
@@ -280,8 +299,7 @@ async function renderFullView({
         shelter={shelter}
         shelterRating={shelterRating}
         initialApplied={initialApplied}
-        fosterName={fosterName}
-        fosterId={fosterRow.id}
+        initialSaved={initialSaved}
         canonicalUrl={`${getAppUrl()}/foster/dog/${dog.id}`}
       />
     </FosterPortalShell>

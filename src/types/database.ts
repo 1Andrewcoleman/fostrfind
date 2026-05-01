@@ -73,6 +73,15 @@ export interface Application {
   status: 'submitted' | 'reviewing' | 'accepted' | 'declined' | 'completed'
   note: string | null
   shelter_note: string | null
+  // Phase 7 Step 46 — structured application form fields. Legacy rows
+  // pre-dating the migration default to nulls / false; the API enforces
+  // them as required on new submissions.
+  available_from: string | null
+  available_until: string | null
+  why_this_dog: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  responsibilities_acknowledged: boolean
 }
 
 export interface Rating {
@@ -148,6 +157,49 @@ export interface ShelterFosterNote {
   foster_id: string
   author_user: string
   body: string
+}
+
+// Phase 6.5 — Saved dogs.
+
+/** Foster bookmarks a dog. Composite key (foster_id, dog_id). */
+export interface DogSave {
+  foster_id: string
+  dog_id: string
+  saved_at: string
+}
+
+/** RPC return shape for `get_save_counts_for_my_dogs()` (shelter aggregate). */
+export interface DogSaveCount {
+  dog_id: string
+  save_count: number
+}
+
+// Phase 6.4 — Mutual reporting.
+
+export type ReportCategory =
+  | 'safety'
+  | 'harassment'
+  | 'misrepresentation'
+  | 'no_show'
+  | 'other'
+
+export type ReportStatus = 'pending' | 'reviewing' | 'resolved' | 'dismissed'
+
+/**
+ * A flag raised by one party on an application against the other party.
+ * Exactly one of `subject_foster_id` / `subject_shelter_id` is non-null,
+ * enforced by a table CHECK and an RLS WITH CHECK.
+ */
+export interface Report {
+  id: string
+  created_at: string
+  application_id: string
+  reporter_user_id: string
+  subject_foster_id: string | null
+  subject_shelter_id: string | null
+  category: ReportCategory
+  body: string
+  status: ReportStatus
 }
 
 // Composite types for UI

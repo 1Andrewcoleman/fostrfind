@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, MessageCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, MessageCircle } from 'lucide-react'
 
 /**
  * Dynamic tab title — "<First Last>'s application" — so shelter staff
@@ -29,12 +29,13 @@ export async function generateMetadata({
   }
 }
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { FosterProfileView } from '@/components/shelter/foster-profile-view'
 import { AcceptDeclineButtons } from '@/components/shelter/accept-decline-buttons'
 import { ShelterNoteEditor } from '@/components/shelter/shelter-note-editor'
+import { ReportApplicationDialog } from '@/components/report-application-dialog'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/helpers'
 import { DEV_MODE } from '@/lib/constants'
@@ -165,17 +166,98 @@ export default async function ApplicationDetailPage({
         </CardContent>
       </Card>
 
-      {/* Foster note */}
-      {app.note && (
-        <div>
-          <h3 className="font-medium mb-2">Message from Foster</h3>
-          <Card>
-            <CardContent className="pt-4 pb-4">
-              <p className="text-sm">{app.note}</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Phase 7 Step 46: structured application details. The legacy
+          free-text "note" is shown as the trailing optional field
+          ("Anything else…") — no separate "Message from Foster" card,
+          to avoid two copies of the same data. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Application Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Available from
+              </p>
+              <p className="text-sm font-medium">
+                {app.available_from
+                  ? formatDate(app.available_from)
+                  : 'Not provided'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Available until
+              </p>
+              <p className="text-sm font-medium">
+                {app.available_until
+                  ? formatDate(app.available_until)
+                  : 'Open-ended'}
+              </p>
+            </div>
+          </div>
+
+          {app.why_this_dog && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                Why this dog
+              </p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                {app.why_this_dog}
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Emergency contact
+              </p>
+              <p className="text-sm font-medium">
+                {app.emergency_contact_name ?? 'Not provided'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Emergency phone
+              </p>
+              <p className="text-sm font-medium">
+                {app.emergency_contact_phone ?? 'Not provided'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm">
+            {app.responsibilities_acknowledged ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="text-foreground">
+                  Responsibilities acknowledged
+                </span>
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <span className="text-muted-foreground">
+                  Responsibilities not acknowledged
+                </span>
+              </>
+            )}
+          </div>
+
+          {app.note && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                Anything else you need us to know?
+              </p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                {app.note}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Accept / Decline / Complete */}
       <div>
@@ -191,6 +273,15 @@ export default async function ApplicationDetailPage({
 
       {/* Shelter internal note */}
       <ShelterNoteEditor applicationId={app.id} initialNote={app.shelter_note} />
+
+      {/* Mutual reporting (Phase 6.4): low-emphasis trailing action.
+          Subject is the foster — derived server-side, label is informational. */}
+      <div className="flex justify-end pt-2">
+        <ReportApplicationDialog
+          applicationId={app.id}
+          subjectLabel={fosterName}
+        />
+      </div>
     </div>
   )
 }

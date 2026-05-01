@@ -24,6 +24,18 @@
 //   if (!rl.success) {
 //     return rateLimitResponse(rl)
 //   }
+//
+// Known route keys in use today:
+//   - 'applications:create'   (POST /api/applications)
+//   - 'applications:accept'   (POST /api/applications/[id]/accept)
+//   - 'applications:decline'  (POST /api/applications/[id]/decline)
+//   - 'applications:complete' (POST /api/applications/[id]/complete)
+//   - 'applications:withdraw' (POST /api/applications/[id]/withdraw)
+//   - 'applications:review'   (POST /api/applications/[id]/review)
+//   - 'ratings'               (POST /api/ratings)
+//   - 'reports'               (POST /api/reports)
+// Keep this list in sync when adding new mutation routes so future
+// auditors can grep for protected endpoints.
 
 import { NextResponse } from 'next/server'
 

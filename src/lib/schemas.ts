@@ -115,6 +115,90 @@ const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 // when missing. Limit length loosely to catch obvious garbage pastes.
 const URL_LOOSE_REGEX = /^(https?:\/\/)?[a-z0-9.-]+\.[a-z]{2,}([/?#][^\s]*)?$/i
 
+// ---------- Foster application form ----------
+
+// Why-this-dog free text. Lower bound forces a meaningful answer; upper
+// bound caps insert size since the column is TEXT.
+const WHY_MIN = 10
+const WHY_MAX = 1000
+const NOTE_MAX = 1000
+const CONTACT_NAME_MAX = 200
+const CONTACT_PHONE_MIN = 7
+const CONTACT_PHONE_MAX = 50
+
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+
+// Today as a YYYY-MM-DD string in UTC. Pinning to UTC keeps server and
+// client validation in lockstep regardless of the caller's timezone —
+// the check is "not strictly before today UTC", so a foster anywhere in
+// the world can still submit "today" in their local calendar without
+// being rejected for a sub-day skew.
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+// Schema avoids transforms so input and output types match — this
+// keeps the @hookform/resolvers Resolver<...> generic identical to the
+// useForm value type. The route handler / submit caller is responsible
+// for converting empty strings to null before persisting.
+export const applicationCreateSchema = z
+  .object({
+    dog_id: z.string().uuid('Invalid dog reference'),
+    shelter_id: z.string().uuid('Invalid shelter reference'),
+    available_from: z
+      .string()
+      .regex(ISO_DATE_REGEX, 'Pick the date you can start fostering'),
+    available_until: z
+      .string()
+      .refine((v) => v === '' || ISO_DATE_REGEX.test(v), {
+        message: 'Use the date picker (YYYY-MM-DD)',
+      }),
+    why_this_dog: z
+      .string()
+      .trim()
+      .min(WHY_MIN, `Please write at least ${WHY_MIN} characters`)
+      .max(WHY_MAX, `Keep this under ${WHY_MAX} characters`),
+    emergency_contact_name: z
+      .string()
+      .trim()
+      .min(1, 'Emergency contact name is required')
+      .max(CONTACT_NAME_MAX, `Keep this under ${CONTACT_NAME_MAX} characters`),
+    emergency_contact_phone: z
+      .string()
+      .trim()
+      .min(CONTACT_PHONE_MIN, 'Enter a valid phone number')
+      .max(CONTACT_PHONE_MAX, 'Phone number is too long'),
+    responsibilities_acknowledged: z.boolean().refine((v) => v === true, {
+      message: 'Please acknowledge the fostering responsibilities to continue',
+    }),
+    note: z
+      .string()
+      .max(NOTE_MAX, `Keep this under ${NOTE_MAX} characters`),
+  })
+  .superRefine((data, ctx) => {
+    if (data.available_from < todayIsoDate()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Start date cannot be in the past',
+        path: ['available_from'],
+      })
+    }
+    if (
+      data.available_until &&
+      data.available_until <= data.available_from
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'End date must be after the start date',
+        path: ['available_until'],
+      })
+    }
+  })
+
+export type ApplicationCreateInput = z.infer<typeof applicationCreateSchema>
+
+// ---------- Shelter settings ----------
+
 export const shelterSettingsSchema = z.object({
   name: z.string().trim().min(1, 'Shelter name is required').max(NAME_MAX),
   slug: z

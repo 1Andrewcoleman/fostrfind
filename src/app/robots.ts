@@ -31,7 +31,9 @@ export default function robots(): MetadataRoute.Robots {
         allow: ['/', '/foster/dog/'],
         disallow: [
           '/foster/',
+          '/foster/notifications',
           '/shelter/',
+          '/shelter/notifications',
           '/auth/',
           '/login',
           '/signup',

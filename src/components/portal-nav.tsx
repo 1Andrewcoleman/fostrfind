@@ -23,6 +23,7 @@ import {
   PawPrint,
   Mail,
   Users,
+  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,7 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import type { PortalIdentity } from '@/types/portal'
 
 // ---------------------------------------------------------------------------
@@ -59,6 +61,7 @@ const SHELTER_NAV: NavItem[] = [
   { href: '/shelter/applications', label: 'Applications', icon: FileText },
   { href: '/shelter/fosters', label: 'Fosters', icon: Users },
   { href: '/shelter/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
+  { href: '/shelter/notifications', label: 'Notifications', icon: Bell },
   { href: '/shelter/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -68,6 +71,7 @@ const FOSTER_NAV: NavItem[] = [
   { href: '/foster/applications', label: 'My Applications', icon: FileText },
   { href: '/foster/invites', label: 'Invites', icon: Mail, badgeKey: 'pendingInvites' },
   { href: '/foster/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
+  { href: '/foster/notifications', label: 'Notifications', icon: Bell },
   { href: '/foster/profile', label: 'My Profile', icon: User },
   { href: '/foster/history', label: 'History', icon: History },
 ]
@@ -213,6 +217,13 @@ export function MobileNav({
             />
           ))}
         </nav>
+
+        <div className="border-t px-3 py-2 shrink-0">
+          <NotificationBell
+            portal={portal}
+            initialCount={unreadNotifications}
+          />
+        </div>
 
         {identity ? (
           <PortalSidebarUser identity={identity} />

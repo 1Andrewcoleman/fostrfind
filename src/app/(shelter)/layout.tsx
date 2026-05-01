@@ -7,6 +7,7 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
@@ -63,6 +64,13 @@ export default async function ShelterLayout({ children }: { children: React.Reac
                 unreadNotifications={unreadNotifications}
               />
             </nav>
+            <div className="border-t px-3 py-2 group-data-[collapsed=true]:px-2">
+              <NotificationBell
+                portal="shelter"
+                initialCount={unreadNotifications}
+                className="group-data-[collapsed=true]:mx-auto"
+              />
+            </div>
             <PortalSidebarUser identity={identity} />
           </PortalSidebar>
 

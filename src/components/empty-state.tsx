@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import {
+  Bell,
   ClipboardList,
   Dog,
   Home,
@@ -22,7 +23,7 @@ type EmptyStateAction =
 /**
  * One of seven line-art illustrations paired to the empty-state copy.
  * Keeping the vocabulary small (`dog`, `messages`, `applications`, `search`,
- * `history`, `shelter`, `paw` fallback) so call sites don't pick something
+ * `history`, `shelter`, `notifications`, `paw` fallback) so call sites don't pick something
  * surprising and so future placements can reuse an existing glyph instead
  * of shipping a new SVG. Lucide was chosen over bespoke art to satisfy
  * .impeccable.md principle 1 (restraint over richness) — the glyphs read
@@ -36,6 +37,7 @@ export type EmptyStateIllustration =
   | 'search'
   | 'history'
   | 'shelter'
+  | 'notifications'
 
 const ILLUSTRATION_MAP: Record<EmptyStateIllustration, LucideIcon> = {
   paw: PawPrint,
@@ -45,6 +47,7 @@ const ILLUSTRATION_MAP: Record<EmptyStateIllustration, LucideIcon> = {
   search: SearchX,
   history: Clock3,
   shelter: Home,
+  notifications: Bell,
 }
 
 interface EmptyStateProps {

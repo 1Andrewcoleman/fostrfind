@@ -3,6 +3,7 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
+import { NotificationBell } from '@/components/notifications/notification-bell'
 import { DEV_MODE } from '@/lib/constants'
 import type { PortalIdentity } from '@/types/portal'
 
@@ -60,6 +61,13 @@ export function FosterPortalShell({
               pendingInvites={pendingInvites}
             />
           </nav>
+          <div className="border-t px-3 py-2 group-data-[collapsed=true]:px-2">
+            <NotificationBell
+              portal="foster"
+              initialCount={unreadNotifications}
+              className="group-data-[collapsed=true]:mx-auto"
+            />
+          </div>
           <PortalSidebarUser identity={identity} />
         </PortalSidebar>
 

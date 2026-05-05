@@ -96,7 +96,7 @@ export function EmailLayout({ preview, heading, children, cta }: EmailLayoutProp
       )}
       <div style={styles.container}>
         <div style={styles.card}>
-          <div style={styles.brand}>Fostr Fix</div>
+          <div style={styles.brand}>Fostr Find</div>
           <h1 style={styles.heading}>{heading}</h1>
           {children}
           {cta && (
@@ -108,7 +108,7 @@ export function EmailLayout({ preview, heading, children, cta }: EmailLayoutProp
           )}
         </div>
         <p style={styles.footer}>
-          You&apos;re receiving this because you have a Fostr Fix account.
+          You&apos;re receiving this because you have a Fostr Find account.
         </p>
       </div>
     </div>

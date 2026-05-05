@@ -52,7 +52,7 @@ export function Navbar({ userRole, userName = 'User', avatarUrl }: NavbarProps) 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
           <PawPrint className="h-6 w-6 text-primary" />
-          <span>Fostr Fix</span>
+          <span>Fostr Find</span>
         </Link>
 
         {/* Desktop Nav */}

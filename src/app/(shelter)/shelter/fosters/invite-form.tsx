@@ -69,7 +69,7 @@ export function InviteFosterForm() {
       <div>
         <h2 className="text-sm font-semibold">Invite a foster</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Send an invite by email. If they already have a Fostr Fix account,
+          Send an invite by email. If they already have a Fostr Find account,
           it shows up in their Invites tab immediately. Otherwise it waits
           until they sign up with that email.
         </p>

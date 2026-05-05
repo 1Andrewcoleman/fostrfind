@@ -10,7 +10,7 @@ export default function SheltersIndexLoading(): React.JSX.Element {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <PawPrint className="h-6 w-6" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             Home

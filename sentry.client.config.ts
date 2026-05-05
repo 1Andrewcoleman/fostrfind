@@ -5,7 +5,7 @@
 // repository root by convention. Moving any of them invalidates the
 // auto-discovery.
 //
-// `enabled` is gated on NODE_ENV rather than on Fostr Fix's DEV_MODE
+// `enabled` is gated on NODE_ENV rather than on Fostr Find's DEV_MODE
 // flag (DEV_MODE is Supabase-specific). This keeps Sentry quiet in
 // `next dev` and `vitest run` while still firing on real-Supabase
 // staging deploys where NODE_ENV === 'production'.

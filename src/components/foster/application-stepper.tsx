@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Application } from '@/types/database'
 
@@ -18,6 +18,7 @@ const ORDER: Record<string, number> = {
   reviewing: 1,
   accepted: 2,
   declined: 2,
+  withdrawn: 1,
   completed: 3,
 }
 
@@ -31,6 +32,7 @@ const STEP_COLORS: Record<string, string> = {
   reviewing: 'bg-peach',
   accepted:  'bg-warm',
   declined:  'bg-destructive',
+  withdrawn: 'bg-muted-foreground/40',
   completed: 'bg-warm',
 }
 
@@ -39,62 +41,87 @@ const STEP_RING: Record<string, string> = {
   reviewing: 'ring-peach/40',
   accepted:  'ring-warm/40',
   declined:  'ring-destructive/30',
+  withdrawn: 'ring-muted-foreground/30',
   completed: 'ring-warm/40',
+}
+
+type Override = { color: string; ring: string; label: string; icon: 'declined' | 'withdrawn' }
+
+/**
+ * Per-status override applied at a specific step index. Used to swap
+ * the colour, label, and icon at the moment a non-linear terminal
+ * status (declined, withdrawn) takes the application off the happy
+ * path. Declined caps at the Accepted slot (idx 2); withdrawn caps at
+ * the Reviewing slot (idx 1) since fosters can only withdraw before
+ * acceptance.
+ */
+const OVERRIDE_BY_STATUS: Record<string, { idx: number; override: Override }> = {
+  declined: {
+    idx: 2,
+    override: { color: STEP_COLORS.declined, ring: STEP_RING.declined, label: 'Declined', icon: 'declined' },
+  },
+  withdrawn: {
+    idx: 1,
+    override: { color: STEP_COLORS.withdrawn, ring: STEP_RING.withdrawn, label: 'Withdrawn', icon: 'withdrawn' },
+  },
 }
 
 /**
  * Connector color for the segment entering a step from the left.
- * Rule: filled with the colour of the step at `idx` if that step is reached;
- * declined overrides the colour at index 2.
+ * Rule: filled with the colour of the step at `idx` if that step is
+ * reached; an override at this index wins.
  */
-function connectorColorLeft(idx: number, currentIdx: number, isDeclined: boolean): string {
-  if (idx <= currentIdx) {
-    if (isDeclined && idx === 2) return STEP_COLORS.declined
-    return STEP_COLORS[STEPS[Math.min(idx, currentIdx)].key]
-  }
-  return 'bg-muted'
+function connectorColorLeft(
+  idx: number,
+  currentIdx: number,
+  override: { idx: number; override: Override } | undefined,
+): string {
+  if (idx > currentIdx) return 'bg-muted'
+  if (override && override.idx === idx) return override.override.color
+  return STEP_COLORS[STEPS[Math.min(idx, currentIdx)].key]
 }
 
 /**
  * Connector color for the segment leaving a step to the right.
- * Rule: filled with the colour of the *next* step if the current step is
- * behind `currentIdx`; declined overrides the segment leaving index 1.
  */
-function connectorColorRight(idx: number, currentIdx: number, isDeclined: boolean): string {
-  if (idx < currentIdx) {
-    if (isDeclined && idx === 1) return STEP_COLORS.declined
-    return STEP_COLORS[STEPS[idx + 1].key]
-  }
-  return 'bg-muted'
+function connectorColorRight(
+  idx: number,
+  currentIdx: number,
+  override: { idx: number; override: Override } | undefined,
+): string {
+  if (idx >= currentIdx) return 'bg-muted'
+  if (override && override.idx === idx + 1) return override.override.color
+  return STEP_COLORS[STEPS[idx + 1].key]
 }
 
 export function ApplicationStepper({ status }: ApplicationStepperProps) {
   const currentIdx = ORDER[status] ?? 0
-  const isDeclined = status === 'declined'
+  const override = OVERRIDE_BY_STATUS[status]
 
   return (
     <div className="flex items-start w-full" role="list" aria-label="Application progress">
       {STEPS.map((step, idx) => {
         const isActive = idx === currentIdx
         const isReached = idx <= currentIdx
-        const showDeclined = isDeclined && idx === 2
+        const showOverride = override && idx === override.idx
 
-        const dotColor = showDeclined
-          ? STEP_COLORS.declined
+        const dotColor = showOverride
+          ? override.override.color
           : isReached
             ? STEP_COLORS[step.key]
             : 'bg-muted'
         const ringColor = isActive
-          ? showDeclined
-            ? STEP_RING.declined
+          ? showOverride
+            ? override.override.ring
             : STEP_RING[step.key]
           : ''
+        const label = showOverride ? override.override.label : step.label
 
         return (
           <div key={step.key} className="flex-1 flex flex-col items-center" role="listitem">
             <div className="flex items-center w-full">
               {idx > 0 && (
-                <div className={cn('flex-1 h-0.5', connectorColorLeft(idx, currentIdx, isDeclined))} />
+                <div className={cn('flex-1 h-0.5', connectorColorLeft(idx, currentIdx, override))} />
               )}
               <div
                 className={cn(
@@ -103,8 +130,10 @@ export function ApplicationStepper({ status }: ApplicationStepperProps) {
                   isActive && `ring-2 ring-offset-2 ${ringColor}`,
                 )}
               >
-                {showDeclined ? (
+                {showOverride && override.override.icon === 'declined' ? (
                   <XCircle className="h-3.5 w-3.5 text-destructive-foreground" />
+                ) : showOverride && override.override.icon === 'withdrawn' ? (
+                  <Undo2 className="h-3.5 w-3.5 text-foreground" />
                 ) : isReached ? (
                   <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />
                 ) : (
@@ -112,7 +141,7 @@ export function ApplicationStepper({ status }: ApplicationStepperProps) {
                 )}
               </div>
               {idx < STEPS.length - 1 && (
-                <div className={cn('flex-1 h-0.5', connectorColorRight(idx, currentIdx, isDeclined))} />
+                <div className={cn('flex-1 h-0.5', connectorColorRight(idx, currentIdx, override))} />
               )}
             </div>
             <span
@@ -121,7 +150,7 @@ export function ApplicationStepper({ status }: ApplicationStepperProps) {
                 isActive ? 'font-semibold text-foreground' : 'text-muted-foreground',
               )}
             >
-              {showDeclined ? 'Declined' : step.label}
+              {label}
             </span>
           </div>
         )

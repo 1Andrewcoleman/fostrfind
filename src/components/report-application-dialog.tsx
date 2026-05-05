@@ -112,7 +112,7 @@ export function ReportApplicationDialog({
         <DialogHeader>
           <DialogTitle>Report {subjectLabel}</DialogTitle>
           <DialogDescription>
-            Reports are reviewed privately by the Fostr Fix team. We use them to
+            Reports are reviewed privately by the Fostr Find team. We use them to
             keep both fosters and shelters safe — they are never shared with
             the other party.
           </DialogDescription>

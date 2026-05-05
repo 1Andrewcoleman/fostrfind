@@ -120,10 +120,12 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Defense-in-depth duplicate check. The DB unique constraint
   // (`applications_dog_foster_unique`) is the real guard, but querying
-  // first lets us return a clean 409 before hitting Postgres.
+  // first lets us distinguish "already actively applied" (409) from a
+  // re-apply after withdrawal (UPDATE the existing row) before hitting
+  // Postgres.
   const { data: existing, error: existingError } = await supabase
     .from('applications')
-    .select('id')
+    .select('id, status')
     .eq('dog_id', data.dog_id)
     .eq('foster_id', foster.id)
     .maybeSingle()
@@ -132,7 +134,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     console.error('[applications/create] duplicate check failed:', existingError.message)
     return NextResponse.json({ error: 'Failed to check existing applications' }, { status: 500 })
   }
-  if (existing) {
+  if (existing && existing.status !== 'withdrawn') {
     return NextResponse.json(
       { error: 'You have already applied for this dog' },
       { status: 409 },
@@ -141,38 +143,55 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const cleanedNote = data.note ? sanitizeMultiline(data.note) : ''
 
-  const { data: application, error: insertError } = await supabase
-    .from('applications')
-    .insert({
-      dog_id: data.dog_id,
-      shelter_id: data.shelter_id,
-      foster_id: foster.id,
-      status: 'submitted',
-      available_from: data.available_from,
-      available_until: data.available_until && data.available_until !== ''
-        ? data.available_until
-        : null,
-      why_this_dog: sanitizeMultiline(data.why_this_dog),
-      emergency_contact_name: sanitizeText(data.emergency_contact_name),
-      emergency_contact_phone: sanitizeText(data.emergency_contact_phone),
-      responsibilities_acknowledged: true,
-      note: cleanedNote === '' ? null : cleanedNote,
-    })
-    .select()
-    .single()
+  const insertPayload = {
+    dog_id: data.dog_id,
+    shelter_id: data.shelter_id,
+    foster_id: foster.id,
+    status: 'submitted',
+    available_from: data.available_from,
+    available_until: data.available_until && data.available_until !== ''
+      ? data.available_until
+      : null,
+    why_this_dog: sanitizeMultiline(data.why_this_dog),
+    emergency_contact_name: sanitizeText(data.emergency_contact_name),
+    emergency_contact_phone: sanitizeText(data.emergency_contact_phone),
+    responsibilities_acknowledged: true,
+    note: cleanedNote === '' ? null : cleanedNote,
+  }
 
-  if (insertError || !application) {
+  // Re-apply path: a prior application was withdrawn. UPDATE the same
+  // row so we (a) never collide with the dog/foster unique constraint
+  // and (b) preserve the original `created_at` for audit. The shelter
+  // sees the row return to `submitted` in their queue.
+  const isReapply = !!existing && existing.status === 'withdrawn'
+
+  const mutation = isReapply
+    ? supabase
+        .from('applications')
+        .update(insertPayload)
+        .eq('id', existing.id)
+        .select()
+        .single()
+    : supabase
+        .from('applications')
+        .insert(insertPayload)
+        .select()
+        .single()
+
+  const { data: application, error: mutationError } = await mutation
+
+  if (mutationError || !application) {
     // Map Postgres unique-violation to 409 — covers a rare race where
     // a parallel request inserted between the duplicate-check and this
     // insert. `code` is included on Supabase PostgrestError instances.
-    const code = (insertError as { code?: string } | null)?.code
+    const code = (mutationError as { code?: string } | null)?.code
     if (code === '23505') {
       return NextResponse.json(
         { error: 'You have already applied for this dog' },
         { status: 409 },
       )
     }
-    console.error('[applications/create] insert failed:', insertError?.message)
+    console.error('[applications/create] mutation failed:', mutationError?.message)
     return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 })
   }
 
@@ -189,5 +208,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     })
   }
 
-  return NextResponse.json(application, { status: 201 })
+  return NextResponse.json(application, { status: isReapply ? 200 : 201 })
 }

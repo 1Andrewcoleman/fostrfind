@@ -98,7 +98,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .from('shelters')
       .update({
         name: 'Deleted Shelter',
-        email: 'deleted@fostrfix.invalid',
+        email: 'deleted@fostrfind.invalid',
         phone: null,
         location: 'Unknown',
         bio: null,
@@ -130,7 +130,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .update({
         first_name: 'Deleted',
         last_name: 'User',
-        email: 'deleted@fostrfix.invalid',
+        email: 'deleted@fostrfind.invalid',
         phone: null,
         bio: null,
         avatar_url: null,

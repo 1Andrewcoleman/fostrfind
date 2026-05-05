@@ -2,7 +2,7 @@
 // NEXT_RUNTIME === 'nodejs'.
 //
 // Lives at the project ROOT by Sentry's auto-discovery convention.
-// `enabled` keys off NODE_ENV (not Fostr Fix's Supabase-specific
+// `enabled` keys off NODE_ENV (not Fostr Find's Supabase-specific
 // DEV_MODE) so test + dev runs never publish events.
 
 import * as Sentry from '@sentry/nextjs'

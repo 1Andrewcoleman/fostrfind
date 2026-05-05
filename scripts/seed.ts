@@ -106,7 +106,7 @@ type ShelterSeed = {
 const SHELTERS: ShelterSeed[] = [
   {
     slug: `${SEED_PREFIX}happy-tails-rescue`,
-    email: `${SEED_PREFIX}shelter-a@fostrfix.local`,
+    email: `${SEED_PREFIX}shelter-a@fostrfind.local`,
     name: 'Happy Tails Rescue',
     location: 'Austin, TX',
     latitude: 30.2672,
@@ -115,7 +115,7 @@ const SHELTERS: ShelterSeed[] = [
   },
   {
     slug: `${SEED_PREFIX}paws-and-claws`,
-    email: `${SEED_PREFIX}shelter-b@fostrfix.local`,
+    email: `${SEED_PREFIX}shelter-b@fostrfind.local`,
     name: 'Paws & Claws Sanctuary',
     location: 'Denver, CO',
     latitude: 39.7392,
@@ -124,7 +124,7 @@ const SHELTERS: ShelterSeed[] = [
   },
   {
     slug: `${SEED_PREFIX}second-chance-shelter`,
-    email: `${SEED_PREFIX}shelter-c@fostrfix.local`,
+    email: `${SEED_PREFIX}shelter-c@fostrfind.local`,
     name: 'Second Chance Shelter',
     location: 'Portland, OR',
     latitude: 45.5152,
@@ -150,7 +150,7 @@ type FosterSeed = {
 
 const FOSTERS: FosterSeed[] = [
   {
-    email: `${SEED_PREFIX}foster-a@fostrfix.local`,
+    email: `${SEED_PREFIX}foster-a@fostrfind.local`,
     first_name: 'Mia',
     last_name: 'Rodriguez',
     location: 'Austin, TX',
@@ -164,7 +164,7 @@ const FOSTERS: FosterSeed[] = [
     bio: 'Long-time foster with a fenced yard and flexible remote schedule. Comfortable with medical cases.',
   },
   {
-    email: `${SEED_PREFIX}foster-b@fostrfix.local`,
+    email: `${SEED_PREFIX}foster-b@fostrfind.local`,
     first_name: 'Eli',
     last_name: 'Park',
     location: 'Denver, CO',
@@ -178,7 +178,7 @@ const FOSTERS: FosterSeed[] = [
     bio: 'Apartment-dwelling foster with an elderly cat. Prefer small, low-energy dogs that do well in condos.',
   },
   {
-    email: `${SEED_PREFIX}foster-c@fostrfix.local`,
+    email: `${SEED_PREFIX}foster-c@fostrfind.local`,
     first_name: 'Jordan',
     last_name: 'Walker',
     location: 'Portland, OR',
@@ -192,7 +192,7 @@ const FOSTERS: FosterSeed[] = [
     bio: 'Family home with kids ages 8 and 12. Looking for social, kid-friendly medium-large dogs.',
   },
   {
-    email: `${SEED_PREFIX}foster-d@fostrfix.local`,
+    email: `${SEED_PREFIX}foster-d@fostrfind.local`,
     first_name: 'Sam',
     last_name: 'Kim',
     location: 'Seattle, WA',
@@ -206,7 +206,7 @@ const FOSTERS: FosterSeed[] = [
     bio: 'First-time foster. Quiet building, work-from-home, excited to start with a confident adult dog.',
   },
   {
-    email: `${SEED_PREFIX}foster-e@fostrfix.local`,
+    email: `${SEED_PREFIX}foster-e@fostrfind.local`,
     first_name: 'Priya',
     last_name: 'Shah',
     location: 'Los Angeles, CA',

@@ -18,6 +18,7 @@ const TAB_FILTERS = [
   { value: 'accepted', label: 'Accepted' },
   { value: 'declined', label: 'Declined' },
   { value: 'completed', label: 'Completed' },
+  { value: 'withdrawn', label: 'Withdrawn' },
 ] as const
 
 export function ShelterApplicationsList({ applications }: ShelterApplicationsListProps) {

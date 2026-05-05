@@ -244,7 +244,7 @@ No generic notifications table. If Phase 6 later adds one, the invites page beco
 When the shelter invites a non-existent email:
 
 - Invite row is created with `foster_id = null`.
-- `ShelterFosterInviteEmail` is sent, copy: "Visit fostrfix.com to sign up and accept this invitation from <Shelter Name>."
+- `ShelterFosterInviteEmail` is sent, copy: "Visit fostrfind.com to sign up and accept this invitation from <Shelter Name>."
 - The signup+onboarding hook (commit 3) claims any pending invites matching the new foster's email when the `foster_parents` row is first inserted.
 - No magic-link token in the email body. Keeps the email copy simple and avoids one more secret to rotate.
 

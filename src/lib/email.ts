@@ -25,7 +25,7 @@ export type SendResult =
   | { success: true; mocked: boolean }
   | { success: false; error: string }
 
-const FROM_ADDRESS = process.env.RESEND_FROM ?? 'Fostr Fix <onboarding@resend.dev>'
+const FROM_ADDRESS = process.env.RESEND_FROM ?? 'Fostr Find <onboarding@resend.dev>'
 
 /**
  * Base URL used to build absolute links inside email templates. Trigger

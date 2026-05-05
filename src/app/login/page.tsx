@@ -84,7 +84,7 @@ export default function LoginPage() {
             <PawPrint className="h-8 w-8 text-primary" />
           </div>
           <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Sign in to your Fostr Fix account</CardDescription>
+          <CardDescription>Sign in to your Fostr Find account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {submitError && (

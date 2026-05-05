@@ -26,7 +26,7 @@ export function PublicFooter() {
               className="inline-flex items-center gap-2 font-sans font-bold text-lg tracking-tight"
             >
               <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
-              Fostr Fix
+              Fostr Find
             </Link>
             <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
               Connecting shelters with foster families so every dog has a warm place to land while
@@ -66,7 +66,7 @@ export function PublicFooter() {
         </div>
 
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/60 pt-6 text-xs text-muted-foreground">
-          <span>&copy; {year} Fostr Fix. All rights reserved.</span>
+          <span>&copy; {year} Fostr Find. All rights reserved.</span>
           <span className="inline-flex items-center gap-1.5">
             Built with
             <PawPrint className="h-3.5 w-3.5 text-primary" aria-hidden="true" />

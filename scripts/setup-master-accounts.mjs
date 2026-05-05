@@ -63,8 +63,8 @@ if (!SERVICE_ROLE_KEY || SERVICE_ROLE_KEY.length < 20) {
 
 // ---- Account definitions -------------------------------------------------
 
-const SHELTER_EMAIL = 'dev-shelter@fostrfix.local'
-const FOSTER_EMAIL = 'dev-foster@fostrfix.local'
+const SHELTER_EMAIL = 'dev-shelter@fostrfind.local'
+const FOSTER_EMAIL = 'dev-foster@fostrfind.local'
 
 function generatePassword() {
   // 24 url-safe chars of entropy; hard to type but we never type it.

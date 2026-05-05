@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MessageCircle, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -72,6 +73,7 @@ export function MessageThread({
   // Single browser Supabase client per mount — creating it inside render would
   // re-instantiate the websocket on every state change.
   const supabase = useMemo(() => createClient(), [])
+  const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const [messages, setMessages] = useState<Message[]>(initialMessages)
@@ -82,6 +84,16 @@ export function MessageThread({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
   }, [messages])
+
+  // The parent server page marks incoming messages as read on render,
+  // BUT the portal layout (sidebar / mobile nav badges) ran its unread
+  // count query before that UPDATE happened, so the badge is stale on
+  // first paint. Refresh once on mount so the layout re-fetches against
+  // the now-zero unread count without forcing a hard reload. Fires once
+  // per thread mount, not on every state change.
+  useEffect(() => {
+    router.refresh()
+  }, [router])
 
   // Realtime: subscribe to INSERTs on `public.messages` for this application.
   // Own-sends arrive as Realtime events too, so we dedupe against the state

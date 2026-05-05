@@ -152,7 +152,7 @@ export default function VerifyEmailPage() {
               <>
                 We sent a verification link to{' '}
                 <span className="font-medium text-foreground">{email || 'your email'}</span>. Click
-                the link in that email to continue to Fostr Fix. This page will refresh
+                the link in that email to continue to Fostr Find. This page will refresh
                 automatically once you&apos;re verified.
               </>
             )}

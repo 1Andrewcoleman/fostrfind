@@ -9,8 +9,8 @@ import { DEV_MODE } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s — Fostr Fix',
-    default: 'Foster Portal — Fostr Fix',
+    template: '%s — Fostr Find',
+    default: 'Foster Portal — Fostr Find',
   },
 }
 

@@ -28,7 +28,7 @@ export function ShelterFosterInviteEmail({
       <p style={emailStyles.paragraph}>Hi {fosterEmail},</p>
       <p style={emailStyles.paragraph}>
         <strong>{shelterName}</strong> would like to add you to their trusted
-        group of fosters on Fostr Fix. Being on a shelter{"'"}s roster means
+        group of fosters on Fostr Find. Being on a shelter{"'"}s roster means
         they can reach out to you first when they have a dog who needs help.
       </p>
       {trimmedMessage && (
@@ -40,7 +40,7 @@ export function ShelterFosterInviteEmail({
         </>
       )}
       <p style={emailStyles.paragraph}>
-        If you already have a Fostr Fix account, the invite is waiting for you
+        If you already have a Fostr Find account, the invite is waiting for you
         in your Invites tab. If you{"'"}re new, create an account with this
         email and the invite will be linked automatically after onboarding.
       </p>

@@ -351,11 +351,11 @@ export default function OnboardingPage() {
       <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
         <div className="flex items-center gap-2 font-display font-bold text-xl mb-10">
           <PawPrint className="h-7 w-7 text-primary" />
-          Fostr Fix
+          Fostr Find
         </div>
         <StepIndicator step={step} />
         <h1 className="font-display text-3xl font-semibold mb-2 text-center tracking-tight">
-          How will you use Fostr Fix?
+          How will you use Fostr Find?
         </h1>
         <p className="text-muted-foreground mb-10 text-center">
           Pick the role that fits — you can always add another account later.

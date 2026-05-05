@@ -8,6 +8,8 @@ import { ForceLightTheme } from '@/components/force-light-theme'
 import { ShareButton } from '@/components/foster/share-button'
 import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 
+type DogStatus = 'available' | 'pending' | 'placed' | 'adopted'
+
 interface DogDetailTeaserProps {
   dog: {
     id: string
@@ -17,6 +19,7 @@ interface DogDetailTeaserProps {
     size: 'small' | 'medium' | 'large' | 'xl' | null
     gender: 'male' | 'female' | null
     description: string | null
+    status: DogStatus
   }
   shelter: {
     name: string
@@ -24,6 +27,34 @@ interface DogDetailTeaserProps {
     slug: string | null
   }
   canonicalUrl: string
+}
+
+/**
+ * Status-specific copy for the public teaser CTA. Each variant tells
+ * the visitor exactly what state the dog is in and the most useful next
+ * action — applying only makes sense when `status === 'available'`.
+ */
+const STATUS_COPY: Record<DogStatus, { headline: (name: string) => string; body: string; cta: 'apply' | 'browse' }> = {
+  available: {
+    headline: (name) => `Want to foster ${name}?`,
+    body: 'Create a free foster account to apply, message the shelter, and see every dog available near you.',
+    cta: 'apply',
+  },
+  pending: {
+    headline: (name) => `${name} has a pending foster`,
+    body: "This pup is currently being matched. Browse other dogs nearby — your next foster is waiting.",
+    cta: 'browse',
+  },
+  placed: {
+    headline: (name) => `${name} is in foster care`,
+    body: "This dog is settled with a foster family for now. Plenty of others still need a home — take a look.",
+    cta: 'browse',
+  },
+  adopted: {
+    headline: (name) => `${name} found a forever home`,
+    body: "Wonderful news! This dog has been adopted. Browse other dogs that still need fostering.",
+    cta: 'browse',
+  },
 }
 
 /**
@@ -59,6 +90,7 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
   const blurb = dog.description?.trim() ?? ''
   const clamped = blurb.length > 280 ? `${blurb.slice(0, 280).trimEnd()}…` : blurb
 
+  const copy = STATUS_COPY[dog.status]
   const signUpHref = `/signup?next=${encodeURIComponent(`/foster/dog/${dog.id}`)}`
   const signInHref = `/login?next=${encodeURIComponent(`/foster/dog/${dog.id}`)}`
 
@@ -70,7 +102,7 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <PawPrint className="h-6 w-6" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             Home
@@ -99,7 +131,7 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
                 <ShareButton
                   url={canonicalUrl}
                   title={dog.name}
-                  text={`Meet ${dog.name} on Fostr Fix${dog.breed ? ` — ${dog.breed}` : ''}`}
+                  text={`Meet ${dog.name} on Fostr Find${dog.breed ? ` — ${dog.breed}` : ''}`}
                 />
               </div>
 
@@ -109,6 +141,11 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
                 {dog.gender && (
                   <Badge variant="secondary" className="capitalize">
                     {dog.gender}
+                  </Badge>
+                )}
+                {dog.status !== 'available' && (
+                  <Badge variant="outline" className="capitalize">
+                    {dog.status}
                   </Badge>
                 )}
               </div>
@@ -141,22 +178,35 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
 
           <div className="rounded-xl border bg-background p-5 md:p-6 space-y-3 text-center">
             <h2 className="font-display text-lg md:text-xl font-semibold">
-              Want to foster {dog.name}?
+              {copy.headline(dog.name)}
             </h2>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Create a free foster account to apply, message the shelter, and see every dog
-              available near you.
-            </p>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">{copy.body}</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link href={signUpHref}>
-                  Sign up to apply
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                <Link href={signInHref}>Sign in</Link>
-              </Button>
+              {copy.cta === 'apply' ? (
+                <>
+                  <Button asChild size="lg" className="w-full sm:w-auto">
+                    <Link href={signUpHref}>
+                      Sign up to apply
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    <Link href={signInHref}>Sign in</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button asChild size="lg" className="w-full sm:w-auto">
+                    <Link href="/signup">
+                      Sign up to browse
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                    <Link href={signInHref}>Sign in</Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

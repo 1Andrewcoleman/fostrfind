@@ -22,9 +22,13 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
  * Foster withdrawal of their own application.
  *
  * Only allowed while the application is still `submitted` or `reviewing`
- * (i.e. has not progressed to accepted/declined/completed). Because the
- * application has not affected dog state yet, we DELETE the row rather
- * than introducing a new `withdrawn` status.
+ * (i.e. has not progressed to accepted/declined/completed). Withdrawal
+ * is a STATUS transition, not a row delete, so the shelter retains a
+ * record of who applied and when — see `withdrawn` in
+ * `APPLICATION_STATUSES`. A foster can re-apply for the same dog later;
+ * the re-apply path in `POST /api/applications` updates the existing
+ * withdrawn row back to `submitted` to play nicely with the
+ * `applications_dog_foster_unique` constraint.
  */
 export async function POST(
   _request: Request,
@@ -74,13 +78,17 @@ export async function POST(
     )
   }
 
-  // 4. Delete the application row
-  const { error: deleteError } = await supabase
+  // 4. Flip status to withdrawn. Keeping the row preserves shelter-side
+  //    history and audit trail; the foster can re-apply via
+  //    POST /api/applications, which will UPDATE this same row back to
+  //    `submitted` rather than INSERT a colliding duplicate.
+  const { error: updateError } = await supabase
     .from('applications')
-    .delete()
+    .update({ status: 'withdrawn' })
     .eq('id', params.id)
 
-  if (deleteError) {
+  if (updateError) {
+    console.error('[applications/withdraw] update failed:', updateError.message)
     return NextResponse.json({ error: 'Failed to withdraw application' }, { status: 500 })
   }
 
@@ -92,7 +100,7 @@ export async function POST(
       userId: application.shelter.user_id,
       type: 'application_withdrawn',
       title: `${fosterName} withdrew their application for ${dogName}`,
-      link: '/shelter/applications',
+      link: `/shelter/applications/${params.id}`,
       metadata: { applicationId: params.id },
     })
   }

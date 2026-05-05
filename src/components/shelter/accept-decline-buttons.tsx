@@ -44,7 +44,7 @@ export function AcceptDeclineButtons({
   const [loading, setLoading] = useState<ActionKind | null>(null)
   const [showRatingDialog, setShowRatingDialog] = useState(false)
 
-  const isTerminal = ['declined', 'completed'].includes(currentStatus)
+  const isTerminal = ['declined', 'completed', 'withdrawn'].includes(currentStatus)
 
   async function handleAction(action: ActionKind): Promise<void> {
     setLoading(action)

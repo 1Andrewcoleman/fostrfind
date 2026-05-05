@@ -16,7 +16,7 @@ Written for the next agent picking up this project. **Read this before doing any
 | 33 | `99440f3` | `vitest.config.ts` (node env, `@/*` alias, `oxc.jsx.runtime: 'automatic'`), `src/lib/__tests__/helpers.test.ts` (9 helpers, 83 assertions total), `src/lib/__tests__/auth-routing.test.ts` (every `getPostAuthDestination` branch). `npm test` + `npm run test:watch`. |
 | 34 | `05acc4c` | API route tests for `/api/applications/[id]/{accept,decline,complete}`, `/api/ratings`, `DELETE /api/dogs/[id]` — every branch (auth 503, unauthorized 401, rate-limit 429, not-found 404, forbidden 403, idempotency 409, DB failure 500, happy-path 200, email-send omission when recipient null). Shared `src/lib/__tests__/supabase-mock.ts`. |
 | 36 | `5a39b78` | `src/app/error.tsx` redesigned (warm card + reference-ID digest + "Try again" / "Go home" / Contact support). New `(foster)/error.tsx` ("Back to browse") + `(shelter)/error.tsx` ("Back to dashboard"). All three log through `[error-boundary:root|foster|shelter]`. New `SUPPORT_EMAIL` constant. |
-| 35 | `0ec1c80` | Portal layouts own a `title.template` (`%s — Fostr Fix`). Static `metadata.title` on every server-rendered foster + shelter page. `generateMetadata` for `<Name>'s Application` and `Edit <Dog Name>`. Client-only foster pages (`/foster/browse`, `/foster/dog/[id]`) got sibling `layout.tsx` files so titles work without dropping `'use client'`. |
+| 35 | `0ec1c80` | Portal layouts own a `title.template` (`%s — Fostr Find`). Static `metadata.title` on every server-rendered foster + shelter page. `generateMetadata` for `<Name>'s Application` and `Edit <Dog Name>`. Client-only foster pages (`/foster/browse`, `/foster/dog/[id]`) got sibling `layout.tsx` files so titles work without dropping `'use client'`. |
 
 Plus: Phase 4 Progress Tracker flipped to Complete, per-step `**Status:** ✅` markers added to `docs/roadmap.md`, Deferred Follow-ups Log rows for every Phase 4 deferral.
 
@@ -53,7 +53,7 @@ Commit order on the branch was **31 → 36 → 33 → 34 → 32 → 35** (lowest
 4. **API route test coverage is 5 routes.** Still untested: `/api/applications/[id]/review`, `/withdraw`, `/api/dogs/[id]/status` (PATCH), `/api/account/delete`, `/api/upload/photo`, `/api/notifications/send`. The mock pattern drops in; schedule alongside CI so the suite actually gates merges.
 5. **Metadata is titles only.** No `description`, no `openGraph`, no `twitter`, no `og:image`, no `sitemap.xml`, no `robots.txt`. Coordinate with Phase 5 Step 37 (landing page hero redesign) so the social-preview asset pipeline is done once.
 6. **Error boundaries log to `console.error`, not Sentry.** Already listed in Remaining Items. The `[error-boundary:root|foster|shelter]` prefix is forward-compatible — whatever ingestion adapter lands later just swaps the `useEffect` log for a `captureException(error, { tags: { scope: '…' } })`.
-7. **`SUPPORT_EMAIL = 'support@fostrfix.local'` is placeholder.** `.local` domain is deliberate so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — single-point-of-truth in `src/lib/constants.ts`.
+7. **`SUPPORT_EMAIL = 'support@fostrfind.local'` is placeholder.** `.local` domain is deliberate so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — single-point-of-truth in `src/lib/constants.ts`.
 
 ---
 

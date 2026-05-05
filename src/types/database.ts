@@ -72,7 +72,7 @@ export interface Application {
   dog_id: string
   foster_id: string
   shelter_id: string
-  status: 'submitted' | 'reviewing' | 'accepted' | 'declined' | 'completed'
+  status: 'submitted' | 'reviewing' | 'accepted' | 'declined' | 'completed' | 'withdrawn'
   note: string | null
   shelter_note: string | null
   // Phase 7 Step 46 — structured application form fields. Legacy rows

@@ -38,9 +38,9 @@ const sourceSerif = Source_Serif_4({
   display: 'swap',
 })
 
-const SITE_NAME = 'Fostr Fix'
+const SITE_NAME = 'Fostr Find'
 const SITE_DESCRIPTION =
-  'Fostr Fix connects animal shelters with compassionate foster families — giving dogs the temporary homes they need while they wait for their forever family.'
+  'Fostr Find connects animal shelters with compassionate foster families — giving dogs the temporary homes they need while they wait for their forever family.'
 
 // metadataBase root: prefer NEXT_PUBLIC_APP_URL so prod social shares resolve
 // absolute URLs correctly; fall back to localhost in dev. Duplicates the

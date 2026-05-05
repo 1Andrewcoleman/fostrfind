@@ -29,7 +29,7 @@ function buildDescription(fields: MetaFields): string {
 
   const blurb = fields.description?.trim() ?? ''
   const clamped = blurb.length > 200 ? `${blurb.slice(0, 200).trimEnd()}…` : blurb
-  const suffix = 'Meet them on Fostr Fix.'
+  const suffix = 'Meet them on Fostr Find.'
 
   const combined = `${attrLine}${clamped}`.trim()
   return combined.length > 0 ? `${combined} ${suffix}` : suffix
@@ -64,7 +64,7 @@ export async function generateMetadata({
   if (DEV_MODE) {
     return {
       title: 'Dog Profile',
-      description: 'Meet them on Fostr Fix.',
+      description: 'Meet them on Fostr Find.',
     }
   }
   try {
@@ -88,13 +88,13 @@ export async function generateMetadata({
       openGraph: {
         type: 'article',
         url,
-        title: `${title} — Fostr Fix`,
+        title: `${title} — Fostr Find`,
         description,
-        siteName: 'Fostr Fix',
+        siteName: 'Fostr Find',
       },
       twitter: {
         card: 'summary',
-        title: `${title} — Fostr Fix`,
+        title: `${title} — Fostr Find`,
         description,
       },
     }

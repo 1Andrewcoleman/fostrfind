@@ -4,9 +4,9 @@ import { PawPrint } from 'lucide-react'
 import { PublicFooter } from '@/components/public-footer'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Fostr Fix',
+  title: 'Terms of Service | Fostr Find',
   description:
-    'The terms that govern your use of Fostr Fix as a foster parent or shelter partner.',
+    'The terms that govern your use of Fostr Find as a foster parent or shelter partner.',
 }
 
 // Effective date is baked into the page so the history is legible without
@@ -21,7 +21,7 @@ export default function TermsPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <PawPrint className="h-6 w-6" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <Link
             href="/"
@@ -42,15 +42,15 @@ export default function TermsPage() {
           </p>
 
           <p>
-            Welcome to Fostr Fix. These Terms of Service (&ldquo;Terms&rdquo;) govern your
-            access to and use of the Fostr Fix website, applications, and services
+            Welcome to Fostr Find. These Terms of Service (&ldquo;Terms&rdquo;) govern your
+            access to and use of the Fostr Find website, applications, and services
             (together, the &ldquo;Service&rdquo;). By creating an account or using the
             Service you agree to be bound by these Terms.
           </p>
 
           <h2>1. Who We Are</h2>
           <p>
-            Fostr Fix is a platform that connects animal shelters and rescues with
+            Fostr Find is a platform that connects animal shelters and rescues with
             prospective foster parents. We are a neutral intermediary: we do not own,
             transport, or take custody of any animal listed on the Service.
           </p>
@@ -96,7 +96,7 @@ export default function TermsPage() {
 
           <h2>5. Foster Placements</h2>
           <p>
-            Fostr Fix does not make placement decisions. Shelters remain solely
+            Fostr Find does not make placement decisions. Shelters remain solely
             responsible for evaluating foster applications, transferring custody of
             animals, and complying with applicable animal welfare, veterinary, and
             adoption laws. Foster parents are responsible for the humane care of any
@@ -113,7 +113,7 @@ export default function TermsPage() {
 
           <h2>7. Limitation of Liability</h2>
           <p>
-            To the fullest extent permitted by law, Fostr Fix and its operators are
+            To the fullest extent permitted by law, Fostr Find and its operators are
             not liable for any indirect, incidental, consequential, or punitive
             damages arising from your use of the Service, including any injury,
             property damage, or loss arising from a foster placement. Our total
@@ -137,7 +137,7 @@ export default function TermsPage() {
           <h2>10. Contact</h2>
           <p>
             Questions about these Terms? Reach us at{' '}
-            <a href="mailto:hello@fostrfix.example">hello@fostrfix.example</a>.
+            <a href="mailto:support@fostrfind.com">support@fostrfind.com</a>.
           </p>
 
           <hr />

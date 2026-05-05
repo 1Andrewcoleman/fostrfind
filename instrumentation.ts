@@ -9,6 +9,13 @@
 //
 // The client bundle does NOT come through here; `sentry.client.config`
 // is loaded automatically by @sentry/nextjs's webpack plugin.
+//
+// `onRequestError` is the recommended Next.js 15+ / @sentry/nextjs >=
+// 8.28 hook for auto-capturing every unhandled server-side request
+// error (RSC, route handlers, server actions). It complements the
+// per-segment error.tsx boundaries and Sentry's automatic instrumentation.
+
+import * as Sentry from '@sentry/nextjs'
 
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
@@ -18,3 +25,5 @@ export async function register(): Promise<void> {
     await import('./sentry.edge.config')
   }
 }
+
+export const onRequestError = Sentry.captureRequestError

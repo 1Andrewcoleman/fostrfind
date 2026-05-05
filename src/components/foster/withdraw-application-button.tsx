@@ -74,8 +74,9 @@ export function WithdrawApplicationButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Withdraw your application?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove your application for <strong>{dogName}</strong>. You can apply
-            again later if the dog is still available.
+            Your application for <strong>{dogName}</strong> will be marked as withdrawn.
+            The shelter will see that you withdrew, and you can re-apply later if the
+            dog is still available.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

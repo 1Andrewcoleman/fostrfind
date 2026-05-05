@@ -1,5 +1,12 @@
 export const DOG_STATUSES = ['available', 'pending', 'placed', 'adopted'] as const
-export const APPLICATION_STATUSES = ['submitted', 'reviewing', 'accepted', 'declined', 'completed'] as const
+export const APPLICATION_STATUSES = [
+  'submitted',
+  'reviewing',
+  'accepted',
+  'declined',
+  'completed',
+  'withdrawn',
+] as const
 export const DOG_SIZES = ['small', 'medium', 'large', 'xl'] as const
 export const DOG_AGES = ['puppy', 'young', 'adult', 'senior'] as const
 export const DOG_GENDERS = ['male', 'female'] as const
@@ -48,6 +55,7 @@ export const APPLICATION_STATUS_LABELS: Record<string, string> = {
   accepted: 'Accepted',
   declined: 'Declined',
   completed: 'Completed',
+  withdrawn: 'Withdrawn',
 }
 
 export const REPORT_CATEGORIES = [
@@ -76,9 +84,9 @@ export const DOG_STATUS_LABELS: Record<string, string> = {
 export const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
 
 /**
- * Placeholder support address surfaced on error boundaries. Swap for a
- * real inbox before public launch — the domain is intentionally `.local`
- * so an accidental `mailto:` click in dev won't try to reach a real
- * mailbox.
+ * Real support inbox surfaced on error boundaries and the public footer.
+ * Used as a single catch-all for support, privacy, and general inquiries
+ * during the pilot — see also the privacy/terms pages, which point at
+ * the same address.
  */
-export const SUPPORT_EMAIL = 'support@fostrfix.local'
+export const SUPPORT_EMAIL = 'support@fostrfind.com'

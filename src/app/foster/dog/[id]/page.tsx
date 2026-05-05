@@ -62,7 +62,7 @@ type FullDogRow = {
 
 type TeaserDogRow = {
   id: string
-  status: string
+  status: 'available' | 'pending' | 'placed' | 'adopted'
   name: string
   breed: string | null
   age: DogDetailDog['age']
@@ -96,6 +96,9 @@ async function loadTeaserDogRow(
   supabase: Awaited<ReturnType<typeof createClient>>,
   id: string,
 ): Promise<TeaserDogRow | null> {
+  // No status filter — share links must work for `pending`, `placed`,
+  // and `adopted` dogs too. RLS (`dogs: anyone can read listed statuses`,
+  // migration 20240118) gates which statuses anonymous viewers can see.
   try {
     const { data } = await supabase
       .from('dogs')
@@ -103,7 +106,6 @@ async function loadTeaserDogRow(
         'id, status, name, breed, age, size, gender, description, shelter:shelters(name, location, slug)',
       )
       .eq('id', id)
-      .eq('status', 'available')
       .maybeSingle()
     return (data as TeaserDogRow | null) ?? null
   } catch (e) {
@@ -254,12 +256,15 @@ async function renderFullView({
   // Resilient duplicate check: a transient query failure here must
   // never surface as a 500 on the dog page. Worst case we render the
   // apply button enabled and the API/DB unique constraint catches a
-  // duplicate submit downstream.
+  // duplicate submit downstream. A `withdrawn` row is not a blocker —
+  // POST /api/applications updates that row back to `submitted` so the
+  // foster can re-apply without colliding with the dog/foster unique
+  // constraint.
   let initialApplied = false
   try {
     const { data: existingApp, error } = await supabase
       .from('applications')
-      .select('id')
+      .select('id, status')
       .eq('dog_id', dog.id)
       .eq('foster_id', fosterRow.id)
       .limit(1)
@@ -267,7 +272,7 @@ async function renderFullView({
     if (error) {
       console.error('[foster/dog] existingApp lookup failed:', error.message)
     } else {
-      initialApplied = !!existingApp
+      initialApplied = !!existingApp && existingApp.status !== 'withdrawn'
     }
   } catch (e) {
     if (isNextControlFlowError(e)) throw e
@@ -331,6 +336,7 @@ async function renderTeaser({
         size: row.size,
         gender: row.gender,
         description: row.description,
+        status: row.status,
       }}
       shelter={row.shelter}
       canonicalUrl={`${getAppUrl()}/foster/dog/${row.id}`}

@@ -87,14 +87,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const q = normaliseQuery(searchParams.q)
   if (q) {
     return {
-      title: `Shelters matching "${q}" — Fostr Fix`,
-      description: `Browse shelters on Fostr Fix matching "${q}".`,
+      title: `Shelters matching "${q}" — Fostr Find`,
+      description: `Browse shelters on Fostr Find matching "${q}".`,
     }
   }
   return {
-    title: 'Shelters — Fostr Fix',
+    title: 'Shelters — Fostr Find',
     description:
-      'Browse animal shelters and rescues on Fostr Fix. Every shelter here is partnered to place dogs in foster homes.',
+      'Browse animal shelters and rescues on Fostr Find. Every shelter here is partnered to place dogs in foster homes.',
   }
 }
 
@@ -120,7 +120,7 @@ export default async function SheltersIndexPage({
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <PawPrint className="h-6 w-6" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             Home
@@ -135,7 +135,7 @@ export default async function SheltersIndexPage({
               Shelters
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              Every shelter listed here is partnered with Fostr Fix to place dogs in foster
+              Every shelter listed here is partnered with Fostr Find to place dogs in foster
               homes. Visit a profile to see their story, or jump straight to the dogs they
               have available.
             </p>
@@ -177,7 +177,7 @@ export default async function SheltersIndexPage({
               <EmptyState
                 illustration="shelter"
                 title="No shelters yet"
-                description="Partner shelters will appear here as they join Fostr Fix."
+                description="Partner shelters will appear here as they join Fostr Find."
               />
             )
           ) : (

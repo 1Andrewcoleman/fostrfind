@@ -101,7 +101,7 @@ export function DogDetailFull({
           <ShareButton
             url={canonicalUrl}
             title={dog.name}
-            text={`Meet ${dog.name} on Fostr Fix${dog.breed ? ` — ${dog.breed}` : ''}`}
+            text={`Meet ${dog.name} on Fostr Find${dog.breed ? ` — ${dog.breed}` : ''}`}
           />
         </div>
       </div>

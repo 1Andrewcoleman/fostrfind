@@ -78,20 +78,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const payload = await loadShelterBySlug(params.slug)
     if (!payload) {
-      return { title: 'Shelter not found | Fostr Fix' }
+      return { title: 'Shelter not found | Fostr Find' }
     }
     const { shelter } = payload
     const description = shelter.bio
       ? shelter.bio.slice(0, 155)
-      : `${shelter.name} is a partner shelter on Fostr Fix.`
+      : `${shelter.name} is a partner shelter on Fostr Find.`
     return {
-      title: `${shelter.name} | Fostr Fix`,
+      title: `${shelter.name} | Fostr Find`,
       description,
     }
   } catch (e) {
     if (isNextControlFlowError(e)) throw e
     console.error('[shelters/:slug metadata] load failed:', e instanceof Error ? e.message : String(e))
-    return { title: 'Fostr Fix' }
+    return { title: 'Fostr Find' }
   }
 }
 

@@ -57,6 +57,23 @@ const DATE_INPUT_CLASSNAME = cn(
 const WHY_MAX = 1000
 const NOTE_MAX = 1000
 
+/**
+ * The native `<input type="date">` `min` attribute caps the picker at
+ * the user's local calendar today, so a foster can't accidentally pick
+ * a past date that the server would then reject. Computed in the
+ * browser timezone (Intl), not UTC, so users in Western timezones late
+ * in the evening don't see "today" greyed out.
+ */
+function todayLocalIso(): string {
+  const now = new Date()
+  // Intl with `en-CA` produces YYYY-MM-DD which the date input expects.
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+}
+
 export function ApplicationFormDialog({
   dogId,
   dogName,
@@ -94,6 +111,12 @@ export function ApplicationFormDialog({
 
   const whyValue = watch('why_this_dog') ?? ''
   const noteValue = watch('note') ?? ''
+  const availableFromValue = watch('available_from') ?? ''
+  const todayLocal = todayLocalIso()
+  // `available_until` must be strictly after `available_from`; if no
+  // start date is picked yet, fall back to today so the picker is still
+  // useful instead of showing every past date as valid.
+  const untilMin = availableFromValue || todayLocal
 
   function handleOpenChange(next: boolean) {
     if (submitting) return
@@ -189,7 +212,15 @@ export function ApplicationFormDialog({
       return
     }
 
-    toast.error('Something went wrong. Please try again.')
+    // Catch-all for any other non-2xx (400 from shelter/dog mismatch,
+    // 404 dog gone, 500 insert failure, etc). Surface the API's
+    // user-safe message when present so the foster sees what actually
+    // failed instead of a generic banner.
+    console.error('[application-form] submit failed:', {
+      status: response.status,
+      error: errorBody.error,
+    })
+    toast.error(errorBody.error ?? 'Something went wrong. Please try again.')
     setSubmitting(false)
   }
 
@@ -222,6 +253,7 @@ export function ApplicationFormDialog({
               <input
                 id="available_from"
                 type="date"
+                min={todayLocal}
                 className={DATE_INPUT_CLASSNAME}
                 aria-invalid={errors.available_from ? 'true' : undefined}
                 {...register('available_from')}
@@ -240,6 +272,7 @@ export function ApplicationFormDialog({
               <input
                 id="available_until"
                 type="date"
+                min={untilMin}
                 className={DATE_INPUT_CLASSNAME}
                 aria-invalid={errors.available_until ? 'true' : undefined}
                 {...register('available_until')}

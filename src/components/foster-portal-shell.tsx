@@ -3,7 +3,6 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
-import { NotificationBell } from '@/components/notifications/notification-bell'
 import { DEV_MODE } from '@/lib/constants'
 import type { PortalIdentity } from '@/types/portal'
 
@@ -51,7 +50,7 @@ export function FosterPortalShell({
         <PortalSidebar>
           <div className="flex items-center gap-2.5 px-6 h-16 border-b font-display font-bold text-lg group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-2">
             <PawPrint className="h-6 w-6 text-primary flex-shrink-0" />
-            <span className="group-data-[collapsed=true]:hidden">Fostr Fix</span>
+            <span className="group-data-[collapsed=true]:hidden">Fostr Find</span>
           </div>
           <nav className="flex-1 py-4 px-3 space-y-1">
             <NavLinks
@@ -61,13 +60,6 @@ export function FosterPortalShell({
               pendingInvites={pendingInvites}
             />
           </nav>
-          <div className="border-t px-3 py-2 group-data-[collapsed=true]:px-2">
-            <NotificationBell
-              portal="foster"
-              initialCount={unreadNotifications}
-              className="group-data-[collapsed=true]:mx-auto"
-            />
-          </div>
           <PortalSidebarUser identity={identity} />
         </PortalSidebar>
 
@@ -97,7 +89,7 @@ export function FosterPortalShell({
             />
             <div className="flex items-center gap-2 font-display font-bold text-base">
               <PawPrint className="h-5 w-5 text-primary" />
-              Fostr Fix
+              Fostr Find
             </div>
           </header>
 

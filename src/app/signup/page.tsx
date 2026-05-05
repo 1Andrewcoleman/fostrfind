@@ -105,7 +105,7 @@ function SignUpForm() {
               ? 'Register your shelter or rescue'
               : role === 'foster'
               ? 'Sign up to start fostering'
-              : 'Join Fostr Fix today'}
+              : 'Join Fostr Find today'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

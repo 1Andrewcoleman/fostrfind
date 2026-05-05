@@ -1,4 +1,4 @@
-# Fostr Fix — Technical MVP Specification
+# Fostr Find — Technical MVP Specification
 
 **For:** Solo technical founder building with Cursor  
 **Stack:** Next.js + Supabase + Tailwind  

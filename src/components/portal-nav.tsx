@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
-import { NotificationBell } from '@/components/notifications/notification-bell'
 import type { PortalIdentity } from '@/types/portal'
 
 // ---------------------------------------------------------------------------
@@ -53,7 +52,7 @@ interface NavItem {
    * receives a single `counts` map and doesn't have to know about every
    * surface that might grow a badge.
    */
-  badgeKey?: 'unreadMessages' | 'pendingInvites'
+  badgeKey?: 'unreadMessages' | 'pendingInvites' | 'unreadNotifications'
 }
 
 const SHELTER_NAV: NavItem[] = [
@@ -62,7 +61,7 @@ const SHELTER_NAV: NavItem[] = [
   { href: '/shelter/applications', label: 'Applications', icon: FileText },
   { href: '/shelter/fosters', label: 'Fosters', icon: Users },
   { href: '/shelter/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
-  { href: '/shelter/notifications', label: 'Notifications', icon: Bell },
+  { href: '/shelter/notifications', label: 'Notifications', icon: Bell, badgeKey: 'unreadNotifications' },
   { href: '/shelter/settings', label: 'Settings', icon: Settings },
 ]
 
@@ -73,7 +72,7 @@ const FOSTER_NAV: NavItem[] = [
   { href: '/foster/applications', label: 'My Applications', icon: FileText },
   { href: '/foster/invites', label: 'Invites', icon: Mail, badgeKey: 'pendingInvites' },
   { href: '/foster/messages', label: 'Messages', icon: MessageCircle, badgeKey: 'unreadMessages' },
-  { href: '/foster/notifications', label: 'Notifications', icon: Bell },
+  { href: '/foster/notifications', label: 'Notifications', icon: Bell, badgeKey: 'unreadNotifications' },
   { href: '/foster/profile', label: 'My Profile', icon: User },
   { href: '/foster/history', label: 'History', icon: History },
 ]
@@ -205,7 +204,7 @@ export function MobileNav({
       <SheetContent side="left" className="w-60 p-0 flex flex-col">
         <SheetHeader className="flex flex-row items-center gap-2.5 px-6 h-16 border-b shrink-0">
           <PawPrint className="h-6 w-6 text-primary" />
-          <SheetTitle className="font-display font-bold text-lg">Fostr Fix</SheetTitle>
+          <SheetTitle className="font-display font-bold text-lg">Fostr Find</SheetTitle>
         </SheetHeader>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
@@ -219,13 +218,6 @@ export function MobileNav({
             />
           ))}
         </nav>
-
-        <div className="border-t px-3 py-2 shrink-0">
-          <NotificationBell
-            portal={portal}
-            initialCount={unreadNotifications}
-          />
-        </div>
 
         {identity ? (
           <PortalSidebarUser identity={identity} />

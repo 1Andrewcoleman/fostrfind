@@ -173,7 +173,7 @@ export function AccountSettingsForm({ currentEmail, authProvider }: AccountSetti
                 <>
                   {' '}You&apos;re signed in with{' '}
                   <span className="capitalize">{authProvider}</span>; changing email here
-                  updates how Fostr Fix reaches you but not your {authProvider} account.
+                  updates how Fostr Find reaches you but not your {authProvider} account.
                 </>
               )}
             </p>

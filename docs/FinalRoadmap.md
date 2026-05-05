@@ -1,8 +1,8 @@
-# Fostr Fix — Final Pilot Roadmap
+# Fostr Find — Final Pilot Roadmap
 
 > **For AI agents:** This document picks up directly from `docs/roadmap.md` (Phases 1–6 complete). Read this file, the most recent `AgentHandoff_*.md`, `docs/TODO.md`, and `CLAUDE.md` before starting any step. The Agent Code Quality Protocol below is mandatory and identical to the one in `roadmap.md` — it is reproduced here so this file is fully self-contained.
 
-**Context:** Phases 1–6 of `roadmap.md` are complete. Fostr Fix has a live Vercel deployment, a real Supabase production project, and email infrastructure via Resend. The platform is entering a **controlled pilot with one shelter partner**. The goal of this roadmap is to ship the remaining items required for that pilot to succeed, then document the post-pilot backlog for future development.
+**Context:** Phases 1–6 of `roadmap.md` are complete. Fostr Find has a live Vercel deployment, a real Supabase production project, and email infrastructure via Resend. The platform is entering a **controlled pilot with one shelter partner**. The goal of this roadmap is to ship the remaining items required for that pilot to succeed, then document the post-pilot backlog for future development.
 
 **Scope of this document:**
 - **Phase 7 (Pilot Launch):** Four development steps + a Launch Ops Checklist. Must all be complete before showing the app to the pilot shelter.
@@ -153,10 +153,10 @@ Every agent session leaves behind a handoff document at `docs/AgentHandoff_{YYYY
 1. Open a browser and go to `https://resend.com`. Log in with the project's Resend credentials.
 2. In the left sidebar, click **Domains**.
 3. Click **Add Domain** (top-right button).
-4. Enter the production domain (e.g. `fostrfix.com`). Click **Add**.
+4. Enter the production domain (e.g. `fostrfind.com`). Click **Add**.
 5. Resend will display three DNS records to add. They will look like:
    - A **TXT record** for SPF (e.g. `v=spf1 include:amazonses.com ~all`)
-   - A **CNAME record** for DKIM (e.g. `resend._domainkey.fostrfix.com → ...`)
+   - A **CNAME record** for DKIM (e.g. `resend._domainkey.fostrfind.com → ...`)
    - Optionally an **MX record** for inbound (only needed if receiving email — likely skip this one)
 6. Open a new browser tab. Log in to the DNS provider for the domain (Cloudflare, Namecheap, GoDaddy, etc.).
 7. Navigate to the DNS records management page for the domain.
@@ -300,7 +300,7 @@ END $$;
 
 **Steps:**
 
-1. Open a browser and go to `https://vercel.com`. Log in and open the Fostr Fix project.
+1. Open a browser and go to `https://vercel.com`. Log in and open the Fostr Find project.
 2. Click **Settings** (top navigation), then **Environment Variables** in the left sidebar.
 3. Verify the following variables exist and their values match the descriptions below. You do not need to see the full secret value — just confirm the variable name exists and the preview shows the right format.
 
@@ -417,15 +417,15 @@ The `is_verified` column should now show `true`.
 
 ### OPS-6: Support Email Constant
 
-**Why this matters:** The error boundary pages (`src/app/error.tsx`, `(foster)/error.tsx`, `(shelter)/error.tsx`) show a "Contact support" mailto link. This currently points to a placeholder address (`support@fostrfix.local`). Before the pilot, this must be updated to a real inbox so users experiencing errors can actually reach someone.
+**Why this matters:** The error boundary pages (`src/app/error.tsx`, `(foster)/error.tsx`, `(shelter)/error.tsx`) show a "Contact support" mailto link. This currently points to a placeholder address (`support@fostrfind.local`). Before the pilot, this must be updated to a real inbox so users experiencing errors can actually reach someone.
 
 **Steps:**
 
 This is a **code change**, not a dashboard setting. A developer must:
 
 1. Open `src/lib/constants.ts`.
-2. Find the line: `export const SUPPORT_EMAIL = 'support@fostrfix.local'`
-3. Replace `'support@fostrfix.local'` with the real support email address (e.g., `'support@fostrfix.com'` or a personal Gmail address for the pilot).
+2. Find the line: `export const SUPPORT_EMAIL = 'support@fostrfind.local'`
+3. Replace `'support@fostrfind.local'` with the real support email address (e.g., `'support@fostrfind.com'` or a personal Gmail address for the pilot).
 4. Commit and deploy.
 
 **Verification test:** On the live app, navigate to a non-existent route to trigger the 404/error page. Confirm the "Contact support" link opens a mail client addressed to the correct real email address.
@@ -748,7 +748,7 @@ Display rules:
 Before writing any code, a Sentry project must exist:
 
 1. Go to `https://sentry.io` and log in (or create an account).
-2. Create a new **Project**. Select **Next.js** as the platform. Name it `fostr-fix`.
+2. Create a new **Project**. Select **Next.js** as the platform. Name it `fostr-find`.
 3. Sentry will display a **DSN** — a URL that looks like `https://abc123@o123456.ingest.sentry.io/789`. Copy this value.
 4. In **Project Settings → Client Keys (DSN)**, also note the project's Auth Token (needed for source maps). Generate one if none exists under **Settings → Auth Tokens**.
 
@@ -834,7 +834,7 @@ const nextConfig = {
 
 export default withSentryConfig(nextConfig, {
   org: 'your-sentry-org-slug',       // replace with the Sentry org slug
-  project: 'fostr-fix',
+  project: 'fostr-find',
   silent: true,                       // suppress Sentry build output
   widenClientFileUpload: true,
   hideSourceMaps: true,               // hide source maps from client bundles
@@ -890,7 +890,7 @@ Also add `NEXT_PUBLIC_SENTRY_DSN` to your local `.env.local` for development (bu
 #### Verification
 
 1. Deploy to production (Vercel redeploy after adding env vars).
-2. In the Sentry dashboard, navigate to the `fostr-fix` project.
+2. In the Sentry dashboard, navigate to the `fostr-find` project.
 3. Trigger a test error: navigate to any portal page while logged in, then temporarily break a server component (or use Sentry's "Send Test Event" button in **Settings → Client Keys → Send Test Event**). Confirm the event appears in the Sentry Issues feed within 30 seconds.
 4. Confirm the error boundary pages still render correctly — adding Sentry must not change visible behavior.
 5. Type check passes. Build passes.

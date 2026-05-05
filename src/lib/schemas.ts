@@ -128,13 +128,21 @@ const CONTACT_PHONE_MAX = 50
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
 
-// Today as a YYYY-MM-DD string in UTC. Pinning to UTC keeps server and
-// client validation in lockstep regardless of the caller's timezone —
-// the check is "not strictly before today UTC", so a foster anywhere in
-// the world can still submit "today" in their local calendar without
-// being rejected for a sub-day skew.
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10)
+// Earliest acceptable "available_from" date as YYYY-MM-DD.
+//
+// Validation runs both client-side (browser TZ) and server-side
+// (typically UTC on Vercel). A user in a Western timezone picking
+// "today" late in the evening hits a boundary case: the picker shows
+// e.g. May 4 but the UTC clock has already rolled to May 5, so a strict
+// `available_from < todayUtc` check rejects a perfectly valid
+// same-day submission.
+//
+// We absorb the timezone wobble by allowing one calendar day of slack.
+// Truly stale inputs (a date weeks in the past) still get rejected.
+function earliestAcceptableStartDate(): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - 1)
+  return d.toISOString().slice(0, 10)
 }
 
 // Schema avoids transforms so input and output types match — this
@@ -176,7 +184,7 @@ export const applicationCreateSchema = z
       .max(NOTE_MAX, `Keep this under ${NOTE_MAX} characters`),
   })
   .superRefine((data, ctx) => {
-    if (data.available_from < todayIsoDate()) {
+    if (data.available_from < earliestAcceptableStartDate()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Start date cannot be in the past',

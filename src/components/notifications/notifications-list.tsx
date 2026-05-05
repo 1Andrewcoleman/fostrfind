@@ -43,6 +43,11 @@ export function NotificationsList({ notifications, portal }: NotificationsListPr
       if (!ok) {
         setItems(previous)
         toast.error('Could not mark notification as read.')
+      } else {
+        // Re-fetch the layout so the Notifications nav badge reflects the
+        // newly-read row without forcing a hard reload. Optimistic state
+        // already updated the local list above.
+        router.refresh()
       }
     }
 
@@ -58,7 +63,9 @@ export function NotificationsList({ notifications, portal }: NotificationsListPr
     if (!ok) {
       setItems(previous)
       toast.error('Could not mark notifications as read.')
+      return
     }
+    router.refresh()
   }
 
   if (items.length === 0) {

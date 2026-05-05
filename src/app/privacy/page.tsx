@@ -4,9 +4,9 @@ import { PawPrint } from 'lucide-react'
 import { PublicFooter } from '@/components/public-footer'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | Fostr Fix',
+  title: 'Privacy Policy | Fostr Find',
   description:
-    'How Fostr Fix collects, uses, and protects personal information belonging to foster parents and shelter partners.',
+    'How Fostr Find collects, uses, and protects personal information belonging to foster parents and shelter partners.',
 }
 
 const EFFECTIVE_DATE = 'April 19, 2026'
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
             <PawPrint className="h-6 w-6" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <Link
             href="/"
@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           </p>
 
           <p>
-            This Privacy Policy explains what information Fostr Fix collects about
+            This Privacy Policy explains what information Fostr Find collects about
             you, how we use it, and the choices you have. It applies to our website,
             applications, and services (together, the &ldquo;Service&rdquo;).
           </p>
@@ -131,13 +131,13 @@ export default function PrivacyPage() {
             Depending on your jurisdiction (e.g., the EU, UK, California) you may
             have the right to access, correct, or erase personal data we hold about
             you. To exercise these rights, email us at{' '}
-            <a href="mailto:privacy@fostrfix.example">privacy@fostrfix.example</a>.
+            <a href="mailto:support@fostrfind.com">support@fostrfind.com</a>.
             We will respond within the timeframe required by applicable law.
           </p>
 
           <h2>8. International Transfers</h2>
           <p>
-            Fostr Fix is operated from the United States. If you use the Service from
+            Fostr Find is operated from the United States. If you use the Service from
             outside the US, your information will be transferred to and processed in
             the US and other countries where our service providers operate.
           </p>
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
           <h2>10. Contact</h2>
           <p>
             Questions about this policy? Reach us at{' '}
-            <a href="mailto:privacy@fostrfix.example">privacy@fostrfix.example</a>.
+            <a href="mailto:support@fostrfind.com">support@fostrfind.com</a>.
           </p>
 
           <hr />

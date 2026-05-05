@@ -1,4 +1,4 @@
-# Fostr Fix — Technical TODO
+# Fostr Find — Technical TODO
 
 Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x]` done
 
@@ -227,7 +227,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **User identity in the sidebar footer** — `PortalSidebarUser` + `getPortalLayoutData` / `PortalIdentity`; avatar, display name, role badge, sign-out; mirrored in mobile nav sheet
 - [x] **Sidebar active state redesign** — the current active state is `bg-accent` (same gray as muted) with no color differentiation; replace with a warm-tinted pill (`bg-primary/10 text-primary font-semibold`) plus a left-border accent bar so the active page is unmistakeable
-- [x] **Sidebar brand lockup** — the `PawPrint` icon next to "Fostr Fix" in the sidebar header is the same size and color as the nav icons below it; make the brand treatment larger, give the paw a warm color, and separate it visually with more padding so it reads as a logo not a nav item
+- [x] **Sidebar brand lockup** — the `PawPrint` icon next to "Fostr Find" in the sidebar header is the same size and color as the nav icons below it; make the brand treatment larger, give the paw a warm color, and separate it visually with more padding so it reads as a logo not a nav item
 - [x] **Micro-transitions on nav items** — add `transition-all duration-150` with a subtle `translate-x-0.5` on hover so links feel interactive; currently only `transition-colors` is applied
 - [x] **Unread badge pulse animation** — add a `animate-pulse` ring on the unread message badge when count > 0 to draw attention without being disruptive
 

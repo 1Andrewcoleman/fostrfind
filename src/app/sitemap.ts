@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 import { getAppUrl } from '@/lib/email'
 
 /**
- * sitemap.xml — static list of the *public* routes on Fostr Fix.
+ * sitemap.xml — static list of the *public* routes on Fostr Find.
  *
  * Scope is intentionally narrow:
  * - Authenticated portal routes (`/foster/*`, `/shelter/*`) are omitted;

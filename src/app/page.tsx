@@ -69,7 +69,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-sans font-bold text-lg tracking-tight">
             <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
-            Fostr Fix
+            Fostr Find
           </Link>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" asChild>
@@ -112,7 +112,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 [animation-fill-mode:both] motion-reduce:animate-none">
-                Fostr Fix connects animal shelters with compassionate foster families — giving
+                Fostr Find connects animal shelters with compassionate foster families — giving
                 dogs the temporary homes they need while they wait for their forever family.
               </p>
 

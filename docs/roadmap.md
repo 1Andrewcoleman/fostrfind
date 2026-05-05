@@ -1,8 +1,8 @@
-# Fostr Fix — Master Roadmap
+# Fostr Find — Master Roadmap
 
 > **For AI agents:** This is the single source of truth for platform development. When asked to "pick up where you left off," find the first unchecked `- [ ]` step, read its context, and create a detailed implementation plan for that step. Each step is scoped to one coding session (1–3 hours). Always read [`docs/TODO.md`](./TODO.md) and [`CLAUDE.md`](../CLAUDE.md) before starting any step.
 
-**Goal:** Ship Fostr Fix from current MVP state to production-ready platform.
+**Goal:** Ship Fostr Find from current MVP state to production-ready platform.
 
 **Current state:** Core flows work (onboarding, dog CRUD, browse, applications, messaging, ratings, dashboards). Missing: several features, hardening, infrastructure, and polish.
 
@@ -842,7 +842,7 @@ export async function sendEmail({
     return { success: true, mock: true }
   }
   const { error } = await resend.emails.send({
-    from: 'Fostr Fix <noreply@fostrfix.com>',
+    from: 'Fostr Find <noreply@fostrfind.com>',
     to,
     subject,
     react,
@@ -1121,7 +1121,7 @@ void sendEmail({
 **Pitfalls:**
 - This page is OUTSIDE the `(foster)/` and `(shelter)/` route groups — it's a public page. No `AuthGuard` or `RoleGuard`.
 - The `shelters.slug` column may not be unique. Check the schema — if not, add a unique index. The initial schema creates slug with `slugify(name) + random suffix`, which should be unique in practice, but enforce it.
-- Add `metadata` export for SEO: `title: "${shelter.name} | Fostr Fix"`.
+- Add `metadata` export for SEO: `title: "${shelter.name} | Fostr Find"`.
 - In DEV_MODE, the Supabase query won't work. Show a placeholder shelter profile.
 
 **Verification:**
@@ -1992,14 +1992,14 @@ Call from root layout (`src/app/layout.tsx`) at module scope.
 **Pattern:**
 ```ts
 export const metadata: Metadata = {
-  title: 'Browse Dogs | Fostr Fix',
+  title: 'Browse Dogs | Fostr Find',
   description: 'Find your perfect foster dog from local shelters',
 }
 ```
 
 **Commit:** `chore: add page metadata for SEO (§26)`
 
-**Status:** ✅ Complete (2026-04-20) — `0ec1c80`. Portal layouts own a `title.template` (`%s — Fostr Fix`) so nested server pages export short titles. Foster + shelter server pages (dashboard, applications, history, messages, profile, dogs list, dogs new, settings) export static `metadata.title`. Dynamic routes use `generateMetadata` — shelter application detail renders `<Name>'s Application`, shelter dog edit renders `Edit <Dog Name>`. Client-only foster pages (`/foster/browse`, `/foster/dog/[id]`) got sibling server `layout.tsx` files so they can carry metadata without losing `'use client'`. All dynamic paths short-circuit in DEV_MODE and swallow errors to a generic default — `generateMetadata` must never throw. OpenGraph / Twitter cards / sitemap still deferred.
+**Status:** ✅ Complete (2026-04-20) — `0ec1c80`. Portal layouts own a `title.template` (`%s — Fostr Find`) so nested server pages export short titles. Foster + shelter server pages (dashboard, applications, history, messages, profile, dogs list, dogs new, settings) export static `metadata.title`. Dynamic routes use `generateMetadata` — shelter application detail renders `<Name>'s Application`, shelter dog edit renders `Edit <Dog Name>`. Client-only foster pages (`/foster/browse`, `/foster/dog/[id]`) got sibling server `layout.tsx` files so they can carry metadata without losing `'use client'`. All dynamic paths short-circuit in DEV_MODE and swallow errors to a generic default — `generateMetadata` must never throw. OpenGraph / Twitter cards / sitemap still deferred.
 
 ---
 
@@ -2351,7 +2351,7 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-20 | Step 35 (Metadata / SEO) | Only `title` set — no `description`, `openGraph`, `twitter`, `og:image`, `sitemap.xml`, `robots.txt` | Phase 5 Polish | Tab titles were the immediate asked-for payoff. Social previews matter once the landing page hero redesign (Step 37) is actually shareable. Next.js 14 App Router ships `generateSitemap()` + `generateMetadata()` cleanly; coordinate both passes so we don't redo the asset pipeline twice. |
 | 2026-04-20 | Step 35 | `generateMetadata` in shelter app-detail + dog edit does its own Supabase fetch — duplicates the page's query | acceptable | Next's current App Router doesn't expose a "cache the page data for metadata" primitive short of React `cache()`. The pages themselves already hit their own query; the metadata hit is identical and both are `.maybeSingle()` so the penalty is one extra in-flight DB call per SSR. If it ever hurts, wrap the fetch in `React.cache` and share between `generateMetadata` + the page default export. |
 | 2026-04-20 | Step 36 (Error Boundaries) | No Sentry / observability integration — errors only go to `console.error` with `[error-boundary:root|foster|shelter]` prefix | Remaining Items (Error tracking) | Already listed in Remaining Items. The prefixed console path is compatible with whatever ingestion adapter lands later — just swap the `useEffect` log for a Sentry `captureException(error, { tags: { scope: 'foster' } })`. |
-| 2026-04-20 | Step 36 | `SUPPORT_EMAIL` in `src/lib/constants.ts` is placeholder (`support@fostrfix.local`) | ops / pre-launch | Domain is intentionally `.local` so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — every error boundary's "Contact support" CTA flows through this single constant. |
+| 2026-04-20 | Step 36 | `SUPPORT_EMAIL` in `src/lib/constants.ts` is placeholder (`support@fostrfind.local`) | ops / pre-launch | Domain is intentionally `.local` so an accidental click in dev can't reach a real inbox. Swap to the real support address before public launch — every error boundary's "Contact support" CTA flows through this single constant. |
 | 2026-04-20 | Step 37 (Hero Redesign) | Social-proof stat numbers (2,400+ / 180+ / 4.9) are placeholder pilot-network figures | Remaining Items (Analytics) | Labeled "Based on our pilot network of early partner shelters." below the grid so they don't read as fabricated analytics. Swap to real counts once analytics (PostHog/Mixpanel) lands and we have production data to source from. Numbers live as the `STATS` array at the top of `src/app/page.tsx`. |
 | 2026-04-20 | Step 37 (Hero Redesign) | Hero photograph is a hardcoded Unsplash URL (`photo-1583337130417-3346a1be7dee`) | unscheduled — brand assets | Stable CDN image but not owned by us. Pre-public-launch brand work should commission or license an exclusive hero photo and replace `HERO_IMAGE_SRC` at the top of `src/app/page.tsx`. The `next/image` frame aspect is fixed at 4/5 so a replacement just needs matching dimensions. |
 | 2026-04-20 | Step 38 (How It Works + Footer) | Public footer ships with Mail only — no Instagram / Twitter / LinkedIn icons | ops / pre-launch | Per the Agent Code Quality Protocol we refused to wire placeholder `href="#"` links. When real social handles exist, add them to the brand column of `src/components/public-footer.tsx` alongside the existing `Mail` icon (same circular-border styling, same `aria-label` pattern). |
@@ -2361,7 +2361,7 @@ These are larger features that can be tackled after the above phases, in any ord
 | 2026-04-20 | Phase 6 §6.1 (Shelter Discovery) | `/shelters` index capped at 200 rows, no pagination | Phase 3 / §27 | `MAX_ROWS = 200` covers any realistic pilot-network scale, but a proper launch should add cursor pagination (`.range(from, to)` with a "Load more" button or URL page param) or a search-required UX once the list exceeds a single screen's worth of browsing. Logged so the cap isn't forgotten on scale-up. |
 | 2026-04-20 | Phase 6 §6.1 (Shelter Discovery) | `/shelters` sitemap entry not emitted | Phase 5 Polish | Landed alongside §6.3 — `src/app/sitemap.ts` still emits only `/`, `/terms`, `/privacy`. When dynamic sitemap entries land for `/shelters/[slug]` and `/foster/dog/[id]`, include the index page itself too. |
 | 2026-04-20 | Phase 6 §6.3 (Share) | No share / view analytics | Remaining Items (Analytics) | `ShareButton` is purely functional — no event fires on click or on successful share. When PostHog/Mixpanel lands, capture `share_clicked` + `share_completed` (distinguish clipboard fallback from native share) on the dog detail surface so we can measure the funnel. |
-| 2026-04-20 | Phase 6 §6.3 (Share) | No `og:image` on shared dog links | Phase 5 Polish / brand assets | `src/app/foster/dog/[id]/layout.tsx` emits `openGraph` + Twitter `summary` metadata but deliberately omits `og:image` because dogs don't have a required photo field yet. Two acceptable paths once photos are mandatory: (a) use the first `dogs.photos[0]` URL directly as `openGraph.images[0]`, or (b) render a branded OG card via `ImageResponse` that composes the dog photo + name + Fostr Fix wordmark. Path (b) is the better experience for dogs without uploaded photos. |
+| 2026-04-20 | Phase 6 §6.3 (Share) | No `og:image` on shared dog links | Phase 5 Polish / brand assets | `src/app/foster/dog/[id]/layout.tsx` emits `openGraph` + Twitter `summary` metadata but deliberately omits `og:image` because dogs don't have a required photo field yet. Two acceptable paths once photos are mandatory: (a) use the first `dogs.photos[0]` URL directly as `openGraph.images[0]`, or (b) render a branded OG card via `ImageResponse` that composes the dog photo + name + Fostr Find wordmark. Path (b) is the better experience for dogs without uploaded photos. |
 | 2026-04-20 | Phase 6 §6.3 (Share) | Sitemap entries for `/shelters/[slug]` and `/foster/dog/[id]` still deferred | Phase 5 Polish | Consistent with the Step 35 / Step 38 notes — `robots.txt` now allows `/foster/dog/` so these pages are crawlable by URL discovery, but an explicit sitemap pass would help cold-start SEO. Tracked alongside the og:image work. |
 | 2026-04-20 | Phase 6 §6.3 (Share) | Dog detail metadata fetch is a duplicate Supabase round trip (`generateMetadata` + page data) | acceptable / Phase 5 Polish | Same pattern as Step 35's note on shelter/dog-edit metadata. `maybeSingle()` is cheap and narrows the SELECT to the teaser-safe columns, but if it ever matters wrap the fetch in `React.cache` and share between `generateMetadata` and the page's `loadFullDogRow` / `loadTeaserDogRow`. |
 | 2026-04-22 | Phase 6 §6.2 (Roster) | **Herds** — shelter-curated emergency/general groups of fosters with group chat | future phase | Mentioned as the motivating next step during planning. The v1 data model is deliberately ready: `shelter_fosters (shelter_id, foster_id)` is a natural key exactly so `herd_members` can `FOREIGN KEY (shelter_id, foster_id) REFERENCES shelter_fosters ON DELETE CASCADE`. The Herds feature will add `herds` + `herd_members` tables and a shelter-side UI for composing broadcasts; messaging will extend `messages` or introduce a `herd_messages` table depending on the chosen model. No schema decisions blocked here. |

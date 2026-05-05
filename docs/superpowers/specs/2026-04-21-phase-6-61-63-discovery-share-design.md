@@ -97,10 +97,10 @@ Either way, the **page component** is a single server component that:
 
 - The absolute URL is built once at the top of the dog detail page via the existing `getAppUrl()` helper (`src/lib/email.ts`), or — if that helper's coupling to the Resend SDK still matters post Phase 5-b — a new leaf helper `src/lib/app-url.ts` (resend-free) called from both places. The implementation plan picks one.
 - `generateMetadata` for `/foster/dog/[id]`:
-  - `title`: `<Dog Name> — Fostr Fix` (uses existing root `title.template`).
+  - `title`: `<Dog Name> — Fostr Find` (uses existing root `title.template`).
   - `description`: one sentence composed from name + shelter name + one headline attribute (age or size). Truncated to ~160 chars for OG compliance.
   - `openGraph`: title/description only, no image. `twitter.card: 'summary'` (not `summary_large_image`) until a real og:image exists.
-  - Function must `try/catch` the Supabase fetch and return a fallback (`{ title: 'Dog — Fostr Fix' }`) on failure (existing Phase 4 pattern).
+  - Function must `try/catch` the Supabase fetch and return a fallback (`{ title: 'Dog — Fostr Find' }`) on failure (existing Phase 4 pattern).
 
 ---
 
@@ -130,7 +130,7 @@ Chrome:
 
 ### 3.3 Dog not available
 
-- Regardless of auth state, if the dog's status is not `available` (e.g. `pending`, `placed`, or deleted), the page renders a small card: headline "This dog isn't available right now.", one-sentence body, and two buttons — **"Browse available dogs"** (→ `/foster/browse` if logged-in foster, else `/shelters`) and **"About Fostr Fix"** (→ `/`).
+- Regardless of auth state, if the dog's status is not `available` (e.g. `pending`, `placed`, or deleted), the page renders a small card: headline "This dog isn't available right now.", one-sentence body, and two buttons — **"Browse available dogs"** (→ `/foster/browse` if logged-in foster, else `/shelters`) and **"About Fostr Find"** (→ `/`).
 - No share control on this state.
 - 404 is reserved for genuinely-missing rows (bad id).
 
@@ -159,7 +159,7 @@ Chrome:
 | Anonymous user on full-detail page (race: auth just expired) | Next render is teaser; no crash |
 | `getAppUrl()` returns a dev URL in prod build | Accepted — that's a Phase 4 env follow-up, not a new regression |
 | `/shelters` search query contains SQL-special chars | Supabase `ilike` escapes safely; no new sanitization required |
-| `generateMetadata` Supabase fetch fails | Return static fallback `{ title: 'Dog — Fostr Fix' }` |
+| `generateMetadata` Supabase fetch fails | Return static fallback `{ title: 'Dog — Fostr Find' }` |
 
 ---
 

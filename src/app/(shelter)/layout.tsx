@@ -7,15 +7,14 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
-import { NotificationBell } from '@/components/notifications/notification-bell'
 import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: {
-    template: '%s — Fostr Fix',
-    default: 'Shelter Portal — Fostr Fix',
+    template: '%s — Fostr Find',
+    default: 'Shelter Portal — Fostr Find',
   },
 }
 
@@ -55,7 +54,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
           <PortalSidebar>
             <div className="flex items-center gap-2.5 px-6 h-16 border-b font-display font-bold text-lg group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-2">
               <PawPrint className="h-6 w-6 text-primary flex-shrink-0" />
-              <span className="group-data-[collapsed=true]:hidden">Fostr Fix</span>
+              <span className="group-data-[collapsed=true]:hidden">Fostr Find</span>
             </div>
             <nav className="flex-1 py-4 px-3 space-y-1">
               <NavLinks
@@ -64,13 +63,6 @@ export default async function ShelterLayout({ children }: { children: React.Reac
                 unreadNotifications={unreadNotifications}
               />
             </nav>
-            <div className="border-t px-3 py-2 group-data-[collapsed=true]:px-2">
-              <NotificationBell
-                portal="shelter"
-                initialCount={unreadNotifications}
-                className="group-data-[collapsed=true]:mx-auto"
-              />
-            </div>
             <PortalSidebarUser identity={identity} />
           </PortalSidebar>
 
@@ -93,7 +85,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
               />
               <div className="flex items-center gap-2 font-display font-bold text-base">
                 <PawPrint className="h-5 w-5 text-primary" />
-                Fostr Fix
+                Fostr Find
               </div>
             </header>
 

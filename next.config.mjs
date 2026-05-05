@@ -22,11 +22,11 @@ const nextConfig = {
 // edits it to match their Sentry organisation slug or sets SENTRY_ORG
 // in the build environment.
 //
-// TODO(step-47): replace 'fostr-fix' with the real Sentry org slug
+// TODO(step-47): replace 'fostr-find' with the real Sentry org slug
 // once the Sentry project is provisioned.
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG ?? 'fostr-fix',
-  project: process.env.SENTRY_PROJECT ?? 'fostr-fix',
+  org: process.env.SENTRY_ORG ?? 'fostr-find',
+  project: process.env.SENTRY_PROJECT ?? 'fostr-find',
   silent: true,
   widenClientFileUpload: true,
   hideSourceMaps: true,

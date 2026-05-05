@@ -15,19 +15,19 @@ const nextConfig = {
 }
 
 // Sentry build-time wrapper. Uploads source maps when SENTRY_AUTH_TOKEN
-// is present; otherwise silently skips (silent: true keeps local
-// `next build` output clean). Source maps are hidden from the public
-// client bundle for security; Sentry still receives them via the
-// upload step. The `org` value below is a placeholder until the user
-// edits it to match their Sentry organisation slug or sets SENTRY_ORG
-// in the build environment.
+// is present; otherwise silently skips. Source maps are hidden from the
+// public client bundle for security; Sentry still receives them via the
+// upload step. The `org` and `project` slugs default to `fostr-find` —
+// override with SENTRY_ORG / SENTRY_PROJECT env vars if your Sentry
+// dashboard uses different slugs.
 //
-// TODO(step-47): replace 'fostr-find' with the real Sentry org slug
-// once the Sentry project is provisioned.
+// `silent: !process.env.CI` keeps local `next build` output clean while
+// surfacing Sentry plugin output (including upload errors) on Vercel
+// and other CI providers, where CI=1 is set automatically.
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG ?? 'fostr-find',
   project: process.env.SENTRY_PROJECT ?? 'fostr-find',
-  silent: true,
+  silent: !process.env.CI,
   widenClientFileUpload: true,
   hideSourceMaps: true,
 })

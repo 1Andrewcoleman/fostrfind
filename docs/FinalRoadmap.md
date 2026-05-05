@@ -12,6 +12,40 @@
 
 ---
 
+## Pilot Status — 2026-05-05
+
+> Snapshot of where the pilot stands. Update this section as items move; the per-step bodies below remain the source of truth for procedure.
+
+**Phase 7 development steps (§46–§49):** all four shipped and live on `main`.
+
+**Pilot bugfix bundle (post-§49):** seven fixes shipped from the 2026-05-04 session — withdrawn-as-status (preserves shelter history), foster Previous tab, public dog share links, stale-badge `router.refresh()`, NotificationBell removal, accessible star contrast, and the Luna application form's timezone/date hardening. Unblocked a latent `dogs ↔ applications` RLS recursion that would have prevented every foster INSERT.
+
+**Brand rename:** `Fostr Fix` → `Fostr Find` complete across UI, code identifiers, package name, Sentry slugs, email domains, and all docs (including historical handoffs and specs). Verified domain in Resend is `fostrfind.com`.
+
+**Production migrations applied (in addition to §46/§48):**
+- `20240118000000_dogs_public_read_all_statuses.sql` — widens public dog SELECT so share links work for `pending` / `placed` / `adopted` dogs.
+- `20240119000000_fix_dogs_applications_rls_recursion.sql` — `get_my_applied_dog_ids()` SECURITY DEFINER helper breaks the cycle introduced by §20240105 + §20240111 together.
+
+**Launch Ops Checklist:**
+
+| Item | Status | Notes |
+|------|--------|-------|
+| OPS-1 Resend domain | Done | `fostrfind.com` verified in Resend (DKIM + SPF + return-path). |
+| OPS-2 Storage buckets | Done | All three buckets (`dog-photos`, `shelter-logos`, `foster-avatars`) public. Verified by `scripts/launch-ops-check.mjs`. |
+| OPS-3 Vercel env vars | Done | `RESEND_FROM`, `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_AUTH_TOKEN` all set in Vercel for Production. |
+| OPS-4 Migrations | Done | All 19 migrations applied to production Supabase. |
+| OPS-5 Pilot shelter `is_verified` | Pending | One of the 4 shelters in DB needs the badge. Pick name and run a one-line UPDATE. |
+| OPS-6 Real `SUPPORT_EMAIL` | Done | `support@fostrfind.com` (single inbox, also used by privacy + terms pages). |
+| OPS-7 E2E smoke test | Pending | Run on the live URL with both dev master accounts (`dev-shelter@fostrfind.local` / `dev-foster@fostrfind.local`). |
+
+**Sentry:** wired end-to-end. Source maps upload from Vercel against `fostr-find/fostr-find` (the project rename in the Sentry dashboard was required — defaults in [`next.config.mjs`](../next.config.mjs) point at `fostr-find`). Confirmed by a `setTimeout` throw resolving through `node_modules/@sentry/browser/.../helpers.js` source paths. Local dev intentionally does not send events (`enabled: process.env.NODE_ENV === 'production'`).
+
+**New tooling shipped this push:** [`scripts/launch-ops-check.mjs`](../scripts/launch-ops-check.mjs) autonomously verifies storage buckets, env-var presence, schema (tables + Step-46 columns), shelter verification state, and `SUPPORT_EMAIL`. Run with `node scripts/launch-ops-check.mjs`.
+
+**Remaining gates before the pilot ships:** OPS-5 + OPS-7. Everything else is green.
+
+---
+
 ## Agent Code Quality Protocol
 
 > **MANDATORY.** Every AI agent working on this codebase MUST follow this protocol for every step. These are not suggestions — they are hard requirements. Violating them produces code that looks complete but breaks under real use.
@@ -1538,3 +1572,11 @@ Import `Bell` from `lucide-react`. This gives the notifications page a persisten
 | — | Step 48 | `POST /api/messages` changes the client-side message-send path. `MessageThread`'s Realtime subscription (Step 17) is unchanged — it listens for DB-level `INSERT` on `messages`, which still fires regardless of whether the insert was made via the old client path or the new API route. | n/a — intentional, no action needed | Documented to prevent confusion. |
 | — | Step 49 | `NotificationBell` does not subscribe to Realtime — the bell count only updates on full page load. | Post-pilot | Add `postgres_changes` subscription on `notifications` where `user_id = auth.uid()` to update the badge in real time. Pattern is identical to the Realtime subscription in `MessageThread`. |
 | — | Step 49 | `/foster/notifications` and `/shelter/notifications` are not paginated — query is capped at 50 rows. | Post-pilot | Add cursor-based pagination with a "Load more" button once the pilot generates enough notification volume to need it. |
+| 2026-05-04 | Pilot bugfix bundle (item 1) | `dogs: anyone can read listed statuses` policy hardcodes `('available','pending','placed','adopted')`. Adding a new `DOG_STATUSES` enum value will silently exclude it from public visibility. | Whenever a new dog status is added | Update the policy in lockstep with `src/lib/constants.ts::DOG_STATUSES`. Migration: see `20240118000000_dogs_public_read_all_statuses.sql`. |
+| 2026-05-04 | Pilot bugfix bundle (item 2) | `applicationCreateSchema` absorbs ±1 day of timezone slack via `earliestAcceptableStartDate()` (returns `today UTC - 1`). Date inputs use `min={todayLocalIso()}` (local-calendar today) as a UI guard. The slack window is intentional but does mean a foster could submit `available_from` literally yesterday-UTC. | Post-pilot if it ever causes confusion | Replace with a per-request user-timezone-aware check (would require shipping the timezone from the client). Document in `src/lib/schemas.ts`. |
+| 2026-05-04 | Pilot bugfix bundle (item 7) | `withdrawn` is now a status, not a row delete. Mutation routes (`accept`, `decline`, `review`, `complete`) reject `withdrawn` via the existing status-set guard with a clean 409. The previous `applications: foster can delete own` RLS policy from `20240111` is now unused but not dropped. | Post-pilot cleanup | Drop the policy in a future migration. Harmless to leave; just dead code. |
+| 2026-05-04 | Rebrand | Workspace directory is still `Downloads/fostr_fix/` and Vercel git remote is `1Andrewcoleman/fostrfind`. Renaming the local directory would break absolute paths in this file and historical handoffs. | User's call | Safe to `mv` after this session if desired; will not affect the deployed app. |
+| 2026-05-04 | Rebrand | Old `dev-shelter@fostrfix.local` / `dev-foster@fostrfix.local` users still exist in Supabase Auth alongside the new `@fostrfind.local` ones. | Optional cleanup | Delete in **Supabase → Authentication → Users** when convenient. App no longer references the old emails. |
+| 2026-05-05 | Sentry | `sentry.client.config.ts` is the legacy file location; current pattern (and Turbopack-required) is `instrumentation-client.ts`. Build log emits a `DEPRECATION WARNING` on every Vercel build. | Post-pilot or whenever Turbopack adoption forces it | Move file contents to `instrumentation-client.ts` at repo root and delete the old file. Behavior is identical. |
+| 2026-05-05 | Sentry | `next.config.mjs` defaults `org` and `project` to `fostr-find`. The actual Sentry project was renamed from `javascript-nextjs` → `fostr-find` in the dashboard so the upload path matches. If the dashboard slug ever drifts, set `SENTRY_PROJECT` env var instead of editing the code. | n/a — locked in | `silent: !process.env.CI` in `next.config.mjs` is intentional: keeps local `next build` output clean while exposing upload errors on Vercel (where `CI=1`). |
+| 2026-05-05 | Sentry | Demo issue `TypeError: Object [object Object] has no method 'updateFrom'` (Raven.js paths) is the auto-populated onboarding event Sentry ships in every new project. | Cleanup | Resolve in the dashboard. Will not re-fire. |

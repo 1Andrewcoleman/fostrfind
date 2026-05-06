@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
 
 // Body is minimal — the typed "DELETE" confirmation is really a UX guard,
 // but we still validate it server-side as defense in depth so the route
@@ -15,14 +16,15 @@ const bodySchema = z.object({
  * POST /api/account/delete
  *
  * Deletes the caller's account:
- *   1. Authenticates the caller via their session cookie.
- *   2. Validates the typed-DELETE confirmation.
- *   3. Calls `prepare_account_deletion(user_id)` via the service-role client.
+ *   1. Validates origin + content-type (mutation guard, same as other API routes).
+ *   2. Authenticates the caller via their session cookie.
+ *   3. Validates the typed-DELETE confirmation.
+ *   4. Calls `prepare_account_deletion(user_id)` via the service-role client.
  *      This RPC atomically: declines active applications, anonymises shelter
  *      and foster_parents rows. Any failure raises a SQL exception and the
  *      entire cleanup rolls back — auth deletion is only attempted when this
  *      succeeds.
- *   4. Calls `auth.admin.deleteUser(user.id)` with the service role key to
+ *   5. Calls `auth.admin.deleteUser(user.id)` with the service role key to
  *      wipe the auth.users row. Schema-level `on delete cascade` on
  *      `shelters.user_id` and `foster_parents.user_id` then removes the
  *      profile rows, which cascades to dogs/applications/messages via
@@ -32,6 +34,9 @@ const bodySchema = z.object({
  * to `/` on 200.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   let body: z.infer<typeof bodySchema>
   try {
     body = bodySchema.parse(await request.json())

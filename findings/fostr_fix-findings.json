@@ -1,0 +1,145 @@
+{
+  "schema_version": "1.0",
+  "scan_metadata": {
+    "target": "/Users/andrewlovellecoleman/Downloads/fostr_fix",
+    "scanned_at": "2026-05-05T12:00:00Z",
+    "scope": "Static review of Next.js 14 App Router app: API route handlers under src/app/api, auth guards, middleware, Supabase integration, headers/CSP, and supporting libs (no penetration test, no live Supabase tenant).",
+    "out_of_scope": [
+      "Remote Supabase project RLS correctness beyond migration/SQL inspection",
+      "Dependency CVE database scan without exercised reachability proof",
+      "Runtime penetration / Burp against a deployed host",
+      "Secrets in developer-only .env.local (gitignored)"
+    ],
+    "languages_detected": ["typescript", "sql"],
+    "frameworks_detected": ["next.js", "react", "supabase", "tailwind"],
+    "lines_of_code_estimated": 45000,
+    "duration_minutes": 35
+  },
+  "summary": {
+    "total_findings": 2,
+    "by_severity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 1,
+      "info": 0
+    },
+    "by_tier": {
+      "tier_1": 1,
+      "tier_2": 1,
+      "tier_3": 0
+    },
+    "headline": "The highest-impact issue is inconsistent CSRF-oriented hardening: POST /api/account/delete never calls validateMutationRequest, unlike every other state-changing API route, so cross-site request forgery is a plausible path to trick a logged-in user into wiping their account (severity depends on session cookie SameSite and browser behaviour). Secondary: in-memory rate limits are trivially shard-bypassable on multi-instance/serverless deployments, weakening abuse controls documented in-code. Production boot now throws when NEXT_PUBLIC_SUPABASE_URL would imply DEV_MODE (validateEnv in root layout), which materially reduces the earlier “silent auth guard bypass” footgun."
+  },
+  "findings": [
+    {
+      "id": "ZDF-001",
+      "title": "POST /api/account/delete omits validateMutationRequest (CSRF gap vs other mutations)",
+      "severity": "medium",
+      "tier": 1,
+      "confidence": "confirmed",
+      "category": "csrf",
+      "cwe": ["CWE-352"],
+      "summary": "All other authenticated mutation handlers in src/app/api import and call validateMutationRequest from api-security.ts first. The account deletion route parses JSON and authenticates but skips this guard, so the optional Origin-based CSRF layer and Content-Type expectations applied elsewhere are absent on the most destructive user action.",
+      "trace": [
+        {
+          "file": "src/lib/api-security.ts",
+          "line": 23,
+          "note": "validateMutationRequest documents use at the top of every authenticated mutation handler before reading the body."
+        },
+        {
+          "file": "src/app/api/account/delete/route.ts",
+          "line": 34,
+          "note": "POST handler starts with JSON parse and Zod validation but never calls validateMutationRequest(request)."
+        },
+        {
+          "file": "src/app/api/applications/route.ts",
+          "line": 44,
+          "note": "Representative sibling: mutations call validateMutationRequest immediately."
+        }
+      ],
+      "exploit_scenario": "An attacker hosts a page that triggers an automatic POST to the victim's app origin with credentials included (circumstances vary by cookie SameSite and browser). If the session cookie is sent, the victim's account deletion RPC and auth.users deletion run as them, causing irreversible lockout and data cleanup.",
+      "poc_sketch": "While logged into the real app in a browser profile, open a second origin that runs fetch('https://victim.example/api/account/delete', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: 'DELETE' }) }) or an equivalent HTML form POST. Compare behaviour with and without SameSite=Lax cookies; observe 200 vs blocked/cookie omission.",
+      "preconditions": [
+        "Victim has an active session to the application",
+        "Browser sends cookies on the forged request (policy-dependent)",
+        "Attacker can deliver the malicious page to the victim (link, ads, compromised site)"
+      ],
+      "impact": "Irreversible account deletion and associated profile/anonymisation side effects implemented by prepare_account_deletion and auth.admin.deleteUser.",
+      "constraints": [
+        "Modern default SameSite=Lax cookie behaviour often omit cookies on cross-site POST from third-party contexts, reducing practical risk",
+        "Origin check only applies when NEXT_PUBLIC_APP_URL is set and Origin header is present on other routes; absent env still weakens CSRF posture globally"
+      ],
+      "fix": {
+        "summary": "Call validateMutationRequest(request) at the start of POST /api/account/delete before parsing the body (same ordering as other routes), or adopt equivalent CSRF tokens / double-submit cookie for JSON APIs.",
+        "details": "Align this route with the project convention documented in AgentHandoff and api-security.ts. If JSON body must be read first for architectural reasons, use a synchronously available CSRF defence (cookie + header token) instead.",
+        "patch_sketch": "At top of POST in src/app/api/account/delete/route.ts after imports:\nimport { validateMutationRequest } from '@/lib/api-security'\n\nexport async function POST(request: Request): Promise<NextResponse> {\n  const guardErr = validateMutationRequest(request)\n  if (guardErr) return guardErr\n  let body: z.infer<typeof bodySchema>\n  try {\n    body = bodySchema.parse(await request.json())\n  } catch {\n    ...\n  }\n}"
+      },
+      "references": ["internal: docs/AgentHandoff_2026-05-05_hardening.md CSRF guidance"]
+    },
+    {
+      "id": "ZDF-002",
+      "title": "Process-local API rate limiting bypassable across serverless instances",
+      "severity": "low",
+      "tier": 2,
+      "confidence": "confirmed",
+      "category": "rate-limit-bypass",
+      "cwe": ["CWE-770"],
+      "summary": "rateLimit() in src/lib/rate-limit.ts stores counters in an in-memory Map. Each Vercel/serverless isolate or horizontally scaled replica maintains its own map, so global abuse caps are not enforced across instances.",
+      "trace": [
+        {
+          "file": "src/lib/rate-limit.ts",
+          "line": 81,
+          "note": "const buckets = new Map<string, Bucket>() — no shared backend."
+        },
+        {
+          "file": "src/lib/rate-limit.ts",
+          "line": 4,
+          "note": "Inline comment acknowledges serverless bypass and suggests Upstash Redis migration."
+        }
+      ],
+      "exploit_scenario": "An attacker distributes traffic across many connections that hit different warm instances (or cold starts), each allowing the full per-window quota, multiplying effective throughput for spam, invite abuse, or resource-heavy endpoints.",
+      "poc_sketch": "From multiple egress IPs or parallel serverless invocations, issue more than the documented per-route limit per minute (e.g. 30 POST /api/messages) such that each instance sees a subset under its local threshold; aggregate traffic exceeds the intended cap.",
+      "preconditions": [
+        "Deployment uses multiple workers/isolates or frequent cold starts",
+        "Attacker can parallelize requests"
+      ],
+      "impact": "Degraded abuse prevention: higher notification/email volume, storage upload pressure, and noisy support load rather than direct cross-tenant data breach.",
+      "constraints": [
+        "Many routes also enforce RLS and per-user auth, limiting blast radius",
+        "Supabase and Resend may impose their own quotas"
+      ],
+      "fix": {
+        "summary": "Replace or augment in-memory buckets with a distributed limiter (e.g. Upstash Redis as sketched in the file comment).",
+        "details": "Make rateLimit async, use a fixed-window or sliding-window algorithm with a shared key prefix per route and user id (or IP for anonymous routes).",
+        "patch_sketch": "Follow the migration block already drafted in src/lib/rate-limit.ts lines 16–37: install @upstash/redis + @upstash/ratelimit, implement async rateLimit(), update await at call sites."
+      },
+      "references": ["https://upstash.com/docs/redis/features/ratelimiting"]
+    }
+  ],
+  "hardening_recommendations": [
+    {
+      "id": "HR-001",
+      "title": "Tighten Content-Security-Policy script-src for production",
+      "rationale": "next.config.mjs allows 'unsafe-eval' in script-src for Next.js dev ergonomics; evaluate removing for production-only builds or adopting nonces to reduce XSS blast radius if inline scripts are ever introduced incorrectly.",
+      "effort": "medium"
+    },
+    {
+      "id": "HR-002",
+      "title": "Run Semgrep, CodeQL, and npm audit on CI with custom rules for validateMutationRequest",
+      "rationale": "A one-line Semgrep rule can flag new POST/PATCH/DELETE handlers under src/app/api that omit validateMutationRequest, preventing regression after ZDF-001 is fixed.",
+      "effort": "low"
+    },
+    {
+      "id": "HR-003",
+      "title": "Structured log redaction for safety report events",
+      "rationale": "POST /api/reports logs reporterUserId in console.warn; centralised logging should treat user ids as sensitive in some compliance regimes.",
+      "effort": "low"
+    }
+  ],
+  "uncertainties": [
+    "Supabase session cookie SameSite and Secure attributes are not defined in this repo; practical CSRF impact of ZDF-001 depends on hosted auth cookie settings.",
+    "Whether validateEnv() runs on every production deploy path (custom servers, edge-only experiments) was not exhaustively enumerated.",
+    "OAuth redirect uses new URL(request.url).origin in auth/callback; host-header behaviour depends on hosting reverse proxy configuration (typical Vercel setup is fine)."
+  ]
+}

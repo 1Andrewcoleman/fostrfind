@@ -12,12 +12,13 @@ import { isNextControlFlowError } from '@/lib/server-errors'
 import type { Message } from '@/types/database'
 
 interface FosterMessageThreadPageProps {
-  params: { applicationId: string }
+  params: Promise<{ applicationId: string }>
 }
 
 export default async function FosterMessageThreadPage({
-  params,
+  params: paramsPromise,
 }: FosterMessageThreadPageProps): Promise<React.JSX.Element> {
+  const params = await paramsPromise
   if (DEV_MODE) {
     return (
       <div className="max-w-2xl space-y-4">

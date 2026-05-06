@@ -83,9 +83,17 @@ interface EmailLayoutProps {
   children: ReactNode
   /** Optional primary CTA. */
   cta?: { label: string; href: string }
+  /** Overrides the default footer line (e.g. internal routing emails). */
+  footerText?: string
 }
 
-export function EmailLayout({ preview, heading, children, cta }: EmailLayoutProps) {
+export function EmailLayout({
+  preview,
+  heading,
+  children,
+  cta,
+  footerText = "You're receiving this because you have a Fostr Find account.",
+}: EmailLayoutProps) {
   return (
     <div style={styles.body}>
       {/* Hidden preview text for inbox clients. */}
@@ -107,9 +115,7 @@ export function EmailLayout({ preview, heading, children, cta }: EmailLayoutProp
             </p>
           )}
         </div>
-        <p style={styles.footer}>
-          You&apos;re receiving this because you have a Fostr Find account.
-        </p>
+        <p style={styles.footer}>{footerText}</p>
       </div>
     </div>
   )

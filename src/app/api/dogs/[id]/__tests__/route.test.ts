@@ -26,7 +26,7 @@ function happyDog(overrides: Record<string, unknown> = {}) {
 
 function callRoute(): Promise<Response> {
   return DELETE(new Request('http://localhost/api/dogs/dog-123', { method: 'DELETE' }), {
-    params: { id: DOG_ID },
+    params: Promise.resolve({ id: DOG_ID }),
   })
 }
 

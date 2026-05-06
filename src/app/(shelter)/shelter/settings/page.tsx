@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShelterSettingsForm } from '@/components/shelter/shelter-settings-form'
+import { ProfileFeedbackPanel } from '@/components/profile-feedback-panel'
 
 export const metadata: Metadata = { title: 'Shelter Settings' }
 import { AccountSettingsForm } from '@/components/account-settings-form'
@@ -87,6 +88,7 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
       <h1 className="text-2xl font-bold">Settings</h1>
       <ShelterSettingsForm initialData={shelterData} />
       <AccountSettingsForm currentEmail={currentEmail} authProvider={authProvider} />
+      {!DEV_MODE && <ProfileFeedbackPanel portal="shelter" />}
     </div>
   )
 }

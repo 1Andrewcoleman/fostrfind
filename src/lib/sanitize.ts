@@ -1,15 +1,22 @@
-// Lightweight text sanitization for user-submitted free-text fields.
+// Lightweight TEXT cleaners for user-submitted free-text fields.
 //
-// We render user text via React, so Next's default escaping already
-// neutralises `<script>`-style injection in the browser. These helpers
-// are a belt-and-braces defence for cases where the text might be
-// forwarded elsewhere (email bodies, exports, server logs, future
-// plaintext rendering) and to keep the stored data clean.
+// PURPOSE AND LIMITS:
+//   These helpers are NOT HTML sanitizers. They strip tag-shaped substrings
+//   and normalise whitespace so stored data is clean for plaintext contexts
+//   (email bodies, exports, logs, admin views). React's JSX escaping is the
+//   actual XSS defence for browser rendering.
 //
-// The sanitization intentionally does NOT try to parse HTML — we just
-// strip tag-shaped substrings and normalise whitespace. For anything
-// that renders raw HTML in the future, switch to a real sanitizer
-// (DOMPurify on client, `sanitize-html` on server).
+//   DO NOT use these helpers before rendering content with
+//   `dangerouslySetInnerHTML`. If raw HTML rendering is ever required, use a
+//   real sanitizer library: `sanitize-html` on the server, DOMPurify on the
+//   client. The names `sanitizeText` and `sanitizeMultiline` intentionally do
+//   not say "HTML" to avoid false confidence.
+//
+// INVARIANT:
+//   `dangerouslySetInnerHTML` MUST NOT be used in this codebase without a
+//   prior review and a real sanitizer in place. This comment is the canonical
+//   reminder; grep for `dangerouslySetInnerHTML` to confirm the invariant
+//   holds before adding new rendering code.
 
 /**
  * Strip HTML-like tags from a string and collapse runs of whitespace.

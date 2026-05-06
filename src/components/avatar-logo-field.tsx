@@ -18,7 +18,7 @@ import {
   uploadSingleImage,
 } from '@/lib/client-image'
 import { createClient } from '@/lib/supabase/client'
-import { validateImageFile } from '@/lib/storage'
+import { validateImageFileFast } from '@/lib/storage'
 
 interface AvatarLogoFieldProps {
   /** URL already saved in the DB, or null. Treated as the initial
@@ -65,7 +65,7 @@ export const AvatarLogoField = forwardRef<AvatarLogoFieldHandle, AvatarLogoField
       const file = e.target.files?.[0]
       if (!file) return
 
-      const problem = validateImageFile(file)
+      const problem = validateImageFileFast(file)
       if (problem) {
         if (problem.kind === 'too-large') {
           toast.error('File is too large. Maximum 10 MB.')

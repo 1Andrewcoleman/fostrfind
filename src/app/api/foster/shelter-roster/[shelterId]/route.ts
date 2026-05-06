@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * DELETE /api/foster/shelter-roster/[shelterId]
@@ -22,9 +24,13 @@ import { createNotification } from '@/lib/notifications'
  * placements") — any in-flight application keeps its own status.
  */
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { shelterId: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ shelterId: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -111,5 +117,5 @@ export async function DELETE(
     })
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

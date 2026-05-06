@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/shelter/foster-invites/[id]/accept
@@ -27,9 +29,13 @@ import { createNotification } from '@/lib/notifications'
  * it.
  */
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -124,16 +130,29 @@ export async function POST(
   }
 
   // Update invite — foster-side RLS permits this path.
+  // .select('id') + .maybeSingle() lets us detect the concurrent-acceptance
+  // race: if another tab/request already accepted, the .eq('status','pending')
+  // filter matches 0 rows and maybeSingle returns null data with no error.
   const now = new Date().toISOString()
-  const { error: updateErr } = await supabase
+  const { data: updatedRow, error: updateErr } = await supabase
     .from('shelter_foster_invites')
     .update({ status: 'accepted', responded_at: now, foster_id: fosterId })
     .eq('id', inviteRow.id)
     .eq('status', 'pending') // guard against concurrent acceptance
+    .select('id')
+    .maybeSingle()
 
   if (updateErr) {
     console.error('[foster-invites/accept] update failed:', updateErr.message)
     return NextResponse.json({ error: 'Failed to accept invite' }, { status: 500 })
+  }
+  if (!updatedRow) {
+    // Concurrent acceptance won — invite is no longer pending. Return 409
+    // so the client knows the action was already completed by another request.
+    return NextResponse.json(
+      { error: 'Invite was already responded to (possible duplicate request)' },
+      { status: 409 },
+    )
   }
 
   // Insert roster row via service client. Idempotent — if the foster was
@@ -179,5 +198,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText } from '@/lib/sanitize'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 const bodySchema = z.object({
   applicationId: z.string().uuid(),
@@ -24,13 +26,11 @@ const bodySchema = z.object({
  * 5. Idempotency — one shelter_rating per application; 409 if present
  */
 export async function POST(request: Request): Promise<NextResponse> {
-  let body: z.infer<typeof bodySchema>
-  try {
-    body = bodySchema.parse(await request.json())
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
 
+  // Authenticate before parsing the body so unauthenticated requests don't
+  // incur JSON parsing cost.
   const supabase = await createClient()
 
   const {
@@ -47,6 +47,13 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const rl = rateLimit('shelter-ratings:post', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
+
+  let body: z.infer<typeof bodySchema>
+  try {
+    body = bodySchema.parse(await request.json())
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
 
   const { data: application, error: fetchError } = await supabase
     .from('applications')
@@ -96,8 +103,16 @@ export async function POST(request: Request): Promise<NextResponse> {
   })
 
   if (insertError) {
+    // Map Postgres unique_violation to 409 — covers race between duplicate-check
+    // and insert (two concurrent requests for the same placement).
+    if ((insertError as { code?: string }).code === '23505') {
+      return NextResponse.json(
+        { error: 'A rating for this placement already exists' },
+        { status: 409 },
+      )
+    }
     return NextResponse.json({ error: 'Failed to save rating' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

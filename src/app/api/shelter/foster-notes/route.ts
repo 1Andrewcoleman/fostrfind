@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeMultiline } from '@/lib/sanitize'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/shelter/foster-notes
@@ -19,6 +21,9 @@ const bodySchema = z.object({
 })
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -93,5 +98,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to save note' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, note: inserted })
+  return privateJson({ success: true, note: inserted })
 }

@@ -20,7 +20,7 @@ function callRoute(): Promise<Response> {
     new Request(`http://localhost/api/foster/shelter-roster/${SHELTER_ID}`, {
       method: 'DELETE',
     }),
-    { params: { shelterId: SHELTER_ID } },
+    { params: Promise.resolve({ shelterId: SHELTER_ID }) },
   )
 }
 

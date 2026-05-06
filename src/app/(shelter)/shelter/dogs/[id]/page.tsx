@@ -9,10 +9,11 @@ import { notFound } from 'next/navigation'
  * a generic title on any error path or in DEV_MODE.
  */
 export async function generateMetadata({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }): Promise<Metadata> {
+  const params = await paramsPromise
   if (DEV_MODE) return { title: 'Edit Dog' }
   try {
     const supabase = await createClient()
@@ -37,10 +38,11 @@ import { isNextControlFlowError } from '@/lib/server-errors'
 import type { Dog } from '@/types/database'
 
 interface EditDogPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
-export default async function EditDogPage({ params }: EditDogPageProps) {
+export default async function EditDogPage({ params: paramsPromise }: EditDogPageProps) {
+  const params = await paramsPromise
   let dog: Dog | null = null
   let fetchError = false
 

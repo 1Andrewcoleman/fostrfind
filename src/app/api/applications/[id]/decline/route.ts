@@ -4,6 +4,8 @@ import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationDeclinedEmail } from '@/emails/application-declined'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 interface DeclinedApplicationRow {
   status: string
@@ -18,9 +20,13 @@ interface DeclinedApplicationRow {
 }
 
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate the caller
@@ -103,5 +109,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true, applicationId: params.id })
+  return privateJson({ success: true, applicationId: params.id })
 }

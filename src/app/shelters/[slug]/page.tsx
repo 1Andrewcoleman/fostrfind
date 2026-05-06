@@ -17,11 +17,16 @@ import { PLACEHOLDER_SHELTERS } from '@/lib/placeholder-shelters'
 import type { Dog, DogWithShelter, Shelter } from '@/types/database'
 
 interface PageProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
+// Public projection: exclude EIN (tax ID) and user_id (owner auth UUID).
+// These columns are withheld from anonymous/public requests both here and
+// at the database column-privilege level (migration 20240124).
+type ShelterPublic = Omit<Shelter, 'ein' | 'user_id'>
+
 interface ShelterPayload {
-  shelter: Shelter
+  shelter: ShelterPublic
   dogs: DogWithShelter[]
   avgRating: number | null
   ratingCount: number
@@ -37,7 +42,9 @@ async function loadShelterBySlug(slug: string): Promise<ShelterPayload | null> {
   const supabase = await createClient()
   const { data: shelter, error: shelterError } = await supabase
     .from('shelters')
-    .select('*')
+    // Explicit projection: exclude ein (tax ID) and user_id (auth UUID) — these
+    // are not needed by the public profile page and should not be sent to browsers.
+    .select('id,name,slug,email,phone,location,latitude,longitude,logo_url,bio,website,instagram,is_verified,created_at')
     .eq('slug', slug)
     .maybeSingle()
 
@@ -74,7 +81,8 @@ async function loadShelterBySlug(slug: string): Promise<ShelterPayload | null> {
   return { shelter, dogs, avgRating, ratingCount }
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: PageProps): Promise<Metadata> {
+  const params = await paramsPromise
   try {
     const payload = await loadShelterBySlug(params.slug)
     if (!payload) {
@@ -104,7 +112,8 @@ function normalizeWebsiteUrl(raw: string): string {
   return `https://${raw}`
 }
 
-export default async function ShelterProfilePage({ params }: PageProps): Promise<React.JSX.Element> {
+export default async function ShelterProfilePage({ params: paramsPromise }: PageProps): Promise<React.JSX.Element> {
+  const params = await paramsPromise
   let payload: ShelterPayload | null = null
   let fetchError = false
 

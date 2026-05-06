@@ -17,11 +17,11 @@ const bodySchema = z.object({
  * Deletes the caller's account:
  *   1. Authenticates the caller via their session cookie.
  *   2. Validates the typed-DELETE confirmation.
- *   3. For every shelter or foster row owned by the user:
- *      a. Cancels any active applications (submitted / reviewing / accepted
- *         get flipped to `declined`). `completed` history is preserved.
- *      b. Anonymises identifying columns in place so remaining joined rows
- *         (ratings, messages, completed applications) still render.
+ *   3. Calls `prepare_account_deletion(user_id)` via the service-role client.
+ *      This RPC atomically: declines active applications, anonymises shelter
+ *      and foster_parents rows. Any failure raises a SQL exception and the
+ *      entire cleanup rolls back — auth deletion is only attempted when this
+ *      succeeds.
  *   4. Calls `auth.admin.deleteUser(user.id)` with the service role key to
  *      wipe the auth.users row. Schema-level `on delete cascade` on
  *      `shelters.user_id` and `foster_parents.user_id` then removes the
@@ -79,70 +79,27 @@ export async function POST(request: Request): Promise<NextResponse> {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
-  // Shelter side cleanup
-  const { data: shelterRows } = await admin
-    .from('shelters')
-    .select('id')
-    .eq('user_id', user.id)
-
-  if (shelterRows && shelterRows.length > 0) {
-    const shelterIds = shelterRows.map((r) => r.id)
-
-    await admin
-      .from('applications')
-      .update({ status: 'declined' })
-      .in('shelter_id', shelterIds)
-      .in('status', ['submitted', 'reviewing', 'accepted'])
-
-    await admin
-      .from('shelters')
-      .update({
-        name: 'Deleted Shelter',
-        email: 'deleted@fostrfind.invalid',
-        phone: null,
-        location: 'Unknown',
-        bio: null,
-        website: null,
-        instagram: null,
-        ein: null,
-        logo_url: null,
-      })
-      .in('id', shelterIds)
+  // Step 1: Atomically clean up all PII and decline active applications.
+  // The `prepare_account_deletion` RPC wraps everything in a Postgres
+  // transaction — if any UPDATE fails, the whole cleanup rolls back and we
+  // surface a 500. Auth deletion is only attempted after this succeeds.
+  const { error: cleanupErr } = await admin.rpc('prepare_account_deletion', {
+    p_user_id: user.id,
+  })
+  if (cleanupErr) {
+    console.error('[account/delete] cleanup RPC failed:', cleanupErr.message)
+    return NextResponse.json(
+      { error: 'Failed to prepare account deletion. Please contact support.' },
+      { status: 500 },
+    )
   }
 
-  // Foster side cleanup
-  const { data: fosterRows } = await admin
-    .from('foster_parents')
-    .select('id')
-    .eq('user_id', user.id)
-
-  if (fosterRows && fosterRows.length > 0) {
-    const fosterIds = fosterRows.map((r) => r.id)
-
-    await admin
-      .from('applications')
-      .update({ status: 'declined' })
-      .in('foster_id', fosterIds)
-      .in('status', ['submitted', 'reviewing', 'accepted'])
-
-    await admin
-      .from('foster_parents')
-      .update({
-        first_name: 'Deleted',
-        last_name: 'User',
-        email: 'deleted@fostrfind.invalid',
-        phone: null,
-        bio: null,
-        avatar_url: null,
-        other_pets_info: null,
-        children_info: null,
-      })
-      .in('id', fosterIds)
-  }
-
-  // Finally, remove the auth user. Schema cascades handle the rest.
+  // Step 2: Remove the auth user. Schema cascades handle the rest.
   const { error: deleteErr } = await admin.auth.admin.deleteUser(user.id)
   if (deleteErr) {
+    // The cleanup already committed, but auth deletion failed. Support will
+    // need to manually remove the auth user. Log with user.id for traceability.
+    console.error('[account/delete] auth.admin.deleteUser failed for user:', user.id, deleteErr.message)
     return NextResponse.json(
       { error: 'Failed to delete account. Please contact support.' },
       { status: 500 },

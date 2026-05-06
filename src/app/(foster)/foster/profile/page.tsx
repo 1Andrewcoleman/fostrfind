@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FosterProfileForm } from '@/components/foster/foster-profile-form'
+import { ProfileFeedbackPanel } from '@/components/profile-feedback-panel'
 
 export const metadata: Metadata = { title: 'Foster Profile' }
 import { AccountSettingsForm } from '@/components/account-settings-form'
@@ -59,6 +60,7 @@ export default async function FosterProfilePage(): Promise<React.JSX.Element> {
         <>
           <FosterProfileForm initialData={fosterData} />
           <AccountSettingsForm currentEmail={currentEmail} authProvider={authProvider} />
+          {!DEV_MODE && <ProfileFeedbackPanel portal="foster" />}
         </>
       )}
     </div>

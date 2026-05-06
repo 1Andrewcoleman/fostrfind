@@ -29,8 +29,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
-.env*.local
+# local env files — ignore ALL real env files; keep only the template.
+.env
+.env.*
+!.env.example
 
 # supabase
 supabase/.temp/

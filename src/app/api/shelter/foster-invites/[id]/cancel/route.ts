@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/shelter/foster-invites/[id]/cancel
@@ -13,9 +15,13 @@ import { createNotification } from '@/lib/notifications'
  * 409 rather than silently re-writing a terminal state.
  */
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -106,5 +112,5 @@ export async function POST(
     }
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

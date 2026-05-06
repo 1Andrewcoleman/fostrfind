@@ -6,6 +6,8 @@ import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/shelter/foster-invites
@@ -39,6 +41,9 @@ const bodySchema = z.object({
 })
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   const {
@@ -115,7 +120,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .eq('foster_id', existingFosterId)
       .maybeSingle()
     if (alreadyInRoster) {
-      return NextResponse.json({
+      return privateJson({
         success: true,
         alreadyInRoster: true,
       })
@@ -175,5 +180,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     })
   }
 
-  return NextResponse.json({ success: true, invite: inserted })
+  return privateJson({ success: true, invite: inserted })
 }

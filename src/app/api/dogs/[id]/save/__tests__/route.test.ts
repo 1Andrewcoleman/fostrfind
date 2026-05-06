@@ -18,7 +18,7 @@ const DOG_ID = 'dog-1'
 function call(method: 'POST' | 'DELETE'): Promise<Response> {
   const handler = method === 'POST' ? POST : DELETE
   return handler(new Request(`http://localhost/api/dogs/${DOG_ID}/save`, { method }), {
-    params: { id: DOG_ID },
+    params: Promise.resolve({ id: DOG_ID }),
   })
 }
 

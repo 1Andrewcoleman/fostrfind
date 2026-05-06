@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 const messageSchema = z.object({
   applicationId: z.string().uuid(),
@@ -44,6 +46,9 @@ function fullName(firstName: string | null | undefined, lastName: string | null 
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   const {
@@ -80,10 +85,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   const { data: application, error: appError } = await supabase
     .from('applications')
     .select(
-      'id, foster:foster_parents!inner(id, user_id, first_name, last_name), shelter:shelters!inner(id, user_id, name)',
+      'id, status, foster:foster_parents!inner(id, user_id, first_name, last_name), shelter:shelters!inner(id, user_id, name)',
     )
     .eq('id', parsed.data.applicationId)
-    .single<MessageApplicationRow>()
+    .single<MessageApplicationRow & { status: string }>()
 
   if (appError || !application) {
     return NextResponse.json({ error: 'Application not found' }, { status: 404 })
@@ -96,6 +101,19 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!isFoster && !isShelter) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  // Messaging on terminal applications (declined or withdrawn) is blocked.
+  // Accepted and completed placements remain open for coordination/closure.
+  // Document: shelters and fosters can message on submitted, reviewing,
+  // accepted, and completed applications.
+  const terminalStatuses = ['declined', 'withdrawn']
+  const appStatus = (application as { status?: string }).status
+  if (appStatus && terminalStatuses.includes(appStatus)) {
+    return NextResponse.json(
+      { error: 'Messaging is not available for declined or withdrawn applications' },
+      { status: 409 },
+    )
   }
 
   const senderRole: 'foster' | 'shelter' = isFoster ? 'foster' : 'shelter'
@@ -138,5 +156,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     })
   }
 
-  return NextResponse.json(message, { status: 201 })
+  return privateJson(message, { status: 201 })
 }

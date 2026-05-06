@@ -42,7 +42,7 @@ import {
 } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
 import { resizeImageForUpload } from '@/lib/client-image'
-import { validateImageFile } from '@/lib/storage'
+import { validateImageFileFast } from '@/lib/storage'
 
 const dogSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -112,7 +112,7 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
     const rejectedType: string[] = []
 
     for (const file of picked.slice(0, remaining)) {
-      const problem = validateImageFile(file)
+      const problem = validateImageFileFast(file)
       if (!problem) {
         accepted.push(file)
         continue

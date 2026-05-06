@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 const readSchema = z.union([
   z.object({ ids: z.array(z.string().uuid()).min(1) }),
@@ -8,6 +11,9 @@ const readSchema = z.union([
 ])
 
 export async function PATCH(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   const {
@@ -22,6 +28,12 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Rate limit: 60/min is generous for normal notification management (click
+  // "mark all read" a handful of times) while blocking scripted hammering,
+  // especially the { all: true } path which triggers a full-table UPDATE.
+  const rl = rateLimit('notifications:read', user.id, { limit: 60, windowMs: 60_000 })
+  if (!rl.success) return rateLimitResponse(rl)
 
   let raw: unknown
   try {
@@ -65,5 +77,5 @@ export async function PATCH(request: Request): Promise<NextResponse> {
     }
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

@@ -4,6 +4,8 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { applicationCreateSchema } from '@/lib/schemas'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 interface ApplicationDogRow {
   id: string
@@ -39,6 +41,9 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
  *   - 503: auth service unavailable
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   const {
@@ -208,5 +213,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     })
   }
 
-  return NextResponse.json(application, { status: isReapply ? 200 : 201 })
+  // Return only the fields the client actually needs — avoids leaking internal
+  // columns (shelter_note, emergency contact, etc.) in the create response.
+  return privateJson(
+    {
+      id: application.id,
+      status: application.status,
+      dog_id: application.dog_id,
+      shelter_id: application.shelter_id,
+      foster_id: application.foster_id,
+      created_at: application.created_at,
+    },
+    { status: isReapply ? 200 : 201 },
+  )
 }

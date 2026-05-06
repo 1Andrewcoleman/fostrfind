@@ -6,7 +6,7 @@ import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 
 interface DogLayoutProps {
   children: React.ReactNode
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 // Teaser-safe fields. The full dog detail includes medical notes,
@@ -57,10 +57,11 @@ function buildDescription(fields: MetaFields): string {
  * route.
  */
 export async function generateMetadata({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }): Promise<Metadata> {
+  const params = await paramsPromise
   if (DEV_MODE) {
     return {
       title: 'Dog Profile',

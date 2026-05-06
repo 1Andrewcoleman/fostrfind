@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * DELETE /api/dogs/[id]
@@ -17,9 +19,13 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
  *    applications cannot be deleted to protect in-progress workflows
  */
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate the caller
@@ -78,5 +84,5 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to delete dog' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, dogId: params.id })
+  return privateJson({ success: true, dogId: params.id })
 }

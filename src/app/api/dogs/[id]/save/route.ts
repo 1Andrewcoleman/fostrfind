@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * Phase 6.5 — Saved dogs ("favorites").
@@ -72,9 +74,13 @@ async function authedFosterId(): Promise<
 }
 
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const auth = await authedFosterId()
   if (auth.kind === 'error') return auth.response
 
@@ -104,13 +110,17 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to save dog' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, dogId: params.id, saved: true })
+  return privateJson({ success: true, dogId: params.id, saved: true })
 }
 
 export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const auth = await authedFosterId()
   if (auth.kind === 'error') return auth.response
 
@@ -128,5 +138,5 @@ export async function DELETE(
     return NextResponse.json({ error: 'Failed to remove save' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, dogId: params.id, saved: false })
+  return privateJson({ success: true, dogId: params.id, saved: false })
 }

@@ -44,7 +44,7 @@ interface PendingInviteRow {
 }
 
 interface PageProps {
-  searchParams: { q?: string }
+  searchParams: Promise<{ q?: string }>
 }
 
 const PLACEHOLDER_ROSTER: RosterFosterRow[] = [
@@ -82,8 +82,9 @@ function normaliseQuery(q: string | undefined): string {
 }
 
 export default async function ShelterFostersPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: PageProps): Promise<React.JSX.Element> {
+  const searchParams = await searchParamsPromise
   const q = normaliseQuery(searchParams.q)
 
   let rows: RosterFosterRow[] = []

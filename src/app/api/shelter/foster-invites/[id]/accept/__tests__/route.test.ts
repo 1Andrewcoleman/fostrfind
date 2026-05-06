@@ -23,7 +23,7 @@ function callRoute(): Promise<Response> {
     new Request(`http://localhost/api/shelter/foster-invites/${INVITE_ID}/accept`, {
       method: 'POST',
     }),
-    { params: { id: INVITE_ID } },
+    { params: Promise.resolve({ id: INVITE_ID }) },
   )
 }
 
@@ -145,8 +145,8 @@ describe('POST /api/shelter/foster-invites/[id]/accept', () => {
               status: 'pending',
             },
           },
-          // update
-          { data: null, error: null },
+          // update (returns the updated row id for concurrent-accept detection)
+          { data: { id: INVITE_ID }, error: null },
         ],
       },
     })
@@ -176,7 +176,7 @@ describe('POST /api/shelter/foster-invites/[id]/accept', () => {
               status: 'pending',
             },
           },
-          { data: null, error: null },
+          { data: { id: INVITE_ID }, error: null },
         ],
       },
     })
@@ -201,7 +201,7 @@ describe('POST /api/shelter/foster-invites/[id]/accept', () => {
               status: 'pending',
             },
           },
-          { data: null, error: null },
+          { data: { id: INVITE_ID }, error: null },
         ],
       },
     })

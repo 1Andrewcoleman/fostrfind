@@ -80,6 +80,16 @@ export const resetPasswordSchema = z
   })
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
 
+export const profileFeedbackSchema = z.object({
+  message: z
+    .string()
+    .trim()
+    .min(10, 'Please share at least a sentence so we can understand.')
+    .max(4000, 'Feedback must be 4000 characters or less'),
+  portal: z.enum(['foster', 'shelter']),
+})
+export type ProfileFeedbackInput = z.infer<typeof profileFeedbackSchema>
+
 // ---------- Profile / settings ----------
 
 // Free-text bio lengths here mirror the existing upper bounds; the DB is

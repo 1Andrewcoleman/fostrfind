@@ -5,6 +5,8 @@ import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /** Minimal shape of the joined application fetch used below. Typed
  *  narrowly so the email-payload field access stays lint-clean. */
@@ -25,8 +27,12 @@ interface AcceptedApplicationRow {
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } },
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate the caller
@@ -164,5 +170,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true, applicationId: params.id })
+  return privateJson({ success: true, applicationId: params.id })
 }

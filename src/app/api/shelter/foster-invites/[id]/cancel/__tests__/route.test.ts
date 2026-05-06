@@ -19,7 +19,7 @@ function callRoute(): Promise<Response> {
     new Request(`http://localhost/api/shelter/foster-invites/${INVITE_ID}/cancel`, {
       method: 'POST',
     }),
-    { params: { id: INVITE_ID } },
+    { params: Promise.resolve({ id: INVITE_ID }) },
   )
 }
 

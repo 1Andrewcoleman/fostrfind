@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 interface WithdrawApplicationRow {
   status: string
@@ -31,9 +33,13 @@ function displayName(firstName: string | null | undefined, lastName: string | nu
  * `applications_dog_foster_unique` constraint.
  */
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate the caller
@@ -105,5 +111,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true, applicationId: params.id })
+  return privateJson({ success: true, applicationId: params.id })
 }

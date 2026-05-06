@@ -28,7 +28,7 @@ type ShelterIndexRow = Pick<
 const MAX_ROWS = 200
 
 interface PageProps {
-  searchParams: { q?: string | string[] }
+  searchParams: Promise<{ q?: string | string[] }>
 }
 
 /**
@@ -41,7 +41,7 @@ function escapeLikeWildcards(input: string): string {
   return input.replace(/[\\%_]/g, (c) => `\\${c}`)
 }
 
-function normaliseQuery(raw: PageProps['searchParams']['q']): string {
+function normaliseQuery(raw: string | string[] | undefined): string {
   const first = Array.isArray(raw) ? raw[0] : raw
   return (first ?? '').trim().slice(0, 100)
 }
@@ -83,7 +83,8 @@ async function loadShelters(q: string): Promise<ShelterIndexRow[]> {
   return (data ?? []) as ShelterIndexRow[]
 }
 
-export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ searchParams: searchParamsPromise }: PageProps): Promise<Metadata> {
+  const searchParams = await searchParamsPromise
   const q = normaliseQuery(searchParams.q)
   if (q) {
     return {
@@ -99,8 +100,9 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 }
 
 export default async function SheltersIndexPage({
-  searchParams,
+  searchParams: searchParamsPromise,
 }: PageProps): Promise<React.JSX.Element> {
+  const searchParams = await searchParamsPromise
   const q = normaliseQuery(searchParams.q)
 
   let shelters: ShelterIndexRow[] = []

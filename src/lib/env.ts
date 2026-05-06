@@ -72,6 +72,21 @@ export function validateEnv(): void {
   const isProd = process.env.NODE_ENV === 'production'
 
   if (DEV_MODE) {
+    // DEV_MODE in production means the Supabase URL is missing or invalid.
+    // This would silently bypass auth guards in AuthGuard and RoleGuard.
+    // Fail loudly rather than boot a broken production deployment.
+    if (isProd) {
+      const missingBackend = missing(BACKEND_VARS)
+      const detail =
+        missingBackend.length > 0
+          ? ` Missing: ${missingBackend.join(', ')}.`
+          : ' NEXT_PUBLIC_SUPABASE_URL does not start with "http".'
+      throw new Error(
+        `[env] Refusing to boot production in DEV_MODE.${detail} ` +
+          'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in the hosting environment.',
+      )
+    }
+
     const missingBackend = missing(BACKEND_VARS)
     if (missingBackend.length > 0) {
       console.warn(

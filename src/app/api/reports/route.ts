@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import { REPORT_CATEGORIES } from '@/lib/constants'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/reports
@@ -45,6 +47,9 @@ interface ApplicationOwnershipRow {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   const {
@@ -145,5 +150,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to file report' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, reportId: inserted.id })
+  // Emit a structured log event so Sentry / centralized logging surfaces new
+  // safety reports to support staff without requiring them to poll the DB.
+  // TODO: replace with a dedicated support notification email (ReportNotificationEmail
+  // template + sendEmail() call) before broad public launch.
+  console.warn('[reports] NEW_SAFETY_REPORT', {
+    reportId: inserted.id,
+    applicationId: parsed.applicationId,
+    category: parsed.category,
+    reporterUserId: user.id,
+    createdAt: inserted.created_at,
+  })
+
+  return privateJson({ success: true, reportId: inserted.id })
 }

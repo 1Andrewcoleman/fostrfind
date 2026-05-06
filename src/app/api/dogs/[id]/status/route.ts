@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * PATCH /api/dogs/[id]/status
@@ -23,8 +25,12 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate
@@ -81,7 +87,7 @@ export async function PATCH(
 
   // 4. Idempotency — already available
   if (dog.status === 'available') {
-    return NextResponse.json({ success: true, dogId: params.id })
+    return privateJson({ success: true, dogId: params.id })
   }
 
   // 5. Transition guard — only pending → available
@@ -106,5 +112,5 @@ export async function PATCH(
     return NextResponse.json({ error: 'Failed to re-list dog' }, { status: 500 })
   }
 
-  return NextResponse.json({ success: true, dogId: params.id })
+  return privateJson({ success: true, dogId: params.id })
 }

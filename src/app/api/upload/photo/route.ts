@@ -8,6 +8,8 @@ import {
   validateImageFile,
 } from '@/lib/storage'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/upload/photo
@@ -24,11 +26,14 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
  * specify a path or overwrite someone else's file.
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const guardErr = validateMutationRequest(request, ['multipart/form-data'])
+  if (guardErr) return guardErr
+
   if (DEV_MODE) {
     // No real Supabase to talk to — return a placeholder that keeps
     // form submissions usable for UI work, but cannot be actually
     // rendered (invalid hostname). Document this behavior in the stub.
-    return NextResponse.json(
+    return privateJson(
       { url: 'https://placeholder.supabase.co/dev-mode-upload.jpg', path: 'dev/placeholder.jpg' },
       { status: 200 },
     )
@@ -75,7 +80,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  const fileError = validateImageFile(file)
+  // validateImageFile is now async — it reads file bytes and inspects magic
+  // bytes rather than trusting the client-supplied Content-Type header.
+  const fileError = await validateImageFile(file)
   if (fileError) {
     if (fileError.kind === 'too-large') {
       return NextResponse.json(
@@ -99,5 +106,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: result.error }, { status: result.status })
   }
 
-  return NextResponse.json({ url: result.url, path: result.path })
+  return privateJson({ url: result.url, path: result.path })
 }

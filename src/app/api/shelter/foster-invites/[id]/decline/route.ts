@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 /**
  * POST /api/shelter/foster-invites/[id]/decline
@@ -12,9 +14,13 @@ import { createNotification } from '@/lib/notifications'
  * the service-role membership insert.
  */
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -100,7 +106,7 @@ export async function POST(
     console.error('[foster-invites/decline] shelter fetch failed:', shelterErr.message)
   }
 
-  const { error: updateErr } = await supabase
+  const { data: updatedRow, error: updateErr } = await supabase
     .from('shelter_foster_invites')
     .update({
       status: 'declined',
@@ -112,10 +118,18 @@ export async function POST(
     })
     .eq('id', inviteRow.id)
     .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
 
   if (updateErr) {
     console.error('[foster-invites/decline] update failed:', updateErr.message)
     return NextResponse.json({ error: 'Failed to decline invite' }, { status: 500 })
+  }
+  if (!updatedRow) {
+    return NextResponse.json(
+      { error: 'Invite was already responded to (possible duplicate request)' },
+      { status: 409 },
+    )
   }
 
   const shelter = shelterRow as { user_id: string } | null
@@ -131,5 +145,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true })
+  return privateJson({ success: true })
 }

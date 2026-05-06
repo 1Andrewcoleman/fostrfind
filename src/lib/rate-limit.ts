@@ -1,11 +1,43 @@
-// Tiny in-memory token-bucket rate limiter for API routes.
+// In-memory rate limiter for API routes.
 //
-// This is deliberately simple — the MVP runs on a single Next.js server
-// process, so a Map keyed by `route + identifier` is enough to blunt
-// casual abuse (rapid-fire accept/decline clicks, scripted rating spam,
-// etc.). When we move to multi-region / serverless we should replace
-// this with a shared store (Upstash, Supabase `rate_limits` table, etc.) —
-// see docs/roadmap.md Deferred Follow-ups.
+// ┌─────────────────────────────────────────────────────────────────────────┐
+// │  PRODUCTION HARDENING NOTE (hardening-audit finding 8.1)               │
+// │                                                                         │
+// │  This implementation is process-local and does NOT coordinate across   │
+// │  serverless / multi-instance deployments. Attackers can bypass limits  │
+// │  by spreading requests across multiple Vercel function instances.       │
+// │                                                                         │
+// │  Migration path to distributed limiting with Upstash Redis:            │
+// │                                                                         │
+// │    1. Create a free Upstash Redis database at console.upstash.com      │
+// │    2. Add env vars: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN   │
+// │       (also to .env.example and to Vercel's env settings)              │
+// │    3. Install: npm install @upstash/redis @upstash/ratelimit           │
+// │    4. Replace this module with:                                         │
+// │                                                                         │
+// │       import { Ratelimit } from '@upstash/ratelimit'                   │
+// │       import { Redis } from '@upstash/redis'                           │
+// │                                                                         │
+// │       const redis = Redis.fromEnv()                                    │
+// │                                                                         │
+// │       export async function rateLimit(                                  │
+// │         route: string, identifier: string, opts: RateLimitOptions      │
+// │       ): Promise<RateLimitResult> {                                     │
+// │         const rl = new Ratelimit({                                      │
+// │           redis,                                                        │
+// │           limiter: Ratelimit.fixedWindow(                              │
+// │             opts.limit,                                                 │
+// │             `${Math.ceil(opts.windowMs / 1000)} s`,                    │
+// │           ),                                                            │
+// │           prefix: `fostr:${route}`,                                    │
+// │         })                                                              │
+// │         const { success, remaining, reset } = await rl.limit(id)      │
+// │         return { success, remaining, resetAt: reset,                   │
+// │           retryAfter: success ? 0 : Math.ceil((reset-Date.now())/1e3) }│
+// │       }                                                                 │
+// │                                                                         │
+// │    5. Update every caller: const rl = await rateLimit(...)             │
+// └─────────────────────────────────────────────────────────────────────────┘
 //
 // Semantics:
 //   - Each (key, identifier) pair gets `limit` tokens per `windowMs`.
@@ -35,6 +67,7 @@
 //   - 'messages:create'       (POST /api/messages)
 //   - 'ratings'               (POST /api/ratings)
 //   - 'reports'               (POST /api/reports)
+//   - 'feedback:post'         (POST /api/feedback)
 // Keep this list in sync when adding new mutation routes so future
 // auditors can grep for protected endpoints.
 

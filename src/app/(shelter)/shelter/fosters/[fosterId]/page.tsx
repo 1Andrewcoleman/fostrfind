@@ -23,10 +23,11 @@ import { NoteForm } from '@/app/(shelter)/shelter/fosters/[fosterId]/note-form'
 import { getInitials } from '@/lib/helpers'
 
 interface PageProps {
-  params: { fosterId: string }
+  params: Promise<{ fosterId: string }>
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params: paramsPromise }: PageProps): Promise<Metadata> {
+  const params = await paramsPromise
   if (DEV_MODE) return { title: 'Foster' }
   try {
     const supabase = await createClient()
@@ -77,8 +78,9 @@ interface NoteRow {
 }
 
 export default async function ShelterFosterDetailPage({
-  params,
+  params: paramsPromise,
 }: PageProps): Promise<React.JSX.Element> {
+  const params = await paramsPromise
   if (DEV_MODE) {
     return (
       <ServerErrorPanel

@@ -14,7 +14,7 @@ import { isNextControlFlowError } from '@/lib/server-errors'
 import { getAppUrl } from '@/lib/email'
 
 interface DogDetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 const PLACEHOLDER_DOG: DogDetailDog = {
@@ -141,7 +141,8 @@ async function loadTeaserDogRow(
  *     for fosters who already have an application on the dog (that
  *     flow is preserved via their own RLS policy).
  */
-export default async function FosterDogDetailPage({ params }: DogDetailPageProps) {
+export default async function FosterDogDetailPage({ params: paramsPromise }: DogDetailPageProps) {
+  const params = await paramsPromise
   if (DEV_MODE) {
     return (
       <FosterPortalShell

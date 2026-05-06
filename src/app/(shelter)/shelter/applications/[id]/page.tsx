@@ -9,10 +9,11 @@ import { AlertTriangle, CheckCircle2, ChevronLeft, MessageCircle } from 'lucide-
  * back to a generic title on any error path.
  */
 export async function generateMetadata({
-  params,
+  params: paramsPromise,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }): Promise<Metadata> {
+  const params = await paramsPromise
   if (DEV_MODE) return { title: 'Application' }
   try {
     const supabase = await createClient()
@@ -43,12 +44,13 @@ import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails, Rating } from '@/types/database'
 
 interface ApplicationDetailPageProps {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default async function ApplicationDetailPage({
-  params,
+  params: paramsPromise,
 }: ApplicationDetailPageProps): Promise<React.JSX.Element> {
+  const params = await paramsPromise
   if (DEV_MODE) {
     return (
       <div className="max-w-2xl space-y-6">

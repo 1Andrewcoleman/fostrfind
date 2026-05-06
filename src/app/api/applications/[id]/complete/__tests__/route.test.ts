@@ -32,7 +32,7 @@ function happyApp(overrides: Record<string, unknown> = {}) {
 
 function callRoute(): Promise<Response> {
   return POST(new Request('http://localhost/api/applications/app-123/complete', { method: 'POST' }), {
-    params: { id: APP_ID },
+    params: Promise.resolve({ id: APP_ID }),
   })
 }
 

@@ -21,7 +21,7 @@ function callRoute(): Promise<Response> {
     new Request(`http://localhost/api/shelter/foster-invites/${INVITE_ID}/decline`, {
       method: 'POST',
     }),
-    { params: { id: INVITE_ID } },
+    { params: Promise.resolve({ id: INVITE_ID }) },
   )
 }
 
@@ -100,7 +100,7 @@ describe('POST /api/shelter/foster-invites/[id]/decline', () => {
               status: 'pending',
             },
           },
-          { data: null, error: null },
+          { data: { id: INVITE_ID }, error: null },
         ],
       },
     })

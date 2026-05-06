@@ -65,7 +65,7 @@ function buildMockServiceClient(opts: { shouldFail?: boolean; shouldThrow?: bool
 
 function callRoute(): Promise<Response> {
   return POST(new Request('http://localhost/api/applications/app-123/accept', { method: 'POST' }), {
-    params: { id: APP_ID },
+    params: Promise.resolve({ id: APP_ID }),
   })
 }
 

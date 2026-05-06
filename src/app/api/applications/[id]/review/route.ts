@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { createNotification } from '@/lib/notifications'
+import { validateMutationRequest } from '@/lib/api-security'
+import { privateJson } from '@/lib/api-response'
 
 interface ReviewApplicationRow {
   status: string
@@ -11,9 +13,13 @@ interface ReviewApplicationRow {
 }
 
 export async function POST(
-  _request: Request,
-  { params }: { params: { id: string } },
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
+  const params = await paramsPromise
+  const guardErr = validateMutationRequest(request)
+  if (guardErr) return guardErr
+
   const supabase = await createClient()
 
   // 1. Authenticate the caller
@@ -52,7 +58,7 @@ export async function POST(
 
   // 3. Idempotency — if already reviewing, return success without re-writing
   if (application.status === 'reviewing') {
-    return NextResponse.json({ success: true, applicationId: params.id })
+    return privateJson({ success: true, applicationId: params.id })
   }
 
   // 4. Guard — only submitted applications can transition to reviewing
@@ -84,5 +90,5 @@ export async function POST(
     })
   }
 
-  return NextResponse.json({ success: true, applicationId: params.id })
+  return privateJson({ success: true, applicationId: params.id })
 }

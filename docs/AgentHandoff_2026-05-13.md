@@ -27,6 +27,10 @@ The `docs/TODO.md` had ~35+ items marked `[ ]` that were already fully implement
 | §26 RED | DB indexes (`20240109`), atomic transitions (`20240110`), unique constraints (`20240111`), getUser error handling, server page try-catch |
 | §26 ORANGE | Message thread auth guards, Zod profile form validation, image domain config, centralized DEV_MODE |
 | §26 YELLOW | Page metadata on all portal pages, `pg` not in package.json |
+| §5 | `/api/upload/photo` fully implemented (FormData, magic-byte MIME, role enforcement, Storage upload) |
+| §6 | Supabase Realtime subscription in `MessageThread` (`postgres_changes` on messages, dedup, read receipts) |
+| §11 | Resend integrated; accepted/declined/completed emails wired; React email templates done |
+| §12 | `@/lib/storage.ts` helper, bucket RLS migration (`20240112`), delete-old-on-replace in `AvatarLogoField`, client-side size validation |
 
 ## What was actually done in this session
 
@@ -39,12 +43,9 @@ The `docs/TODO.md` had ~35+ items marked `[ ]` that were already fully implement
 
 ## Genuinely open work (not yet implemented)
 
-### High priority
-- **Photo upload** — `DogForm` file input + `/api/upload/photo` route are stubs; needs FormData parse, resize, Supabase Storage upload, RLS bucket policies
-- **Supabase Realtime** — messaging has no live subscription; users must refresh to see new messages
-- **Email notifications** — Resend integration is a stub; no emails sent on application events or new messages
-
-### Medium priority
+### Remaining open work
+- **Email: submitted + new-message** — `POST /api/applications` and `POST /api/messages` fire in-app notifications only; neither calls `sendEmail`; wiring those two is the last email gap
+- **Image resize** — upload route stores originals; no resize/compression step
 - Distance-based search (schema has lat/lng; needs PostGIS/haversine)
 - Foster-to-shelter ratings (reverse flow)
 - Terms acceptance checkbox on signup

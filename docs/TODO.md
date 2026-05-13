@@ -46,8 +46,8 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] `POST /api/applications/[id]/accept` — auth check, verify shelter ownership, idempotency guard, update status + dog → pending
 - [x] `POST /api/applications/[id]/decline` — auth check, verify shelter ownership, idempotency guard, update status
 - [x] `POST /api/applications/[id]/complete` — auth check, verify shelter ownership, idempotency guard, update status + dog → placed
-- [ ] `POST /api/notifications/send` — Resend integration (code is commented out), email templates
-- [ ] `POST /api/upload/photo` — auth check, FormData parse, image resize, Supabase Storage upload, return public URL
+- [x] `POST /api/notifications/send` — generic endpoint intentionally disabled (410 Gone); per-event emails wired directly in domain routes (accept, decline, complete)
+- [x] `POST /api/upload/photo` — auth, FormData parse, magic-byte MIME validation, role-based bucket enforcement, Supabase Storage upload via `@/lib/storage.ts`
 - [x] `POST /api/ratings` — auth, completed application, shelter ownership, idempotent insert
 - [x] `DELETE /api/dogs/[id]` — auth, shelter ownership, guard against deleting dogs tied to active applications
 
@@ -57,7 +57,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Send message — `MessageThread` inserts into `messages` with `sender_id` / `sender_role`; optimistic UI
 - [x] Fetch messages — server `select` by `application_id`, ordered for display; initial props mirrored after mark-as-read `UPDATE` so client state matches DB
 - [x] Message list pages — server-fetched threads (accepted/completed apps) with last message preview + per-thread unread badges
-- [ ] Supabase Realtime subscription — subscribe to `postgres_changes` on `messages` for live updates without refresh
+- [x] Supabase Realtime subscription — `postgres_changes` on `public.messages` in `MessageThread`; deduplicates own-sends against optimistic rows; marks incoming as read client-side
 - [x] Unread message count / indicators — layouts count unread (by role); thread list badges; nav badge via `portal-nav`
 - [x] Mark messages as read on open — server marks other-party unread rows when thread loads; RLS allows `UPDATE (read)` only (see migrations `20240103000000`, `20240104000000`)
 
@@ -92,21 +92,21 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 11. Email Notifications (Resend)
 
-- [ ] Set up Resend API key (currently placeholder in `.env.local`)
-- [ ] Application submitted → email shelter
-- [ ] Application accepted → email foster
-- [ ] Application declined → email foster
-- [ ] Foster completed → email both parties
-- [ ] New message → email recipient (debounced)
-- [ ] Email templates (HTML) for each notification type
+- [~] Set up Resend API key — `@/lib/email.ts` integrated with Resend; degrades to console log when `RESEND_API_KEY` is missing or not a real key; set env var to enable
+- [ ] Application submitted → email shelter (only in-app notification currently; no `sendEmail` call in `POST /api/applications`)
+- [x] Application accepted → email foster — `sendEmail` wired in `POST /api/applications/[id]/accept`
+- [x] Application declined → email foster — `sendEmail` wired in `POST /api/applications/[id]/decline`
+- [x] Foster completed → email both parties — two `sendEmail` calls in `POST /api/applications/[id]/complete`
+- [ ] New message → email recipient (debounced) — only in-app notification currently; no `sendEmail` call in `POST /api/messages`
+- [x] Email templates (HTML) for each notification type — React email templates implemented in `@/lib/email.ts`
 
 ## 12. Photo & File Storage
 
-- [ ] Supabase Storage upload helper (shared across dog photos, logos, avatars)
-- [ ] Image resize/optimization before upload
-- [ ] Storage bucket RLS policies (currently buckets exist but no access policies)
-- [ ] Delete old photos on replacement
-- [ ] Max file size validation client-side
+- [x] Supabase Storage upload helper — `@/lib/storage.ts` with `validateImageFile`, `uploadImage`, `buildUploadPath`, `checkBucketRole`, `validateBucketName`
+- [ ] Image resize/optimization before upload — not implemented; images uploaded at original size
+- [x] Storage bucket RLS policies — migration `20240112000000_storage_buckets.sql`; per-bucket SELECT/INSERT/DELETE policies
+- [x] Delete old photos on replacement — `AvatarLogoField` derives old path from `initialUrl` and calls `storage.remove()` before uploading the new file
+- [x] Max file size validation client-side — `validateImageFileFast` (sync, checks `file.size` against `MAX_FILE_SIZE_BYTES`)
 
 ## 13. Security & Edge Cases
 

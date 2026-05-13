@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, MapPin, Star } from 'lucide-react'
+import { ChevronLeft, MapPin, PawPrint, Star } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
@@ -81,6 +82,7 @@ export function DogDetailFull({
   canonicalUrl,
 }: DogDetailFullProps) {
   const [applied, setApplied] = useState(initialApplied)
+  const [selectedPhoto, setSelectedPhoto] = useState(0)
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -106,11 +108,42 @@ export function DogDetailFull({
         </div>
       </div>
 
-      {/* Photo carousel placeholder */}
-      <div className="h-72 bg-muted rounded-xl flex items-center justify-center text-muted-foreground">
-        No photos yet
-        {/* TODO: replace with image carousel once photos are uploaded */}
-      </div>
+      {/* Photos */}
+      {dog.photos.length > 0 ? (
+        <div className="space-y-2">
+          <div className="relative aspect-[4/3] w-full rounded-xl overflow-hidden bg-muted">
+            <Image
+              src={dog.photos[selectedPhoto]}
+              alt={dog.name}
+              fill
+              className="object-cover object-top"
+              sizes="(max-width: 768px) 100vw, 672px"
+              priority
+            />
+          </div>
+          {dog.photos.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {dog.photos.map((src, i) => (
+                <button
+                  key={src}
+                  onClick={() => setSelectedPhoto(i)}
+                  className={`relative h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
+                    i === selectedPhoto ? 'border-primary' : 'border-transparent'
+                  }`}
+                  aria-label={`Photo ${i + 1} of ${dog.photos.length}`}
+                  aria-pressed={i === selectedPhoto}
+                >
+                  <Image src={src} alt="" fill className="object-cover" sizes="64px" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="aspect-[4/3] w-full rounded-xl bg-muted flex items-center justify-center">
+          <PawPrint className="h-16 w-16 text-muted-foreground/40" />
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">

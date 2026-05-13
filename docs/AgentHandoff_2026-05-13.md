@@ -2,70 +2,92 @@
 
 ## Session summary
 
-This session merged two Dependabot PRs (#11 TypeScript 6.0.3, #12 ESLint 10.3.0), then audited the codebase against the roadmap to find genuinely open work.
+This session merged two Dependabot PRs (#11 TypeScript 6.0.3, #12 ESLint 10.3.0), then did a comprehensive audit of the entire codebase against `docs/TODO.md`, `docs/FinalRoadmap.md`, and the handoff to bring all documentation in sync with reality.
 
-## Critical finding: TODO.md was severely out of date
+## Critical finding: docs were severely out of date
 
-The `docs/TODO.md` had ~35+ items marked `[ ]` that were already fully implemented. An agent reading the TODO cold would waste time re-implementing things. **The TODO was updated in this session** — all confirmed-done items are now `[x]` with brief notes on the implementing file/migration.
+`docs/TODO.md` had ~60+ items marked `[ ]` that were already fully implemented across two rounds of auditing. The FinalRoadmap post-pilot backlog had no status column. Both docs updated in this session.
 
-### Summary of what was found already done
+### Confirmed done — first audit round
 
 | Section | Items confirmed done |
 |---|---|
 | §2 Dog CRUD | Dog status transitions — `DogRelistButton` + `PATCH /api/dogs/[id]/status` (relist_dog RPC) |
-| §8 Profile | Avatar/logo upload — `AvatarLogoField` wired in both foster and shelter forms |
-| §13 Security | Rate limiting (`validateMutationRequest`), input sanitization (`sanitizeText`/`sanitizeMultiline`), CSRF via same-site cookies |
-| §15 Infrastructure | Sentry error tracking, production Vercel deployment |
+| §2 Dog CRUD | Dog photo upload — `DogForm` wired to `POST /api/upload/photo`; `PhotoThumb` preview |
+| §5 API Routes | `/api/upload/photo` fully implemented (FormData, magic-byte MIME, role enforcement, Storage upload) |
+| §6 Messaging | Supabase Realtime subscription in `MessageThread` (`postgres_changes` on messages, dedup, read receipts) |
+| §8 Profile | Avatar/logo upload — `AvatarLogoField` wired in both forms with dashed drop-zone, preview, delete-old |
+| §11 Email | Resend integrated; accepted/declined/completed emails wired; React email templates done |
+| §12 Storage | `@/lib/storage.ts` helper, bucket RLS migration (`20240112`), delete-old-on-replace, client-side size validation |
+| §13 Security | Rate limiting (`validateMutationRequest`), input sanitization (`sanitizeText`/`sanitizeMultiline`), CSRF via same-site cookies, sanitized error messages (`describeAuthError`) |
+| §15 Infrastructure | Sentry error tracking, production Vercel deployment, `validateEnv()` startup validation, error boundaries with Sentry, seed script (`scripts/seed.ts`), 27 automated tests |
 | §16 Auth | Forgot password (`/auth/forgot-password`), email verification (`/auth/verify-email`, `/auth/confirm`) |
 | §17 Foster dashboard | Full dashboard page, post-login redirect to `/foster/dashboard`, nav item |
 | §18 App workflow | "Mark as Reviewing" button + route, foster withdrawal (`WithdrawApplicationButton`), "View Conversation" links |
 | §19 Dog management | "Re-list Dog" (`DogRelistButton`), shelter placed-dogs history tab |
-| §20 Browse | Debounced text search in filter sidebar, pre-populate filters from foster preferences |
-| §21 Account | Change password, account deletion (both in `AccountSettingsForm`) |
+| §20 Browse | Debounced text search in filter sidebar, pre-populate filters from foster preferences, public shelter profile (`/shelters/[slug]`) |
+| §21 Account | Change password, change email, account deletion (all in `AccountSettingsForm`) |
+| §22 Ratings | Foster-to-shelter ratings (`shelter_ratings` table + `POST /api/shelter-ratings`) |
 | §23 Notifications | In-app notification center with bell + dropdown (Steps 48–49) |
-| §24 Legal | `/terms` and `/privacy` pages implemented and linked |
-| §26 RED | DB indexes (`20240109`), atomic transitions (`20240110`), unique constraints (`20240111`), getUser error handling, server page try-catch |
-| §26 ORANGE | Message thread auth guards, Zod profile form validation, image domain config, centralized DEV_MODE |
+| §24 Legal | `/terms` and `/privacy` pages implemented and linked; terms acceptance checkbox on signup |
+| §25e Browse | `FilterPill` component — Size/Age rendered as pill-toggle buttons (not checkboxes) |
+| §25g Empty states | `EmptyState` uses Lucide icon glyphs (paw, dog, messages, etc.) at 40–48px |
+| §25h Forms | `FormEyebrow` section headers, `AvatarLogoField` dashed drop-zone, `StickySaveBar` dirty-state floating save |
+| §25l Animations | `StaggerItem` wraps browse dog cards, application cards, stat cards with staggered `animate-in` |
+| §25m Responsive | `FilterSidebar` hidden md:block; mobile filter Sheet with floating FAB; collapsible panel |
+| §25m Print | `@media print` block in `globals.css` with `[data-print-hide]` utilities |
+| §26 RED | DB indexes (`20240109`), atomic transitions (`20240110`), unique constraints (`20240111`), RLS block applications to non-available dogs (`20240111`), getUser error handling, server page try-catch |
+| §26 ORANGE | Message thread auth guards, Zod profile form validation, image domain config, centralized DEV_MODE, sanitized error messages |
 | §26 YELLOW | Page metadata on all portal pages, `pg` not in package.json |
-| §5 | `/api/upload/photo` fully implemented (FormData, magic-byte MIME, role enforcement, Storage upload) |
-| §6 | Supabase Realtime subscription in `MessageThread` (`postgres_changes` on messages, dedup, read receipts) |
-| §11 | Resend integrated; accepted/declined/completed emails wired; React email templates done |
-| §12 | `@/lib/storage.ts` helper, bucket RLS migration (`20240112`), delete-old-on-replace in `AvatarLogoField`, client-side size validation |
+| FinalRoadmap §6.4 | Mutual reporting — `reports` table, `POST /api/reports`, `ReportApplicationDialog` |
+| FinalRoadmap §6.5 | Saved dogs — `dog_saves` table, `/foster/saved`, heart on dog detail, shelter save counts |
 
 ## What was actually done in this session
 
 1. **Merged PRs #11 and #12** — TypeScript 6.0.3 and ESLint 10.3.0 Dependabot updates
-2. **Updated `docs/TODO.md`** — flipped ~35 confirmed-done `[ ]` items to `[x]` with implementation notes
-3. **Fixed content width on 3 pages** — added missing `max-w-*` to:
-   - `src/app/(shelter)/shelter/applications/page.tsx` → `max-w-4xl`
-   - `src/app/(shelter)/shelter/dogs/page.tsx` → `max-w-5xl`
-   - `src/app/(foster)/foster/saved/page.tsx` → `max-w-5xl` (both DEV_MODE and main return)
+2. **Updated `docs/TODO.md`** — ~60 confirmed-done `[ ]` items flipped to `[x]` with implementation notes
+3. **Fixed content width on 3 pages** — added missing `max-w-*` to shelter/applications, shelter/dogs, and foster/saved
+4. **Updated `docs/FinalRoadmap.md`** — added Status column to post-pilot backlog; marked already-done items (saved dogs, mutual reporting, application soft-delete, CI/CD partial)
+5. **Updated `docs/AgentHandoff_2026-05-13.md`** (this file) — corrected "high priority" section that incorrectly listed photo upload, Realtime, and emails as unimplemented
 
-## Genuinely open work (not yet implemented)
+## Genuinely open work
 
-### Remaining open work
-- **Email: submitted + new-message** — `POST /api/applications` and `POST /api/messages` fire in-app notifications only; neither calls `sendEmail`; wiring those two is the last email gap
-- **Image resize** — upload route stores originals; no resize/compression step
-- Distance-based search (schema has lat/lng; needs PostGIS/haversine)
-- Foster-to-shelter ratings (reverse flow)
-- Terms acceptance checkbox on signup
-- Public shelter profile page (`/shelter/[slug]`)
+### Email gaps
+- **Application submitted** — `POST /api/applications` fires in-app notification only; no `sendEmail` call to shelter
+- **New message** — `POST /api/messages` fires in-app notification only; no `sendEmail` to recipient (intentionally deferred — needs 15-min debounce)
+
+### Infrastructure
+- **Image resize** — uploads stored at original size; no resize/compression step
+- **CI/CD** — Dependabot configured; no GitHub Actions build/test/deploy workflow
+- **Analytics** — no PostHog/Mixpanel
+- **Database backups** — no documented strategy
+
+### Features
+- Distance-based search (needs PostGIS/haversine + geocoding pipeline)
+- Shelter verification workflow (admin queue; currently set manually via SQL)
 - Shelter multi-staff access
-- Change email flow
-- Pagination on list pages
+- Pagination on non-browse list pages (applications, shelter dogs, messages)
+- `terms_accepted_at` timestamp persistence on signup
 
-### Lower priority / polish
-- Illustrated empty states (§25g)
-- Hero section redesign (§25b)
-- Onboarding card redesign (§25k)
+### Polish / lower priority
 - Page transition animation (§25l)
-- RLS policy blocking applications to non-available dogs (§26 RED)
-- Raw error message sanitization (§26 ORANGE)
+- Hero asymmetric layout + photo commission (§25b)
+- Onboarding role-selection card redesign (§25k)
+- Inline required-field validation indicators (§25h)
+- Profile completeness bar redesign (§25h)
+- Rich SVG empty-state illustrations vs. current Lucide icons (§25g)
+- `og:image` for dog share links
+- Dynamic sitemap for `/shelters/[slug]` and `/foster/dog/[id]`
+- Photo drag-to-reorder in `DogForm`
+- Orphaned storage cleanup on account deletion
+- `terms_accepted_at` migration
+- Redis-backed rate limiting (in-memory doesn't survive serverless restarts)
+- Session expiry graceful handling
 
 ## Key files for next agent
 
-- `src/app/api/upload/photo/route.ts` — stub to replace with real upload logic
-- `src/app/(foster)/foster/browse/page.tsx` — pre-populates filters from foster prefs
-- `src/components/messages/message-thread.tsx` — where Realtime subscription would go
+- `docs/TODO.md` — now accurate; `[ ]` items are genuinely open
+- `docs/FinalRoadmap.md` — post-pilot backlog now has Status column
+- `src/app/api/applications/route.ts` — missing `sendEmail` call for submission notification
+- `src/app/api/messages/route.ts` — missing `sendEmail` call (needs debounce logic first)
 - `supabase/migrations/` — 27 migrations through `20240127000000`; new work needs new numbered files
-- `docs/TODO.md` — now accurate; use as source of truth for open items

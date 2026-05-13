@@ -17,8 +17,8 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Edit dog — edit page loads dog via `select`; `DogForm` updates row
 - [x] List dogs — `/shelter/dogs` loads `dogs` for the signed-in shelter
 - [x] Delete dog — `DogDeleteButton` → `DELETE /api/dogs/[id]`; shelter ownership; 409 if active applications block deletion
-- [ ] Dog photo upload — file input renders; `/api/upload/photo` is a stub; needs FormData parsing, resize, Supabase Storage upload
-- [ ] Photo preview/reorder in `DogForm`
+- [x] Dog photo upload — `DogForm` calls `POST /api/upload/photo`; `PhotoThumb` previews uploaded photos; sequential upload on save
+- [~] Photo preview/reorder in `DogForm` — preview and remove implemented (`PhotoThumb` grid); drag-to-reorder not yet shipped
 - [x] Dog status transitions (available → pending → placed) — `DogRelistButton` + `PATCH /api/dogs/[id]/status` (`relist_dog` RPC)
 
 ## 3. Browse & Search (Foster Side)
@@ -127,21 +127,21 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Mobile navigation — `MobileNav` + `Sheet` in `portal-nav.tsx` (foster + shelter layouts)
 - [x] Active nav link highlighting — `usePathname` in `portal-nav.tsx`
 - [~] Empty state components — used on browse, shelter dogs, applications, dashboard, history
-- [ ] Form error display improvements
+- [~] Form error display improvements — per-field inline errors on DogForm, AccountSettingsForm, and profile forms; no global form-error component or banner pattern
 - [x] Optimistic UI updates for messaging — `MessageThread` appends sent messages before insert completes
 
 ## 15. Infrastructure
 
-- [ ] Environment variable validation on startup
-- [ ] Error boundary improvements (`error.tsx` exists but is generic)
+- [x] Environment variable validation on startup — `validateEnv()` in `src/lib/env.ts`; called in `layout.tsx` on module load; hard-fails for missing production vars
+- [x] Error boundary improvements — custom error UI with Sentry `captureException`, digest reference IDs, and `mailto:support@fostrfind.com` in all three `error.tsx` files
 - [x] Sentry or equivalent error tracking
 - [ ] Analytics (PostHog, Mixpanel, etc.)
-- [ ] CI/CD pipeline
+- [~] CI/CD pipeline — Dependabot configured (`.github/workflows/dependabot.yml`); no build/test/deploy GitHub Actions workflow yet
 - [x] Production deployment (Vercel)
 - [ ] Database backups strategy
-- [ ] Seed script for development data
-- [ ] Automated tests — unit/integration coverage for helpers (`formatRelativeTime`, etc.), `portal-layout-data`, and critical API routes (no test runner wired yet)
-- [ ] **Layout data perf** — `getPortalLayoutData` still runs two parallel queries against `foster_parents` / `shelters` (unread count + identity); consider fetching the profile row once and reusing it for both paths
+- [x] Seed script for development data — `scripts/seed.ts` (dog data, users, applications)
+- [x] Automated tests — 27 test files across `src/lib/__tests__/`, `src/components/notifications/__tests__/`, and API route `__tests__/` directories
+- [ ] **Layout data perf** — `getPortalLayoutData` still runs multiple queries; profile row could be shared between unread-count and identity paths
 
 ---
 
@@ -172,19 +172,19 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **Text / keyword / breed search** — debounced search input in `BrowseFilterForm` filters by `name` / `breed` client-side
 - [x] **Pre-populate browse filters from foster preferences** — browse page reads foster `pref_size`, `pref_age`, `pref_medical` and initialises `FilterState` when no URL params are set
-- [ ] **Public shelter profile page** — dog cards show the shelter name but it is not clickable; add a `/shelter/[slug]` public page showing shelter bio, logo, location, and active listings so fosters can vet a shelter before applying
-- [ ] **Pagination on all list pages** — pagination is noted for browse only; shelter applications, foster applications, shelter dogs, and message thread lists all fetch all records; add cursor/page-based pagination or infinite scroll
+- [x] **Public shelter profile page** — `src/app/shelters/[slug]/page.tsx`; shows shelter bio, logo, location, active dogs, and ratings; `/src/app/shelters/page.tsx` for shelter directory
+- [~] **Pagination** — browse page has load-more infinite scroll (`PAGE_SIZE=24`); other list pages (applications, shelter dogs, messages) still fetch all records
 
 ## 21. Account Settings
 
 - [x] **Change password** — "Change Password" section in `AccountSettingsForm` calls `supabase.auth.updateUser({ password })`
-- [ ] **Change email** — users cannot update their login email; add an email-change form that calls `supabase.auth.updateUser({ email })` and handles the re-confirmation flow
+- [x] **Change email** — `AccountSettingsForm` has `handleEmailChange()` calling `supabase.auth.updateUser({ email })` with re-confirmation email via Supabase
 - [x] **Account deletion** — "Delete Account" danger-zone in `AccountSettingsForm`; anonymises profile data and calls delete via server action
 
 ## 22. Two-Way Trust & Ratings
 
-- [ ] **Foster-to-shelter ratings** — only shelters can rate foster parents; add a reverse rating flow so fosters can rate their shelter experience after a completed placement; requires a new `shelter_ratings` table (or a `rater_role` column on `ratings`) + `POST /api/shelter-ratings`
-- [ ] **Shelter verification workflow** — `shelters.is_verified` is always `false`; add a verification request button on shelter settings, an admin review queue, and surface the verified badge on shelter profiles and dog listings
+- [x] **Foster-to-shelter ratings** — `shelter_ratings` table (migration `20240107000000`), `POST /api/shelter-ratings` route, and rating UI implemented
+- [~] **Shelter verification workflow** — `is_verified` badge shown on shelter profiles and dog listings; verification set manually via SQL (OPS-5); no admin queue or request flow yet
 
 ## 23. Collaboration & Scale
 
@@ -195,7 +195,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **Terms of Service page** — `/terms` page implemented with ToS content; linked from signup and footer
 - [x] **Privacy Policy page** — `/privacy` page implemented; linked from signup and footer
-- [ ] **Terms acceptance on signup** — add a required checkbox on the signup form confirming the user accepts the ToS and Privacy Policy; store acceptance timestamp on the user record
+- [~] **Terms acceptance on signup** — required checkbox + Zod validation wired in signup form; `terms_accepted_at` timestamp not yet stored on the user record
 
 ---
 
@@ -216,7 +216,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25b. Landing Page
 
-- [ ] **Hero section redesign** — replace the centered icon-on-a-circle with a full-bleed asymmetric layout: large headline on the left, a real dog photography placeholder (or illustrated scene) on the right; add a warm gradient wash behind the headline instead of the flat `bg-gradient-to-b from-background to-muted`
+- [~] **Hero section redesign** — hero has a real dog photo (`HERO_IMAGE_SRC`, licensed Unsplash) and stacked layout; not the full asymmetric two-column design; How-It-Works is card-based but minimal; needs photo commission before broad launch
 - [x] **Animated headline or subtle entrance** — fade/slide-in on hero icon, headline, subtext, and CTAs using `tailwindcss-animate` (`animate-in` + staggered delays); `motion-reduce:animate-none` for accessibility
 - [ ] **Social proof / stats bar** — add a row of trust signals below the CTA buttons (e.g. "2,400+ dogs fostered · 180+ partner shelters · ★ 4.9 avg foster rating") in a muted banner strip; even as placeholder copy it signals maturity
 - [ ] **"How It Works" step cards** — replace the three plain icon circles with illustrated or icon-rich cards that have a number badge, a more descriptive graphic, and a subtle background tint per step; give them a border and shadow-sm so they read as cards, not floating text
@@ -245,7 +245,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **Sticky filter sidebar** — the filter sidebar scrolls away with the page; add `sticky top-6` so filters stay in view while browsing the grid
 - [x] **Filter sidebar as floating card** — wrap the filter sidebar in a `Card` with `shadow-sm` and `rounded-xl` so it has visual weight and looks like a panel, not bare text on the page background
-- [ ] **Filter chips / pill selectors** — replace the checkbox lists for Size and Age with horizontal pill/chip toggle buttons (outlined → filled on select) which are more mobile-friendly and visually legible; keep checkboxes only for the binary medical toggle
+- [x] **Filter chips / pill selectors** — `FilterPill` component in `filter-sidebar.tsx` renders Size/Age as pill-toggle buttons with `role="checkbox"` aria semantics
 - [x] **Results count + active filter chips** — show a "12 dogs found" count above the grid with removable chips for each active filter so users can see and undo filters without scrolling back to the sidebar
 - [x] **Mobile filter sheet** — on small screens the 64-width sidebar is hidden but there is no "Filter" button to access it; add a floating `Filter` pill button fixed to the bottom of the screen on mobile that opens a `Sheet` containing the filter sidebar
 
@@ -258,17 +258,17 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25g. Empty States
 
-- [ ] **Illustrated empty states** — all empty states currently show plain text with no visual; add a unique SVG illustration or icon composition per context (e.g. a sleepy dog for "no applications", a magnifying glass with paw for "no dogs match filters", a speech bubble for "no messages")
+- [~] **Illustrated empty states** — `EmptyState` uses Lucide icon glyphs (paw, dog, messages, applications, history, shelter, notifications) at 40–48px; not rich custom SVG illustrations
 - [~] **Empty state CTA buttons** — `EmptyState` is a client component: use `href` from Server Components, `onClick` from Client Components; browse (clear filters), messages, shelter dashboard, and shelter applications list now wire CTAs — finish auditing any remaining empty views
 
 ### 25h. Forms & Inputs
 
 - [x] **Input focus ring** — the default focus ring uses `--ring` (same dark navy as the text); replace with a warm-colored focus ring (`ring-primary/50` or the new `--warm` token) so focused inputs are clearly highlighted
-- [ ] **Section headers inside forms** — `CardTitle` headings like "Personal Info" and "Foster Preferences" are plain `font-semibold` text; add a colored left-border accent line or a small icon before each section title to create visual anchoring
-- [ ] **Avatar upload area redesign** — the current upload area is a `h-16 w-16` circle with an `Upload` icon; replace with a dashed-border drop zone (`border-2 border-dashed border-muted-foreground/30 hover:border-primary`) that shows a preview when a file is selected, and a subtle "Drag & drop or click to upload" label
-- [ ] **Inline field validation styling** — required fields have no visual indicator (no asterisk, no color); add a subtle red `*` after required labels and a green checkmark icon that appears inside the input when the field is valid
-- [ ] **Profile completeness bar** — the `ProfileCompleteness` banner is plain muted/border; restyle it as a warm amber/honey banner with a progress bar that fills with the warm accent color and animated transitions when new fields are completed
-- [ ] **Floating save button** — on long forms (foster profile, shelter settings) the save button is at the very bottom and requires scrolling; add a sticky `bottom-0` save bar that appears once the user has made a change (dirty state detection)
+- [x] **Section headers inside forms** — `FormEyebrow` component used in `foster-profile-form.tsx` and `shelter-settings-form.tsx` for section separation with description subtext
+- [x] **Avatar upload area redesign** — `AvatarLogoField` has dashed-border drop zone with live preview, clear button, and "click or drag to upload" affordance
+- [ ] **Inline field validation styling** — required fields have no visual indicator; add red `*` after required labels and green checkmark on valid inputs
+- [ ] **Profile completeness bar** — `ProfileCompleteness` banner not yet styled with warm amber progress bar
+- [x] **Floating save button** — `StickySaveBar` with dirty-state detection wired in `DogForm`, `FosterProfileForm`, and `ShelterSettingsForm`
 
 ### 25i. Dashboard (Shelter)
 
@@ -292,17 +292,17 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25l. Micro-interactions & Motion
 
-- [ ] **Page transition** — add a subtle `opacity-0 → opacity-100` fade on route change using a layout-level animation wrapper so navigating between pages feels smooth rather than an instant flash
+- [ ] **Page transition** — no layout-level route-change animation wrapper yet
 - [x] **Button loading state** — buttons in loading state currently just change label text; add an inline `Loader2` spinning icon (from lucide) before the label so the affordance is clearer
-- [ ] **Card entrance animations** — dog browse cards, application cards, and dashboard stat cards should fade-and-slide-up on mount using `animate-fade-in` with staggered `animation-delay` based on index, so grids don't pop in all at once
+- [x] **Card entrance animations** — `StaggerItem` wraps browse dog cards, application cards, and stat cards with `animate-in fade-in slide-in-from-bottom-1` and staggered `animation-delay` per index
 - [x] **Toast redesign** — Sonner toasts are styled by default; customise with the brand palette — success toasts with a warm green + paw checkmark icon, error toasts with a muted red, info toasts with the brand warm color
 
 ### 25m. Accessibility & Responsive Polish
 
 - [x] **Keyboard focus visibility** — run through all interactive elements; many shadcn defaults have `focus-visible:ring-2` but the ring color (dark navy on white) has low contrast ratio; switch to a high-contrast ring using the new warm accent token
-- [ ] **Responsive browse layout** — on screens between `sm` and `md` the filter sidebar and grid are squeezed into a cramped two-column layout; add a collapsible sidebar toggle at the `md` breakpoint so the grid can use full width when filters are hidden
+- [x] **Responsive browse layout** — `FilterSidebar` is `hidden md:block`; mobile filter `Sheet` with floating FAB button; collapsible panel fully implemented
 - [x] **Mobile form inputs** — `Input` / `SelectTrigger` use `h-11 md:h-10`; `Textarea` has taller min-height + padding on mobile; browse filters use `min-h-[44px]` rows for checkbox/radio rows
-- [ ] **Print stylesheet** — `/shelter/applications/[id]` and foster profiles are the kind of pages shelter staff may want to print; add a `@media print` block that hides the nav, action buttons, and sidebar and formats the content as a clean single-column document
+- [x] **Print stylesheet** — `@media print` block in `globals.css` hides nav/buttons/sidebar and formats content as single-column; `[data-print-hide]` + `.print:hidden` utilities
 
 ### 25n. Main content width & alignment (portal pages)
 
@@ -323,7 +323,7 @@ On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/
 - [x] **Database indexes** — migration `20240109000000_add_indexes.sql` adds all required indexes
 - [x] **Atomic status transitions** — migrations `20240110000000_atomic_transitions.sql`; accept/complete API routes use `accept_application` / `complete_application` RPCs
 - [x] **Unique constraints** — migration `20240111000000_unique_constraints.sql` adds `UNIQUE(dog_id, foster_id)` on `applications` and `UNIQUE(application_id)` on `ratings`
-- [ ] **RLS: block applications to non-available dogs** — add INSERT policy check `dog_id IN (SELECT id FROM dogs WHERE status = 'available')` so fosters cannot apply to pending/placed dogs at the DB level
+- [x] **RLS: block applications to non-available dogs** — INSERT policy in migration `20240111000000_unique_constraints.sql` checks `dog_id IN (SELECT id FROM dogs WHERE status = 'available')`
 - [x] **`getUser()` error handling** — all server pages throw `authError` inside try-catch → `fetchError = true` → `ServerErrorPanel`; no silent redirect on network/token errors
 - [x] **Server page error handling** — all server pages wrap Supabase queries in try-catch; `ServerErrorPanel` shown on failure
 
@@ -331,7 +331,7 @@ On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/
 
 - [x] **Message thread query-level auth** — thread pages use `.eq('shelter_id', ...)` / `.eq('foster_id', ...)` guards alongside RLS
 - [x] **Profile form validation** — `fosterProfileSchema` in `foster-profile-form.tsx` and `shelterSettingsSchema` in `shelter-settings-form.tsx` both use Zod with per-field error display
-- [ ] **Sanitize error messages** — replace raw `error.message` displays (which can leak RLS policy names) with generic user-facing messages; log originals server-side
+- [x] **Sanitize error messages** — API routes log errors server-side only; user-facing messages are generic copy; `describeAuthError()` helper sanitizes Supabase auth errors in `AccountSettingsForm`
 - [x] **Image domain config** — `images.remotePatterns` for Supabase Storage hostname added to `next.config.mjs`
 - [x] **Centralize `DEV_MODE`** — exported from `src/lib/constants.ts`; all files import from there
 

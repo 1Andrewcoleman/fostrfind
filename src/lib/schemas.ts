@@ -7,7 +7,14 @@
 // migration of those forms).
 
 import { z } from 'zod'
-import { DOG_SIZES, DOG_AGES, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
+import {
+  DOG_SIZES,
+  DOG_AGES,
+  DOG_GENDERS,
+  HOUSING_TYPES,
+  EXPERIENCE_LEVELS,
+  MAX_DOG_PHOTOS,
+} from '@/lib/constants'
 
 // We use Zod's built-in .trim() so input and output types stay `string`;
 // this keeps useForm<SchemaType>() typings clean (z.preprocess would yield
@@ -314,3 +321,82 @@ export const fosterOnboardingSchema = z.object({
   bio: optionalTrimmedString(BIO_MAX, `Keep your bio under ${BIO_MAX} characters`),
 })
 export type FosterOnboardingInput = z.infer<typeof fosterOnboardingSchema>
+
+// ---------- Dog create / update ----------
+
+// The DOG_NAME upper bound is generous enough for "Sir Wiggleworth the Third"
+// but tight enough to keep the column predictable for indexing / display.
+const DOG_NAME_MAX = 80
+const DOG_BREED_MAX = 120
+const DOG_SHORT_NOTE_MAX = 500
+const DOG_DESCRIPTION_MAX = 4000
+
+// The form's free-text fields (`breed`, `temperament`, `medical_status`,
+// `special_needs`, `description`) are all optional. Empty strings coming from
+// the form layer are normalised to `undefined` here so the route handler can
+// branch on "field was sent" vs. "field is intentionally blank" without
+// needing extra logic — and the resulting payload going into Supabase uses
+// `null` for cleared values.
+const dogOptionalShortField = (maxLen: number) =>
+  z
+    .string()
+    .trim()
+    .max(maxLen, `Keep this under ${maxLen} characters`)
+    .transform((v) => (v === '' ? undefined : v))
+    .optional()
+
+const dogOptionalLongField = (maxLen: number) =>
+  z
+    .string()
+    .max(maxLen, `Keep this under ${maxLen} characters`)
+    .transform((v) => (v.trim() === '' ? undefined : v))
+    .optional()
+
+// Photo URLs are produced by the `/api/upload/photo` route which already
+// enforces ownership + content-type. We accept up to MAX_DOG_PHOTOS arbitrary
+// HTTPS URLs here; the route handler does not re-fetch them.
+// IMPORTANT: do NOT add `.default([])` to this base field — Zod preserves
+// defaults across `.partial()`, which would have the PATCH route silently
+// clearing the photos column for any caller that omits the key. The POST
+// schema applies the default explicitly below.
+const dogPhotosBaseField = z
+  .array(z.string().url('Photo URL is malformed'))
+  .max(MAX_DOG_PHOTOS, `At most ${MAX_DOG_PHOTOS} photos`)
+
+const dogSharedFields = {
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(DOG_NAME_MAX, `Keep the name under ${DOG_NAME_MAX} characters`),
+  breed: dogOptionalShortField(DOG_BREED_MAX),
+  age: z.enum(DOG_AGES).optional(),
+  size: z.enum(DOG_SIZES).optional(),
+  gender: z.enum(DOG_GENDERS).optional(),
+  temperament: dogOptionalShortField(DOG_SHORT_NOTE_MAX),
+  medical_status: dogOptionalShortField(DOG_SHORT_NOTE_MAX),
+  special_needs: dogOptionalShortField(DOG_SHORT_NOTE_MAX),
+  description: dogOptionalLongField(DOG_DESCRIPTION_MAX),
+}
+
+export const dogCreateSchema = z.object({
+  ...dogSharedFields,
+  // Default applies only on CREATE so callers can omit `photos` and still
+  // get an empty array stored in the row.
+  photos: dogPhotosBaseField.default([]),
+})
+export type DogCreateInput = z.infer<typeof dogCreateSchema>
+
+// PATCH payload: every field is optional so the client can submit only the
+// fields the user actually edited. Validation rules and length caps still
+// apply for any field that IS present. `photos` here intentionally has no
+// `.default()` so an omitted key remains `undefined` and the route can tell
+// "client wants to keep the existing photos" apart from "client wants to
+// clear them" (an empty array).
+export const dogUpdateSchema = z
+  .object({
+    ...dogSharedFields,
+    photos: dogPhotosBaseField,
+  })
+  .partial()
+export type DogUpdateInput = z.infer<typeof dogUpdateSchema>

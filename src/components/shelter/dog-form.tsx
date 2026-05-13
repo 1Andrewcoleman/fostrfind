@@ -30,7 +30,6 @@ import { FormEyebrow } from '@/components/ui/form-eyebrow'
 import { StickySaveBar } from '@/components/ui/sticky-save-bar'
 import { Check } from 'lucide-react'
 import type { Dog } from '@/types/database'
-import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import {
   ALLOWED_IMAGE_TYPES,
   DEV_MODE,
@@ -40,23 +39,28 @@ import {
   MAX_DOG_PHOTOS,
   STORAGE_BUCKETS,
 } from '@/lib/constants'
-import { createClient } from '@/lib/supabase/client'
 import { resizeImageForUpload } from '@/lib/client-image'
 import { validateImageFileFast } from '@/lib/storage'
 
-const dogSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  breed: z.string().optional(),
+// Client-side form schema. Mirrors the shape of `dogCreateSchema` in
+// src/lib/schemas.ts but accepts empty strings so controlled inputs can
+// supply '' as their initial value without React switching between
+// controlled and uncontrolled. Server-side validation + sanitisation in
+// the /api/dogs route is the source of truth — this schema only powers
+// inline UX feedback (required-name highlight, etc.).
+const dogFormSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(80, 'Keep the name under 80 characters'),
+  breed: z.string().max(120, 'Keep this under 120 characters').optional(),
   age: z.enum(['puppy', 'young', 'adult', 'senior']).optional(),
   size: z.enum(['small', 'medium', 'large', 'xl']).optional(),
   gender: z.enum(['male', 'female']).optional(),
-  temperament: z.string().optional(),
-  medical_status: z.string().optional(),
-  special_needs: z.string().optional(),
-  description: z.string().optional(),
+  temperament: z.string().max(500, 'Keep this under 500 characters').optional(),
+  medical_status: z.string().max(500, 'Keep this under 500 characters').optional(),
+  special_needs: z.string().max(500, 'Keep this under 500 characters').optional(),
+  description: z.string().max(4000, 'Keep this under 4000 characters').optional(),
 })
 
-type DogFormValues = z.infer<typeof dogSchema>
+type DogFormValues = z.infer<typeof dogFormSchema>
 
 interface DogFormProps {
   mode: 'create' | 'edit'
@@ -186,7 +190,7 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
   }
 
   const form = useForm<DogFormValues>({
-    resolver: zodResolver(dogSchema),
+    resolver: zodResolver(dogFormSchema),
     defaultValues: {
       name: initialData?.name ?? '',
       breed: initialData?.breed ?? '',
@@ -208,22 +212,6 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
       return
     }
 
-    const supabase = createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError) {
-      console.error('[dog-form] getUser failed:', authError.message)
-      setSubmitError('Could not verify your session. Please sign in again.')
-      return
-    }
-    if (!user) { setSubmitError('You must be logged in.'); return }
-
-    const { data: shelterRow } = await supabase
-      .from('shelters')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-    if (!shelterRow) { setSubmitError('No shelter profile found.'); return }
-
     // Upload any newly-picked photos before writing to the dogs row.
     // If any upload fails we abort the save entirely — a dog record with
     // half the photos would leave the user without a clear recovery.
@@ -239,46 +227,66 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
 
     const photos = [...existingPhotos, ...uploadedUrls]
 
-    // Strip any HTML-ish content from free-text fields. Multiline on
-    // description (paragraphs matter); single-line on temperament /
-    // medical / special_needs so stray newlines don't stretch cards.
+    // Send the raw form values to the server route. Sanitisation +
+    // tag-strip + length normalisation all happen server-side in
+    // /api/dogs (POST) or /api/dogs/[id] (PATCH) so the database state
+    // is identical no matter how a caller hits the endpoint. The form's
+    // own zod validation above is UX-only — it surfaces inline errors
+    // before a round-trip, but the server is the source of truth.
+    //
+    // Every optional text field is sent as `''` rather than omitted when
+    // empty. The schema's transform collapses empty strings to undefined
+    // before validation; the route handler then sees `'breed' in data`
+    // as `true` and writes `null` to the column, matching the pre-route
+    // behaviour where clearing a field cleared the DB column.
     const payload = {
-      ...values,
-      name: sanitizeText(values.name),
-      breed: values.breed ? sanitizeText(values.breed) || null : null,
-      age: values.age || null,
-      size: values.size || null,
-      gender: values.gender || null,
-      temperament: values.temperament ? sanitizeText(values.temperament) || null : null,
-      medical_status: values.medical_status ? sanitizeText(values.medical_status) || null : null,
-      special_needs: values.special_needs ? sanitizeText(values.special_needs) || null : null,
-      description: values.description ? sanitizeMultiline(values.description) || null : null,
+      name: values.name,
+      breed: values.breed ?? '',
+      age: values.age,
+      size: values.size,
+      gender: values.gender,
+      temperament: values.temperament ?? '',
+      medical_status: values.medical_status ?? '',
+      special_needs: values.special_needs ?? '',
+      description: values.description ?? '',
       photos,
     }
 
-    if (mode === 'create') {
-      const { error } = await supabase.from('dogs').insert({
-        shelter_id: shelterRow.id,
-        ...payload,
+    const endpoint = mode === 'create' ? '/api/dogs' : `/api/dogs/${dogId}`
+    const method = mode === 'create' ? 'POST' : 'PATCH'
+
+    let res: Response
+    try {
+      res = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
-      if (error) {
-        console.error('[dog-form] create failed:', error.message)
-        setSubmitError('Could not save this dog. Please try again.')
-        return
-      }
-    } else {
-      const { error } = await supabase
-        .from('dogs')
-        .update(payload)
-        .eq('id', dogId!)
-      if (error) {
-        console.error('[dog-form] update failed:', error.message)
-        setSubmitError('Could not save this dog. Please try again.')
-        return
-      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Network error'
+      console.error('[dog-form] request failed:', message)
+      setSubmitError('Could not reach the server. Please try again.')
+      toast.error('Network error — please try again.')
+      return
     }
 
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; details?: Record<string, string[]> }
+        | null
+      const firstDetail =
+        body?.details && Object.values(body.details).flat().find(Boolean)
+      const message =
+        firstDetail || body?.error || 'Could not save this dog. Please try again.'
+      console.error('[dog-form] save failed:', res.status, body)
+      setSubmitError(message)
+      toast.error(message)
+      return
+    }
+
+    toast.success(mode === 'create' ? 'Dog added' : 'Changes saved')
     router.push('/shelter/dogs')
+    router.refresh()
   }
 
   // Photo changes aren't tracked by react-hook-form, so fold them into

@@ -155,7 +155,6 @@ describe('PATCH /api/foster-parents/[id]', () => {
       happyBody({
         first_name: '',
         location: '',
-        email: 'not-an-email',
       }),
     )
     expect(res.status).toBe(422)
@@ -163,7 +162,8 @@ describe('PATCH /api/foster-parents/[id]', () => {
     expect(body.error).toBe('Validation failed')
     expect(body.details.first_name).toBeDefined()
     expect(body.details.location).toBeDefined()
-    expect(body.details.email).toBeDefined()
+    // email is not part of the PATCH schema; email changes go through
+    // Supabase Auth updateUser — so there is no email validation error here
   })
 
   it('returns 200 with the updated row on the happy path and sanitizes fields', async () => {
@@ -208,7 +208,7 @@ describe('PATCH /api/foster-parents/[id]', () => {
       happyBody({
         bio: 'I <script>alert(1)</script> love <b>dogs</b>.',
         first_name: '<b>Pat</b>',
-        location: 'Austin<script>x</script>, TX',
+        location: 'Austin<script></script>, TX',
       }),
     )
     expect(res.status).toBe(200)
@@ -218,6 +218,43 @@ describe('PATCH /api/foster-parents/[id]', () => {
     expect(payload.bio).toBe('I alert(1) love dogs.')
     expect(payload.first_name).toBe('Pat')
     expect(payload.location).toBe('Austin, TX')
+  })
+
+  it('does not include email in the update payload', async () => {
+    // email is removed from fosterProfilePatchSchema so a body-supplied
+    // email can never overwrite foster_parents.email. Email changes must
+    // go through Supabase Auth updateUser which triggers re-verification.
+    const updated = { id: FOSTER_ID, user_id: USER_ID, first_name: 'Pat' }
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID }),
+      tableResults: {
+        foster_parents: [
+          { data: { id: FOSTER_ID, user_id: USER_ID } },
+          { single: { data: updated, error: null } },
+        ],
+      },
+    })
+
+    let capturedUpdatePayload: Record<string, unknown> | null = null
+    const originalFrom = client.from.bind(client)
+    client.from = ((table: string) => {
+      const chain = originalFrom(table)
+      if (table === 'foster_parents') {
+        const originalUpdate = chain.update.bind(chain)
+        chain.update = ((payload: Record<string, unknown>) => {
+          capturedUpdatePayload = payload
+          return originalUpdate(payload)
+        }) as typeof chain.update
+      }
+      return chain
+    }) as typeof client.from
+
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute(happyBody({ email: 'hacker@attacker.com' }))
+    expect(res.status).toBe(200)
+    expect(capturedUpdatePayload).not.toBeNull()
+    expect('email' in (capturedUpdatePayload as unknown as Record<string, unknown>)).toBe(false)
   })
 
   it('strips HTML tags from the bio field before update', async () => {

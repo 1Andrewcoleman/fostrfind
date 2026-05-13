@@ -301,6 +301,14 @@ export const shelterOnboardingSchema = z.object({
 })
 export type ShelterOnboardingInput = z.infer<typeof shelterOnboardingSchema>
 
+// Server-only PATCH schemas — email is not updatable via PATCH; email
+// changes go through Supabase Auth updateUser which triggers re-verification.
+export const fosterProfilePatchSchema = fosterProfileSchema.omit({ email: true })
+export type FosterProfilePatchInput = z.infer<typeof fosterProfilePatchSchema>
+
+export const shelterSettingsPatchSchema = shelterSettingsSchema.omit({ email: true })
+export type ShelterSettingsPatchInput = z.infer<typeof shelterSettingsPatchSchema>
+
 // Foster onboarding does NOT collect dog preferences (size/age/medical)
 // or max_distance — those live on /foster/profile after signup. The
 // onboarding form keeps the friction low; preferences default to the
@@ -321,6 +329,14 @@ export const fosterOnboardingSchema = z.object({
   bio: optionalTrimmedString(BIO_MAX, `Keep your bio under ${BIO_MAX} characters`),
 })
 export type FosterOnboardingInput = z.infer<typeof fosterOnboardingSchema>
+
+// Server-only onboarding schemas — email comes from the auth context
+// (user.email), never from the request body, to prevent invite hijacking.
+export const fosterOnboardingServerSchema = fosterOnboardingSchema.omit({ email: true })
+export type FosterOnboardingServerInput = z.infer<typeof fosterOnboardingServerSchema>
+
+export const shelterOnboardingServerSchema = shelterOnboardingSchema.omit({ email: true })
+export type ShelterOnboardingServerInput = z.infer<typeof shelterOnboardingServerSchema>
 
 // ---------- Dog create / update ----------
 

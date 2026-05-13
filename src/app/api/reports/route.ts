@@ -3,9 +3,11 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeMultiline } from '@/lib/sanitize'
-import { REPORT_CATEGORIES } from '@/lib/constants'
+import { REPORT_CATEGORIES, SUPPORT_EMAIL } from '@/lib/constants'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
+import { sendEmail, getAppUrl } from '@/lib/email'
+import { ReportNotificationEmail } from '@/emails/report-notification'
 
 /**
  * POST /api/reports
@@ -150,16 +152,29 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to file report' }, { status: 500 })
   }
 
-  // Emit a structured log event so Sentry / centralized logging surfaces new
-  // safety reports to support staff without requiring them to poll the DB.
-  // TODO: replace with a dedicated support notification email (ReportNotificationEmail
-  // template + sendEmail() call) before broad public launch.
+  // Keep the structured log for Sentry aggregation, then fire the support email.
   console.warn('[reports] NEW_SAFETY_REPORT', {
     reportId: inserted.id,
     applicationId: parsed.applicationId,
     category: parsed.category,
     reporterUserId: user.id,
     createdAt: inserted.created_at,
+  })
+
+  const reporterRole: 'foster' | 'shelter' = fosterUserId === user.id ? 'foster' : 'shelter'
+  void sendEmail({
+    to: SUPPORT_EMAIL,
+    subject: `[Safety Report] ${parsed.category} — ${inserted.id}`,
+    react: ReportNotificationEmail({
+      reportId: inserted.id,
+      applicationId: parsed.applicationId,
+      category: parsed.category,
+      reporterUserId: user.id,
+      reporterRole,
+      body: cleanBody,
+      createdAt: inserted.created_at,
+      appUrl: getAppUrl(),
+    }),
   })
 
   return privateJson({ success: true, reportId: inserted.id })

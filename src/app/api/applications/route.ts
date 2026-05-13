@@ -4,6 +4,8 @@ import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { applicationCreateSchema } from '@/lib/schemas'
 import { createNotification } from '@/lib/notifications'
+import { getAppUrl, sendEmail } from '@/lib/email'
+import { ApplicationSubmittedEmail } from '@/emails/application-submitted'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
 
@@ -12,7 +14,7 @@ interface ApplicationDogRow {
   shelter_id: string
   status: string
   name: string | null
-  shelter: { user_id: string } | null
+  shelter: { user_id: string; email: string | null; name: string | null } | null
 }
 
 function displayName(firstName: string | null | undefined, lastName: string | null | undefined): string {
@@ -102,7 +104,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // actionable for the client than a generic 500/permission error.
   const { data: dog, error: dogError } = await supabase
     .from('dogs')
-    .select('id, shelter_id, status, name, shelter:shelters!inner(user_id)')
+    .select('id, shelter_id, status, name, shelter:shelters!inner(user_id, email, name)')
     .eq('id', data.dog_id)
     .maybeSingle<ApplicationDogRow>()
 
@@ -211,6 +213,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       link: `/shelter/applications/${application.id}`,
       metadata: { applicationId: application.id, dogId: data.dog_id, fosterId: foster.id },
     })
+
+    // Email alongside the in-app notification. Both are fire-and-forget
+    // (`void`) — sendEmail() swallows its own errors so a Resend outage
+    // cannot fail the application submit, mirroring the accept route.
+    // Per-foster abuse is already gated by the route's rate limit (10/min)
+    // and the unique-application guard above.
+    const shelterEmail = dog.shelter?.email
+    const shelterName = dog.shelter?.name
+    if (shelterEmail && shelterName) {
+      void sendEmail({
+        to: shelterEmail,
+        subject: `New foster application from ${fosterName} for ${dogName}`,
+        react: ApplicationSubmittedEmail({
+          shelterName,
+          dogName,
+          fosterName,
+          applicationUrl: `${getAppUrl()}/shelter/applications/${application.id}`,
+        }),
+      })
+    }
   }
 
   // Return only the fields the client actually needs — avoids leaking internal

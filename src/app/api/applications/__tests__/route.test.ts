@@ -6,10 +6,30 @@ vi.mock('@/lib/rate-limit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/rate-limit')>()
   return { ...actual, rateLimit: vi.fn() }
 })
+// Stub the side-effect helpers so tests stay deterministic and so we
+// can assert on email/notification payloads. The route fires both as
+// fire-and-forget; mocking lets us inspect the call args without
+// hitting Resend or the service-role client.
+vi.mock('@/lib/email', () => ({
+  sendEmail: vi.fn(),
+  getAppUrl: () => 'http://localhost:3000',
+}))
+vi.mock('@/lib/notifications', () => ({
+  createNotification: vi.fn(),
+}))
 
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { sendEmail } from '@/lib/email'
+import { createNotification } from '@/lib/notifications'
 import { POST } from '@/app/api/applications/route'
+
+const SHELTER_USER_ID = '44444444-4444-4444-8444-444444444444'
+const SHELTER_EMAIL = 'shelter@example.com'
+const SHELTER_NAME = 'Test Shelter'
+const DOG_NAME = 'Buddy'
+const FOSTER_FIRST = 'Pat'
+const FOSTER_LAST = 'Doe'
 
 const FOSTER_USER_ID = 'user-foster-1'
 const FOSTER_ID = '11111111-1111-4111-8111-111111111111'
@@ -255,10 +275,18 @@ describe('POST /api/applications', () => {
     const { client } = buildMockClient({
       auth: buildAuth({ id: FOSTER_USER_ID }),
       tableResults: {
-        foster_parents: [{ data: { id: FOSTER_ID } }],
+        foster_parents: [
+          { data: { id: FOSTER_ID, first_name: FOSTER_FIRST, last_name: FOSTER_LAST } },
+        ],
         dogs: [
           {
-            data: { id: DOG_ID, shelter_id: SHELTER_ID, status: 'available' },
+            data: {
+              id: DOG_ID,
+              shelter_id: SHELTER_ID,
+              status: 'available',
+              name: DOG_NAME,
+              shelter: { user_id: SHELTER_USER_ID, email: SHELTER_EMAIL, name: SHELTER_NAME },
+            },
           },
         ],
         applications: [
@@ -272,5 +300,96 @@ describe('POST /api/applications', () => {
     const res = await callRoute()
     expect(res.status).toBe(201)
     expect(await res.json()).toMatchObject({ id: 'new-app-id', status: 'submitted' })
+  })
+
+  it('fires the application-submitted email and notification on success', async () => {
+    const inserted = {
+      id: 'new-app-id',
+      dog_id: DOG_ID,
+      foster_id: FOSTER_ID,
+      shelter_id: SHELTER_ID,
+      status: 'submitted',
+    }
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: FOSTER_USER_ID }),
+      tableResults: {
+        foster_parents: [
+          { data: { id: FOSTER_ID, first_name: FOSTER_FIRST, last_name: FOSTER_LAST } },
+        ],
+        dogs: [
+          {
+            data: {
+              id: DOG_ID,
+              shelter_id: SHELTER_ID,
+              status: 'available',
+              name: DOG_NAME,
+              shelter: { user_id: SHELTER_USER_ID, email: SHELTER_EMAIL, name: SHELTER_NAME },
+            },
+          },
+        ],
+        applications: [
+          { data: null },
+          { single: { data: inserted, error: null } },
+        ],
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute()
+    expect(res.status).toBe(201)
+
+    expect(sendEmail).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendEmail).mock.calls[0][0]).toMatchObject({
+      to: SHELTER_EMAIL,
+      subject: expect.stringContaining(DOG_NAME),
+    })
+
+    expect(createNotification).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(createNotification).mock.calls[0][0]).toMatchObject({
+      userId: SHELTER_USER_ID,
+      type: 'application_submitted',
+      link: `/shelter/applications/${inserted.id}`,
+    })
+  })
+
+  it('does NOT send email when shelter email is missing, but still fires notification', async () => {
+    const inserted = {
+      id: 'new-app-id',
+      dog_id: DOG_ID,
+      foster_id: FOSTER_ID,
+      shelter_id: SHELTER_ID,
+      status: 'submitted',
+    }
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: FOSTER_USER_ID }),
+      tableResults: {
+        foster_parents: [
+          { data: { id: FOSTER_ID, first_name: FOSTER_FIRST, last_name: FOSTER_LAST } },
+        ],
+        dogs: [
+          {
+            data: {
+              id: DOG_ID,
+              shelter_id: SHELTER_ID,
+              status: 'available',
+              name: DOG_NAME,
+              // Email missing — shelter row exists (so the notification
+              // still fires) but has no contact address. Email path skips.
+              shelter: { user_id: SHELTER_USER_ID, email: null, name: SHELTER_NAME },
+            },
+          },
+        ],
+        applications: [
+          { data: null },
+          { single: { data: inserted, error: null } },
+        ],
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute()
+    expect(res.status).toBe(201)
+    expect(sendEmail).not.toHaveBeenCalled()
+    expect(createNotification).toHaveBeenCalledTimes(1)
   })
 })

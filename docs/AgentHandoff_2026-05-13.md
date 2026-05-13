@@ -88,6 +88,19 @@ This session merged two Dependabot PRs (#11 TypeScript 6.0.3, #12 ESLint 10.3.0)
 
 - `docs/TODO.md` — now accurate; `[ ]` items are genuinely open
 - `docs/FinalRoadmap.md` — post-pilot backlog now has Status column
-- `src/app/api/applications/route.ts` — missing `sendEmail` call for submission notification
 - `src/app/api/messages/route.ts` — missing `sendEmail` call (needs debounce logic first)
 - `supabase/migrations/` — 27 migrations through `20240127000000`; new work needs new numbered files
+
+## Late-session work — application-submitted email wired
+
+Followed up the audit by closing the remaining pilot-blocking email gap.
+
+**Change:** `src/app/api/applications/route.ts` now fires `void sendEmail(...)` alongside the existing `void createNotification(...)` after a successful insert, using the existing `ApplicationSubmittedEmail` template. Mirrors the accept-route pattern.
+
+**Pilot blocker list now:** OPS-5 (mark pilot shelter `is_verified` via SQL) + confirm Supabase daily backups are enabled. The submitted-email gap is closed.
+
+**Test file note for future agents:** `src/app/api/applications/__tests__/route.test.ts` now mocks `@/lib/email` and `@/lib/notifications`. Prior to this session those fired unmocked in tests (silently no-ops because the service client wasn't configured). If you add a new code path that calls either helper, the mocks are already in place — just assert on `vi.mocked(sendEmail).mock.calls` / `vi.mocked(createNotification).mock.calls`.
+
+**No additional rate limiting was added.** The route's existing per-foster limit (`applications:create`, 10/min) gates the email send because the email only fires after the insert succeeds. The 409 duplicate guard prevents re-spamming the same shelter about the same dog. Resend account limits are the final backstop.
+
+**Local test environment quirk:** `node_modules/.bin/` is empty in this environment — `vitest`, `tsc`, `eslint`, and `next` are all unavailable as local binaries. System `tsc` was used for spot-checks; full test suite must run in CI / Vercel preview.

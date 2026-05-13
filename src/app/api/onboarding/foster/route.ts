@@ -21,8 +21,9 @@ import { privateJson } from '@/lib/api-response'
  *
  * Status contract:
  *   - 201: created (sanitized foster row returned)
- *   - 400: malformed JSON
+ *   - 400: malformed JSON or account email unavailable
  *   - 401: unauthenticated
+ *   - 403: email not yet confirmed (user.email_confirmed_at is null)
  *   - 409: caller already has a foster_parents row
  *   - 422: schema validation failure (per-field errors in `details`)
  *   - 429: rate limit exceeded

@@ -6,6 +6,7 @@ import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
+import { sanitizeMultiline } from '@/lib/sanitize'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
 
@@ -102,6 +103,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
 
+  // Sanitize once at the boundary. Zod gave us a trimmed string; sanitize
+  // strips HTML-tag-shaped substrings and normalises whitespace. The stored
+  // value and email-template value MUST match so admin reads, audit views,
+  // or any future renderer can never surface raw input.
+  const cleanedMessage = body.message ? sanitizeMultiline(body.message) || null : null
+
   // Is the email already a registered foster? If so we pre-link foster_id,
   // and we can also detect the "already on the roster" case cheaply.
   const { data: existingFoster } = await supabase
@@ -138,7 +145,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       email: normalizedEmail,
       foster_id: existingFosterId,
       status: 'pending',
-      message: body.message?.trim() ? body.message.trim() : null,
+      message: cleanedMessage,
     })
     .select('id, email, status, foster_id, created_at')
     .single()
@@ -165,7 +172,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     react: ShelterFosterInviteEmail({
       shelterName,
       fosterEmail: normalizedEmail,
-      message: body.message ?? null,
+      message: cleanedMessage,
       signinUrl: `${getAppUrl()}/foster/invites`,
     }),
   })

@@ -10,10 +10,19 @@ vi.mock('@/lib/email', () => ({
   sendEmail: vi.fn(),
   getAppUrl: () => 'http://localhost:3000',
 }))
+// Mock the email component so we can assert on the props it was called with.
+// The real component is a function that returns rendered EmailLayout JSX, so
+// `emailCall.react.props.message` would be undefined. Replacing it with a
+// vi.fn() returning null lets us inspect the original prop bag via
+// `vi.mocked(ShelterFosterInviteEmail).mock.calls[0][0]`.
+vi.mock('@/emails/shelter-foster-invite', () => ({
+  ShelterFosterInviteEmail: vi.fn(() => null),
+}))
 
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail } from '@/lib/email'
+import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 import { POST } from '@/app/api/shelter/foster-invites/route'
 
 const SHELTER_USER_ID = 'user-shelter-1'
@@ -159,6 +168,65 @@ describe('POST /api/shelter/foster-invites', () => {
     vi.mocked(createClient).mockResolvedValue(client)
     const res = await callRoute({ email: 'new@example.com' })
     expect(res.status).toBe(409)
+  })
+
+  it('strips HTML tags from the message field before insert and email', async () => {
+    // Capture the actual insert payload to assert the sanitized value made it
+    // through to the row. Per `sanitizeMultiline` in src/lib/sanitize.ts, the
+    // function strips tag-shaped substrings but keeps the text content — so
+    // `<script>alert(1)</script>` becomes `alert(1)`.
+    let capturedInsertPayload: { message?: string | null } | null = null
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: SHELTER_USER_ID }),
+      tableResults: {
+        shelters: [{ data: { id: SHELTER_ID, name: 'Happy Tails' } }],
+        foster_parents: [{ data: null }],
+        shelter_foster_invites: [
+          {
+            data: {
+              id: 'invite-3',
+              email: 'safe@example.com',
+              status: 'pending',
+              foster_id: null,
+              created_at: '2026-04-22T00:00:00Z',
+            },
+          },
+        ],
+      },
+    })
+    // Wrap the insert chain to capture its argument. The mock returns a
+    // chainable object via `.from(table)`; we intercept `.insert` to record
+    // the payload before delegating to the existing implementation.
+    const originalFrom = client.from.bind(client)
+    client.from = ((table: string) => {
+      const chain = originalFrom(table)
+      if (table === 'shelter_foster_invites') {
+        const originalInsert = chain.insert.bind(chain)
+        chain.insert = ((payload: { message?: string | null }) => {
+          capturedInsertPayload = payload
+          return originalInsert(payload)
+        }) as typeof chain.insert
+      }
+      return chain
+    }) as typeof client.from
+
+    vi.mocked(createClient).mockResolvedValue(client)
+    const res = await callRoute({
+      email: 'safe@example.com',
+      message: 'Hi <script>alert(1)</script> <b>there</b>',
+    })
+
+    expect(res.status).toBe(200)
+    expect(capturedInsertPayload).not.toBeNull()
+    expect(capturedInsertPayload!.message).toBe('Hi alert(1) there')
+
+    // The email template must receive the same sanitized value — no raw input
+    // can ever leak via that path either. The component is mocked at the top
+    // of this file, so its call args expose the original prop bag.
+    expect(sendEmail).toHaveBeenCalledTimes(1)
+    expect(ShelterFosterInviteEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Hi alert(1) there' }),
+    )
   })
 
   it('returns 429 when rate limited', async () => {

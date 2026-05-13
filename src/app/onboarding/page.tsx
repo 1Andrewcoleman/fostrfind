@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useForm, Controller, type SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { PawPrint, Building2, Heart, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -20,9 +22,12 @@ import { FormEyebrow } from '@/components/ui/form-eyebrow'
 import { Separator } from '@/components/ui/separator'
 import { DEV_MODE, HOUSING_TYPES, EXPERIENCE_LEVELS } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/client'
-import { slugify } from '@/lib/helpers'
-import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
-import { normalizeInviteEmail } from '@/lib/shelter-roster'
+import {
+  shelterOnboardingSchema,
+  fosterOnboardingSchema,
+  type ShelterOnboardingInput,
+  type FosterOnboardingInput,
+} from '@/lib/schemas'
 import { cn } from '@/lib/utils'
 
 type Step = 'role' | 'shelter-form' | 'foster-form'
@@ -133,6 +138,25 @@ function RoleTile({
   )
 }
 
+/**
+ * Map an API error payload onto an inline form error string. Used by
+ * both onboarding forms. 422 responses carry per-field `details`; we
+ * surface the first message per field via `setError`, with a fallback
+ * banner if the response is shaped differently.
+ */
+interface ApiErrorBody {
+  error?: string
+  details?: Record<string, string[] | undefined>
+}
+
+async function readErrorBody(response: Response): Promise<ApiErrorBody> {
+  try {
+    return (await response.json()) as ApiErrorBody
+  } catch {
+    return {}
+  }
+}
+
 export default function OnboardingPage() {
   // Gate: unconfirmed-email users are bounced to /auth/verify-email, so
   // they can't create profile rows with an email they don't control.
@@ -162,181 +186,6 @@ export default function OnboardingPage() {
   }, [])
 
   const [step, setStep] = useState<Step>('role')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [shelter, setShelter] = useState({
-    name: '', email: '', phone: '', location: '', ein: '', bio: '', website: '', instagram: '',
-  })
-
-  const [foster, setFoster] = useState({
-    first_name: '', last_name: '', email: '', phone: '', location: '',
-    housing_type: '', has_yard: false, has_other_pets: false, other_pets_info: '',
-    has_children: false, children_info: '', experience: '', bio: '',
-  })
-
-  async function handleShelterSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    if (DEV_MODE) {
-      window.location.href = '/shelter/dashboard'
-      return
-    }
-
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError) {
-        console.error('[onboarding/shelter] getUser failed:', authError.message)
-        setError('Could not verify your session. Please sign in again.')
-        toast.error('Could not verify your session. Please sign in again.')
-        setLoading(false)
-        return
-      }
-      if (!user) {
-        setError('You must be logged in.')
-        toast.error('You must be logged in.')
-        setLoading(false)
-        return
-      }
-
-      const baseSlug = slugify(shelter.name) || 'shelter'
-      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
-
-      const { error: dbError } = await supabase.from('shelters').insert({
-        user_id: user.id,
-        name: sanitizeText(shelter.name),
-        slug,
-        email: shelter.email,
-        phone: shelter.phone ? sanitizeText(shelter.phone) || null : null,
-        location: sanitizeText(shelter.location),
-        ein: shelter.ein ? sanitizeText(shelter.ein) || null : null,
-        bio: shelter.bio ? sanitizeMultiline(shelter.bio) || null : null,
-        website: shelter.website ? sanitizeText(shelter.website) || null : null,
-        instagram: shelter.instagram ? sanitizeText(shelter.instagram) || null : null,
-      })
-
-      if (dbError) {
-        console.error('[onboarding/shelter] insert failed:', dbError.message)
-        const copy = 'Could not create your shelter. Please try again.'
-        setError(copy)
-        toast.error(copy)
-        setLoading(false)
-        return
-      }
-
-      toast.success('Shelter created! Redirecting...')
-      window.location.href = '/shelter/dashboard'
-    } catch {
-      setError('Something went wrong. Please try again.')
-      toast.error('Something went wrong. Please try again.')
-      setLoading(false)
-    }
-  }
-
-  async function handleFosterSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-
-    if (DEV_MODE) {
-      window.location.href = '/foster/browse'
-      return
-    }
-
-    try {
-      const supabase = createClient()
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError) {
-        console.error('[onboarding/foster] getUser failed:', authError.message)
-        setError('Could not verify your session. Please sign in again.')
-        toast.error('Could not verify your session. Please sign in again.')
-        setLoading(false)
-        return
-      }
-      if (!user) {
-        setError('You must be logged in.')
-        toast.error('You must be logged in.')
-        setLoading(false)
-        return
-      }
-
-      const { error: dbError } = await supabase.from('foster_parents').insert({
-        user_id: user.id,
-        first_name: sanitizeText(foster.first_name),
-        last_name: sanitizeText(foster.last_name),
-        email: foster.email,
-        phone: foster.phone ? sanitizeText(foster.phone) || null : null,
-        location: sanitizeText(foster.location),
-        housing_type: foster.housing_type || null,
-        has_yard: foster.has_yard,
-        has_other_pets: foster.has_other_pets,
-        other_pets_info: foster.other_pets_info
-          ? sanitizeMultiline(foster.other_pets_info) || null
-          : null,
-        has_children: foster.has_children,
-        children_info: foster.children_info
-          ? sanitizeMultiline(foster.children_info) || null
-          : null,
-        experience: foster.experience || null,
-        bio: foster.bio ? sanitizeMultiline(foster.bio) || null : null,
-      })
-
-      if (dbError) {
-        console.error('[onboarding/foster] insert failed:', dbError.message)
-        const copy = 'Could not create your profile. Please try again.'
-        setError(copy)
-        toast.error(copy)
-        setLoading(false)
-        return
-      }
-
-      // Claim any pending shelter-foster invites waiting on this email.
-      // Runs under the new foster's JWT — RLS on shelter_foster_invites
-      // already allows UPDATE when lower(email) matches the caller's
-      // foster_parents.email. Fire-and-forget; a claim failure should
-      // not block the foster from reaching their dashboard — the
-      // invites are still readable by email in /foster/invites and can
-      // be accepted there instead.
-      const newFosterEmail = normalizeInviteEmail(foster.email)
-      if (newFosterEmail) {
-        void (async () => {
-          try {
-            const { data: newFosterRow } = await supabase
-              .from('foster_parents')
-              .select('id')
-              .eq('user_id', user.id)
-              .maybeSingle()
-            const newFosterId = (newFosterRow as { id: string } | null)?.id
-            if (newFosterId) {
-              await supabase
-                .from('shelter_foster_invites')
-                .update({ foster_id: newFosterId })
-                .is('foster_id', null)
-                .ilike('email', newFosterEmail)
-                .eq('status', 'pending')
-            }
-          } catch (e) {
-            console.warn(
-              '[onboarding/foster] invite email-claim failed (non-fatal):',
-              e instanceof Error ? e.message : String(e),
-            )
-          }
-        })()
-      }
-
-      toast.success('Profile created! Redirecting...')
-      window.location.href = '/foster/browse'
-    } catch {
-      setError('Something went wrong. Please try again.')
-      toast.error('Something went wrong. Please try again.')
-      setLoading(false)
-    }
-  }
 
   if (authChecking) {
     return (
@@ -382,131 +231,384 @@ export default function OnboardingPage() {
   }
 
   if (step === 'shelter-form') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
-        <StepIndicator step={step} />
-        <Card className="w-full max-w-xl">
-          <CardContent className="pt-6">
-            <div className="mb-6 space-y-1.5">
-              <h1 className="font-display text-2xl font-semibold tracking-tight">
-                Tell us about your shelter
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                This info is visible to foster parents on your public shelter page.
-              </p>
-            </div>
-            <form onSubmit={handleShelterSubmit} className="space-y-6">
-              {error && (
-                <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
-              )}
-
-              <FormEyebrow>Identity</FormEyebrow>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2 space-y-1">
-                  <Label>Shelter / Rescue Name *</Label>
-                  <Input
-                    placeholder="Happy Paws Rescue"
-                    value={shelter.name}
-                    onChange={(e) => setShelter({ ...shelter, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <Label>Location (City, State) *</Label>
-                  <Input
-                    placeholder="Austin, TX"
-                    value={shelter.location}
-                    onChange={(e) => setShelter({ ...shelter, location: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>EIN (501c3)</Label>
-                  <Input
-                    placeholder="12-3456789"
-                    value={shelter.ein}
-                    onChange={(e) => setShelter({ ...shelter, ein: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <FormEyebrow>Contact</FormEyebrow>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>Email *</Label>
-                  <Input
-                    type="email"
-                    placeholder="info@shelter.org"
-                    value={shelter.email}
-                    onChange={(e) => setShelter({ ...shelter, email: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Phone</Label>
-                  <Input
-                    placeholder="(555) 000-0000"
-                    value={shelter.phone}
-                    onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Website</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={shelter.website}
-                    onChange={(e) => setShelter({ ...shelter, website: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label>Instagram Handle</Label>
-                  <Input
-                    placeholder="@happypaws"
-                    value={shelter.instagram}
-                    onChange={(e) => setShelter({ ...shelter, instagram: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              <FormEyebrow description="Optional. A short mission statement helps fosters trust you faster.">
-                About
-              </FormEyebrow>
-
-              <div className="space-y-1">
-                <Label>Short Bio</Label>
-                <Textarea
-                  placeholder="Tell foster parents about your organization..."
-                  value={shelter.bio}
-                  onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <Button type="submit" disabled={loading}>
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
-                </Button>
-                <Button type="button" variant="ghost" onClick={() => setStep('role')}>
-                  Back
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    return <ShelterForm onBack={() => setStep('role')} />
   }
 
-  // Foster form
+  return <FosterForm onBack={() => setStep('role')} />
+}
+
+/**
+ * Shelter onboarding form. POSTs to `/api/onboarding/shelter` which
+ * validates + sanitizes + inserts under the caller's JWT. Client-side
+ * Zod via `zodResolver` runs the same schema as the server for
+ * immediate UX feedback; 422 responses (rare — schema drift) surface
+ * per-field errors via `setError`.
+ */
+function ShelterForm({ onBack }: { onBack: () => void }) {
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ShelterOnboardingInput>({
+    resolver: zodResolver(shelterOnboardingSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      location: '',
+      ein: '',
+      bio: '',
+      website: '',
+      instagram: '',
+    },
+  })
+
+  const onSubmit: SubmitHandler<ShelterOnboardingInput> = async (values) => {
+    setSubmitError(null)
+
+    if (DEV_MODE) {
+      window.location.href = '/shelter/dashboard'
+      return
+    }
+
+    let response: Response
+    try {
+      response = await fetch('/api/onboarding/shelter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+    } catch (e) {
+      console.error(
+        '[onboarding/shelter] network error:',
+        e instanceof Error ? e.message : String(e),
+      )
+      const copy = 'Network error. Please check your connection and try again.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.ok) {
+      toast.success('Shelter created! Redirecting...')
+      window.location.href = '/shelter/dashboard'
+      return
+    }
+
+    const errorBody = await readErrorBody(response)
+
+    if (response.status === 422 && errorBody.details) {
+      for (const [field, messages] of Object.entries(errorBody.details)) {
+        if (messages && messages.length > 0) {
+          setError(field as keyof ShelterOnboardingInput, {
+            type: 'server',
+            message: messages[0],
+          })
+        }
+      }
+      const copy = errorBody.error ?? 'Please fix the highlighted fields.'
+      setSubmitError(copy)
+      return
+    }
+
+    if (response.status === 401) {
+      const copy = 'Please sign in again to continue.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.status === 409) {
+      const copy = errorBody.error ?? 'A shelter profile already exists for this account.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.status === 429) {
+      const copy = 'Too many requests. Please wait a moment and try again.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    console.error('[onboarding/shelter] submit failed:', {
+      status: response.status,
+      error: errorBody.error,
+    })
+    const copy = errorBody.error ?? 'Could not create your shelter. Please try again.'
+    setSubmitError(copy)
+    toast.error(copy)
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
-      <StepIndicator step={step} />
+      <StepIndicator step="shelter-form" />
+      <Card className="w-full max-w-xl">
+        <CardContent className="pt-6">
+          <div className="mb-6 space-y-1.5">
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Tell us about your shelter
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              This info is visible to foster parents on your public shelter page.
+            </p>
+          </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+            {submitError && (
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{submitError}</p>
+            )}
+
+            <FormEyebrow>Identity</FormEyebrow>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1">
+                <Label htmlFor="shelter-name">Shelter / Rescue Name *</Label>
+                <Input
+                  id="shelter-name"
+                  placeholder="Happy Paws Rescue"
+                  aria-invalid={errors.name ? 'true' : undefined}
+                  {...register('name')}
+                />
+                {errors.name && (
+                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                )}
+              </div>
+              <div className="col-span-2 space-y-1">
+                <Label htmlFor="shelter-location">Location (City, State) *</Label>
+                <Input
+                  id="shelter-location"
+                  placeholder="Austin, TX"
+                  aria-invalid={errors.location ? 'true' : undefined}
+                  {...register('location')}
+                />
+                {errors.location && (
+                  <p className="text-xs text-destructive">{errors.location.message}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="shelter-ein">EIN (501c3)</Label>
+                <Input
+                  id="shelter-ein"
+                  placeholder="12-3456789"
+                  aria-invalid={errors.ein ? 'true' : undefined}
+                  {...register('ein')}
+                />
+                {errors.ein && (
+                  <p className="text-xs text-destructive">{errors.ein.message}</p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <FormEyebrow>Contact</FormEyebrow>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="shelter-email">Email *</Label>
+                <Input
+                  id="shelter-email"
+                  type="email"
+                  placeholder="info@shelter.org"
+                  aria-invalid={errors.email ? 'true' : undefined}
+                  {...register('email')}
+                />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="shelter-phone">Phone</Label>
+                <Input
+                  id="shelter-phone"
+                  placeholder="(555) 000-0000"
+                  aria-invalid={errors.phone ? 'true' : undefined}
+                  {...register('phone')}
+                />
+                {errors.phone && (
+                  <p className="text-xs text-destructive">{errors.phone.message}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="shelter-website">Website</Label>
+                <Input
+                  id="shelter-website"
+                  placeholder="https://..."
+                  aria-invalid={errors.website ? 'true' : undefined}
+                  {...register('website')}
+                />
+                {errors.website && (
+                  <p className="text-xs text-destructive">{errors.website.message}</p>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="shelter-instagram">Instagram Handle</Label>
+                <Input
+                  id="shelter-instagram"
+                  placeholder="@happypaws"
+                  aria-invalid={errors.instagram ? 'true' : undefined}
+                  {...register('instagram')}
+                />
+                {errors.instagram && (
+                  <p className="text-xs text-destructive">{errors.instagram.message}</p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <FormEyebrow description="Optional. A short mission statement helps fosters trust you faster.">
+              About
+            </FormEyebrow>
+
+            <div className="space-y-1">
+              <Label htmlFor="shelter-bio">Short Bio</Label>
+              <Textarea
+                id="shelter-bio"
+                placeholder="Tell foster parents about your organization..."
+                rows={3}
+                aria-invalid={errors.bio ? 'true' : undefined}
+                {...register('bio')}
+              />
+              {errors.bio && (
+                <p className="text-xs text-destructive">{errors.bio.message}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
+              </Button>
+              <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
+                Back
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/**
+ * Foster onboarding form. POSTs to `/api/onboarding/foster` which
+ * validates + sanitizes + inserts under the caller's JWT, then claims
+ * any pending shelter invites for the new foster's email. Client-side
+ * Zod mirrors the server schema for immediate UX feedback.
+ */
+function FosterForm({ onBack }: { onBack: () => void }) {
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const {
+    register,
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FosterOnboardingInput>({
+    resolver: zodResolver(fosterOnboardingSchema),
+    defaultValues: {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      location: '',
+      housing_type: null,
+      has_yard: false,
+      has_other_pets: false,
+      other_pets_info: '',
+      has_children: false,
+      children_info: '',
+      experience: null,
+      bio: '',
+    },
+  })
+
+  const onSubmit: SubmitHandler<FosterOnboardingInput> = async (values) => {
+    setSubmitError(null)
+
+    if (DEV_MODE) {
+      window.location.href = '/foster/browse'
+      return
+    }
+
+    let response: Response
+    try {
+      response = await fetch('/api/onboarding/foster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
+    } catch (e) {
+      console.error(
+        '[onboarding/foster] network error:',
+        e instanceof Error ? e.message : String(e),
+      )
+      const copy = 'Network error. Please check your connection and try again.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.ok) {
+      toast.success('Profile created! Redirecting...')
+      window.location.href = '/foster/browse'
+      return
+    }
+
+    const errorBody = await readErrorBody(response)
+
+    if (response.status === 422 && errorBody.details) {
+      for (const [field, messages] of Object.entries(errorBody.details)) {
+        if (messages && messages.length > 0) {
+          setError(field as keyof FosterOnboardingInput, {
+            type: 'server',
+            message: messages[0],
+          })
+        }
+      }
+      const copy = errorBody.error ?? 'Please fix the highlighted fields.'
+      setSubmitError(copy)
+      return
+    }
+
+    if (response.status === 401) {
+      const copy = 'Please sign in again to continue.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.status === 409) {
+      const copy = errorBody.error ?? 'A foster profile already exists for this account.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    if (response.status === 429) {
+      const copy = 'Too many requests. Please wait a moment and try again.'
+      setSubmitError(copy)
+      toast.error(copy)
+      return
+    }
+
+    console.error('[onboarding/foster] submit failed:', {
+      status: response.status,
+      error: errorBody.error,
+    })
+    const copy = errorBody.error ?? 'Could not create your profile. Please try again.'
+    setSubmitError(copy)
+    toast.error(copy)
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 bg-background">
+      <StepIndicator step="foster-form" />
       <Card className="w-full max-w-xl">
         <CardContent className="pt-6">
           <div className="mb-6 space-y-1.5">
@@ -517,54 +619,70 @@ export default function OnboardingPage() {
               Helps shelters get to know you as a foster parent.
             </p>
           </div>
-          <form onSubmit={handleFosterSubmit} className="space-y-6">
-            {error && (
-              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{error}</p>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
+            {submitError && (
+              <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{submitError}</p>
             )}
 
             <FormEyebrow>Identity</FormEyebrow>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>First Name *</Label>
+                <Label htmlFor="foster-first-name">First Name *</Label>
                 <Input
-                  value={foster.first_name}
-                  onChange={(e) => setFoster({ ...foster, first_name: e.target.value })}
-                  required
+                  id="foster-first-name"
+                  aria-invalid={errors.first_name ? 'true' : undefined}
+                  {...register('first_name')}
                 />
+                {errors.first_name && (
+                  <p className="text-xs text-destructive">{errors.first_name.message}</p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label>Last Name *</Label>
+                <Label htmlFor="foster-last-name">Last Name *</Label>
                 <Input
-                  value={foster.last_name}
-                  onChange={(e) => setFoster({ ...foster, last_name: e.target.value })}
-                  required
+                  id="foster-last-name"
+                  aria-invalid={errors.last_name ? 'true' : undefined}
+                  {...register('last_name')}
                 />
+                {errors.last_name && (
+                  <p className="text-xs text-destructive">{errors.last_name.message}</p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label>Email *</Label>
+                <Label htmlFor="foster-email">Email *</Label>
                 <Input
+                  id="foster-email"
                   type="email"
-                  value={foster.email}
-                  onChange={(e) => setFoster({ ...foster, email: e.target.value })}
-                  required
+                  aria-invalid={errors.email ? 'true' : undefined}
+                  {...register('email')}
                 />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email.message}</p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label>Phone</Label>
+                <Label htmlFor="foster-phone">Phone</Label>
                 <Input
-                  value={foster.phone}
-                  onChange={(e) => setFoster({ ...foster, phone: e.target.value })}
+                  id="foster-phone"
+                  aria-invalid={errors.phone ? 'true' : undefined}
+                  {...register('phone')}
                 />
+                {errors.phone && (
+                  <p className="text-xs text-destructive">{errors.phone.message}</p>
+                )}
               </div>
               <div className="col-span-2 space-y-1">
-                <Label>Location (City, State) *</Label>
+                <Label htmlFor="foster-location">Location (City, State) *</Label>
                 <Input
+                  id="foster-location"
                   placeholder="Austin, TX"
-                  value={foster.location}
-                  onChange={(e) => setFoster({ ...foster, location: e.target.value })}
-                  required
+                  aria-invalid={errors.location ? 'true' : undefined}
+                  {...register('location')}
                 />
+                {errors.location && (
+                  <p className="text-xs text-destructive">{errors.location.message}</p>
+                )}
               </div>
             </div>
 
@@ -576,57 +694,99 @@ export default function OnboardingPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label>Housing Type</Label>
-                <Select onValueChange={(v) => setFoster({ ...foster, housing_type: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HOUSING_TYPES.map((h) => (
-                      <SelectItem key={h} value={h} className="capitalize">{h}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="foster-housing-type">Housing Type</Label>
+                <Controller
+                  control={control}
+                  name="housing_type"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? undefined}
+                      onValueChange={(v) => field.onChange(v as (typeof HOUSING_TYPES)[number])}
+                    >
+                      <SelectTrigger id="foster-housing-type" aria-invalid={errors.housing_type ? 'true' : undefined}>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {HOUSING_TYPES.map((h) => (
+                          <SelectItem key={h} value={h} className="capitalize">{h}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.housing_type && (
+                  <p className="text-xs text-destructive">{errors.housing_type.message}</p>
+                )}
               </div>
               <div className="space-y-1">
-                <Label>Experience with Dogs</Label>
-                <Select onValueChange={(v) => setFoster({ ...foster, experience: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EXPERIENCE_LEVELS.map((e) => (
-                      <SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="foster-experience">Experience with Dogs</Label>
+                <Controller
+                  control={control}
+                  name="experience"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value ?? undefined}
+                      onValueChange={(v) => field.onChange(v as (typeof EXPERIENCE_LEVELS)[number])}
+                    >
+                      <SelectTrigger id="foster-experience" aria-invalid={errors.experience ? 'true' : undefined}>
+                        <SelectValue placeholder="Select..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXPERIENCE_LEVELS.map((e) => (
+                          <SelectItem key={e} value={e} className="capitalize">{e}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.experience && (
+                  <p className="text-xs text-destructive">{errors.experience.message}</p>
+                )}
               </div>
 
               <div className="col-span-2 flex flex-wrap gap-6">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="yard"
-                    checked={foster.has_yard}
-                    onCheckedChange={(c) => setFoster({ ...foster, has_yard: c === true })}
-                  />
-                  <Label htmlFor="yard" className="font-normal cursor-pointer">Has yard</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="pets"
-                    checked={foster.has_other_pets}
-                    onCheckedChange={(c) => setFoster({ ...foster, has_other_pets: c === true })}
-                  />
-                  <Label htmlFor="pets" className="font-normal cursor-pointer">Has other pets</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="kids"
-                    checked={foster.has_children}
-                    onCheckedChange={(c) => setFoster({ ...foster, has_children: c === true })}
-                  />
-                  <Label htmlFor="kids" className="font-normal cursor-pointer">Has children</Label>
-                </div>
+                <Controller
+                  control={control}
+                  name="has_yard"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="yard"
+                        checked={field.value === true}
+                        onCheckedChange={(c) => field.onChange(c === true)}
+                      />
+                      <Label htmlFor="yard" className="font-normal cursor-pointer">Has yard</Label>
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="has_other_pets"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="pets"
+                        checked={field.value === true}
+                        onCheckedChange={(c) => field.onChange(c === true)}
+                      />
+                      <Label htmlFor="pets" className="font-normal cursor-pointer">Has other pets</Label>
+                    </div>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="has_children"
+                  render={({ field }) => (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="kids"
+                        checked={field.value === true}
+                        onCheckedChange={(c) => field.onChange(c === true)}
+                      />
+                      <Label htmlFor="kids" className="font-normal cursor-pointer">Has children</Label>
+                    </div>
+                  )}
+                />
               </div>
             </div>
 
@@ -637,20 +797,24 @@ export default function OnboardingPage() {
             </FormEyebrow>
 
             <div className="space-y-1">
-              <Label>About You</Label>
+              <Label htmlFor="foster-bio">About You</Label>
               <Textarea
+                id="foster-bio"
                 placeholder="Tell shelters about yourself and your fostering experience..."
-                value={foster.bio}
-                onChange={(e) => setFoster({ ...foster, bio: e.target.value })}
                 rows={3}
+                aria-invalid={errors.bio ? 'true' : undefined}
+                {...register('bio')}
               />
+              {errors.bio && (
+                <p className="text-xs text-destructive">{errors.bio.message}</p>
+              )}
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              <Button type="submit" disabled={loading}>
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Setting up…</> : 'Complete setup'}
               </Button>
-              <Button type="button" variant="ghost" onClick={() => setStep('role')}>
+              <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
                 Back
               </Button>
             </div>

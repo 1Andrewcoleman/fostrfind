@@ -1,8 +1,13 @@
+import { z } from 'zod'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
+
+const statusSchema = z.object({
+  status: z.literal('available'),
+})
 
 /**
  * PATCH /api/dogs/[id]/status
@@ -73,12 +78,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const requestedStatus =
-    body && typeof body === 'object' && 'status' in body
-      ? (body as { status: unknown }).status
-      : undefined
-
-  if (requestedStatus !== 'available') {
+  const parsed = statusSchema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json(
       { error: 'Only transitioning to "available" is supported' },
       { status: 400 },

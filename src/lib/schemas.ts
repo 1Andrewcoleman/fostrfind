@@ -41,7 +41,10 @@ export const passwordSchema = z
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, 'Enter your password'),
+  // min(1) not min(PASSWORD_MIN): don't re-enforce strength rules at login
+  // so users who signed up before the min-length policy still authenticate.
+  // max(PASSWORD_MAX): prevents bcrypt CPU exhaustion on huge inputs.
+  password: z.string().min(1, 'Enter your password').max(PASSWORD_MAX),
 })
 export type LoginInput = z.infer<typeof loginSchema>
 

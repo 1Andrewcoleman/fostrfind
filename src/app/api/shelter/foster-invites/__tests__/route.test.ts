@@ -10,10 +10,19 @@ vi.mock('@/lib/email', () => ({
   sendEmail: vi.fn(),
   getAppUrl: () => 'http://localhost:3000',
 }))
+// Mock the email component so we can assert on the props it was called with.
+// The real component is a function that returns rendered EmailLayout JSX, so
+// `emailCall.react.props.message` would be undefined. Replacing it with a
+// vi.fn() returning null lets us inspect the original prop bag via
+// `vi.mocked(ShelterFosterInviteEmail).mock.calls[0][0]`.
+vi.mock('@/emails/shelter-foster-invite', () => ({
+  ShelterFosterInviteEmail: vi.fn(() => null),
+}))
 
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail } from '@/lib/email'
+import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
 import { POST } from '@/app/api/shelter/foster-invites/route'
 
 const SHELTER_USER_ID = 'user-shelter-1'
@@ -212,11 +221,12 @@ describe('POST /api/shelter/foster-invites', () => {
     expect(capturedInsertPayload!.message).toBe('Hi alert(1) there')
 
     // The email template must receive the same sanitized value — no raw input
-    // can ever leak via that path either.
+    // can ever leak via that path either. The component is mocked at the top
+    // of this file, so its call args expose the original prop bag.
     expect(sendEmail).toHaveBeenCalledTimes(1)
-    const emailCall = vi.mocked(sendEmail).mock.calls[0][0]
-    const reactEl = emailCall.react as { props: { message?: string | null } }
-    expect(reactEl.props.message).toBe('Hi alert(1) there')
+    expect(ShelterFosterInviteEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Hi alert(1) there' }),
+    )
   })
 
   it('returns 429 when rate limited', async () => {

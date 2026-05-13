@@ -17,9 +17,9 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Edit dog — edit page loads dog via `select`; `DogForm` updates row
 - [x] List dogs — `/shelter/dogs` loads `dogs` for the signed-in shelter
 - [x] Delete dog — `DogDeleteButton` → `DELETE /api/dogs/[id]`; shelter ownership; 409 if active applications block deletion
-- [ ] Dog photo upload — file input renders; `/api/upload/photo` is a stub; needs FormData parsing, resize, Supabase Storage upload
-- [ ] Photo preview/reorder in `DogForm`
-- [ ] Dog status transitions (available → pending → placed) — no toggle/control in UI
+- [x] Dog photo upload — `DogForm` calls `POST /api/upload/photo`; `PhotoThumb` previews uploaded photos; sequential upload on save
+- [~] Photo preview/reorder in `DogForm` — preview and remove implemented (`PhotoThumb` grid); drag-to-reorder not yet shipped
+- [x] Dog status transitions (available → pending → placed) — `DogRelistButton` + `PATCH /api/dogs/[id]/status` (`relist_dog` RPC)
 
 ## 3. Browse & Search (Foster Side)
 
@@ -46,8 +46,8 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] `POST /api/applications/[id]/accept` — auth check, verify shelter ownership, idempotency guard, update status + dog → pending
 - [x] `POST /api/applications/[id]/decline` — auth check, verify shelter ownership, idempotency guard, update status
 - [x] `POST /api/applications/[id]/complete` — auth check, verify shelter ownership, idempotency guard, update status + dog → placed
-- [ ] `POST /api/notifications/send` — Resend integration (code is commented out), email templates
-- [ ] `POST /api/upload/photo` — auth check, FormData parse, image resize, Supabase Storage upload, return public URL
+- [x] `POST /api/notifications/send` — generic endpoint intentionally disabled (410 Gone); per-event emails wired directly in domain routes (accept, decline, complete)
+- [x] `POST /api/upload/photo` — auth, FormData parse, magic-byte MIME validation, role-based bucket enforcement, Supabase Storage upload via `@/lib/storage.ts`
 - [x] `POST /api/ratings` — auth, completed application, shelter ownership, idempotent insert
 - [x] `DELETE /api/dogs/[id]` — auth, shelter ownership, guard against deleting dogs tied to active applications
 
@@ -57,7 +57,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Send message — `MessageThread` inserts into `messages` with `sender_id` / `sender_role`; optimistic UI
 - [x] Fetch messages — server `select` by `application_id`, ordered for display; initial props mirrored after mark-as-read `UPDATE` so client state matches DB
 - [x] Message list pages — server-fetched threads (accepted/completed apps) with last message preview + per-thread unread badges
-- [ ] Supabase Realtime subscription — subscribe to `postgres_changes` on `messages` for live updates without refresh
+- [x] Supabase Realtime subscription — `postgres_changes` on `public.messages` in `MessageThread`; deduplicates own-sends against optimistic rows; marks incoming as read client-side
 - [x] Unread message count / indicators — layouts count unread (by role); thread list badges; nav badge via `portal-nav`
 - [x] Mark messages as read on open — server marks other-party unread rows when thread loads; RLS allows `UPDATE (read)` only (see migrations `20240103000000`, `20240104000000`)
 
@@ -73,7 +73,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] Foster profile page — server-fetches `foster_parents` row; `FosterProfileForm` client component upserts via Supabase; Sonner toasts
 - [x] Shelter settings page — server-fetches `shelters` row; `ShelterSettingsForm` client component updates via Supabase; Sonner toasts
-- [ ] Avatar/logo upload — file inputs exist (disabled); needs Supabase Storage wiring
+- [x] Avatar/logo upload — `AvatarLogoField` component wired in both foster profile and shelter settings forms
 - [x] `ProfileCompleteness` component — reads from server-fetched data passed via props
 
 ## 9. Dashboard (Shelter)
@@ -92,32 +92,32 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ## 11. Email Notifications (Resend)
 
-- [ ] Set up Resend API key (currently placeholder in `.env.local`)
-- [ ] Application submitted → email shelter
-- [ ] Application accepted → email foster
-- [ ] Application declined → email foster
-- [ ] Foster completed → email both parties
-- [ ] New message → email recipient (debounced)
-- [ ] Email templates (HTML) for each notification type
+- [~] Set up Resend API key — `@/lib/email.ts` integrated with Resend; degrades to console log when `RESEND_API_KEY` is missing or not a real key; set env var to enable
+- [ ] Application submitted → email shelter (only in-app notification currently; no `sendEmail` call in `POST /api/applications`)
+- [x] Application accepted → email foster — `sendEmail` wired in `POST /api/applications/[id]/accept`
+- [x] Application declined → email foster — `sendEmail` wired in `POST /api/applications/[id]/decline`
+- [x] Foster completed → email both parties — two `sendEmail` calls in `POST /api/applications/[id]/complete`
+- [ ] New message → email recipient (debounced) — only in-app notification currently; no `sendEmail` call in `POST /api/messages`
+- [x] Email templates (HTML) for each notification type — React email templates implemented in `@/lib/email.ts`
 
 ## 12. Photo & File Storage
 
-- [ ] Supabase Storage upload helper (shared across dog photos, logos, avatars)
-- [ ] Image resize/optimization before upload
-- [ ] Storage bucket RLS policies (currently buckets exist but no access policies)
-- [ ] Delete old photos on replacement
-- [ ] Max file size validation client-side
+- [x] Supabase Storage upload helper — `@/lib/storage.ts` with `validateImageFile`, `uploadImage`, `buildUploadPath`, `checkBucketRole`, `validateBucketName`
+- [ ] Image resize/optimization before upload — not implemented; images uploaded at original size
+- [x] Storage bucket RLS policies — migration `20240112000000_storage_buckets.sql`; per-bucket SELECT/INSERT/DELETE policies
+- [x] Delete old photos on replacement — `AvatarLogoField` derives old path from `initialUrl` and calls `storage.remove()` before uploading the new file
+- [x] Max file size validation client-side — `validateImageFileFast` (sync, checks `file.size` against `MAX_FILE_SIZE_BYTES`)
 
 ## 13. Security & Edge Cases
 
 - [x] RLS recursion fix — `SECURITY DEFINER` helpers (`get_my_foster_ids`, `get_my_shelter_ids`) break circular policy deps (migration `20240102000000`)
 - [x] Messages mark-as-read hardening — column-scoped `UPDATE (read)` + tightened policy so participants cannot edit message body or sender columns (migration `20240104000000`)
 - [x] Verify application ownership before status changes (all three API routes check shelter `user_id`)
-- [ ] Rate limiting on API routes
-- [ ] Input sanitization on all user-submitted text (XSS prevention)
+- [x] Rate limiting on API routes — `validateMutationRequest` enforcer on all mutation routes
+- [x] Input sanitization on all user-submitted text (XSS prevention) — `sanitizeText` / `sanitizeMultiline` in both profile forms and dog form
 - [x] Prevent duplicate applications (same foster + same dog) — dog detail page checks for existing application on load; button disabled if already applied
 - [ ] Handle expired/revoked sessions gracefully
-- [ ] CSRF protection on mutation endpoints
+- [x] CSRF protection on mutation endpoints — covered by `HttpOnly` same-site session cookies + Supabase SSR auth
 
 ## 14. UX Polish
 
@@ -127,75 +127,75 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 - [x] Mobile navigation — `MobileNav` + `Sheet` in `portal-nav.tsx` (foster + shelter layouts)
 - [x] Active nav link highlighting — `usePathname` in `portal-nav.tsx`
 - [~] Empty state components — used on browse, shelter dogs, applications, dashboard, history
-- [ ] Form error display improvements
+- [~] Form error display improvements — per-field inline errors on DogForm, AccountSettingsForm, and profile forms; no global form-error component or banner pattern
 - [x] Optimistic UI updates for messaging — `MessageThread` appends sent messages before insert completes
 
 ## 15. Infrastructure
 
-- [ ] Environment variable validation on startup
-- [ ] Error boundary improvements (`error.tsx` exists but is generic)
-- [ ] Sentry or equivalent error tracking
+- [x] Environment variable validation on startup — `validateEnv()` in `src/lib/env.ts`; called in `layout.tsx` on module load; hard-fails for missing production vars
+- [x] Error boundary improvements — custom error UI with Sentry `captureException`, digest reference IDs, and `mailto:support@fostrfind.com` in all three `error.tsx` files
+- [x] Sentry or equivalent error tracking
 - [ ] Analytics (PostHog, Mixpanel, etc.)
-- [ ] CI/CD pipeline
-- [ ] Production deployment (Vercel)
+- [~] CI/CD pipeline — Dependabot configured (`.github/workflows/dependabot.yml`); no build/test/deploy GitHub Actions workflow yet
+- [x] Production deployment (Vercel)
 - [ ] Database backups strategy
-- [ ] Seed script for development data
-- [ ] Automated tests — unit/integration coverage for helpers (`formatRelativeTime`, etc.), `portal-layout-data`, and critical API routes (no test runner wired yet)
-- [ ] **Layout data perf** — `getPortalLayoutData` still runs two parallel queries against `foster_parents` / `shelters` (unread count + identity); consider fetching the profile row once and reusing it for both paths
+- [x] Seed script for development data — `scripts/seed.ts` (dog data, users, applications)
+- [x] Automated tests — 27 test files across `src/lib/__tests__/`, `src/components/notifications/__tests__/`, and API route `__tests__/` directories
+- [ ] **Layout data perf** — `getPortalLayoutData` still runs multiple queries; profile row could be shared between unread-count and identity paths
 
 ---
 
 ## 16. Auth — Critical Gaps
 
 - [x] **Sign-out** — `PortalSidebarUser` + `supabase.auth.signOut()` + hard nav to `/login` in desktop sidebar and mobile nav sheet (see [`src/components/portal-sidebar-user.tsx`](../src/components/portal-sidebar-user.tsx))
-- [ ] **Forgot password / reset password flow** — login page has no "Forgot password?" link; implement `supabase.auth.resetPasswordForEmail()` + a `/auth/reset-password` callback route that handles the magic-link token and lets the user set a new password
-- [ ] **Email verification handling** — after `signUp()` Supabase sends a confirmation email but the app immediately redirects to `/onboarding` with no check on `email_confirmed_at`; add a `/auth/confirm` route handler and an "please verify your email" interstitial
+- [x] **Forgot password / reset password flow** — `/auth/forgot-password` + `/auth/reset-password` implemented with `supabase.auth.resetPasswordForEmail()`
+- [x] **Email verification handling** — `/auth/verify-email` interstitial + `/auth/confirm` route handler implemented
 
 ## 17. Foster Dashboard
 
-- [ ] Foster home / dashboard page at `/foster/dashboard` — show active application count, current fostering placements, unread messages badge, and recent application cards (mirrors the shelter dashboard pattern)
-- [ ] Redirect foster post-login to `/foster/dashboard` instead of `/foster/browse`
-- [ ] Add Dashboard nav item to `FOSTER_NAV` in `portal-nav.tsx`
+- [x] Foster home / dashboard page at `/foster/dashboard` — shows active application count, current fostering placements, unread messages, and recent application cards
+- [x] Redirect foster post-login to `/foster/dashboard` instead of `/foster/browse`
+- [x] Add Dashboard nav item to `FOSTER_NAV` in `portal-nav.tsx`
 
 ## 18. Application Workflow Gaps
 
-- [ ] **"Reviewing" status transition** — DB supports `submitted → reviewing → accepted/declined` but there is no shelter UI button to move an application to `reviewing`; add a "Mark as Reviewing" action to `AcceptDeclineButtons` + a `POST /api/applications/[id]/review` route
-- [ ] **Foster application withdrawal** — foster parents have no way to cancel a `submitted` or `reviewing` application; add a "Withdraw Application" button on the foster application detail/list + `DELETE /api/applications/[id]` (guard: only when status is `submitted` or `reviewing`)
-- [ ] **"View Conversation" link from application pages** — shelter application detail and foster application list have no direct link to the message thread; add a "Message" button linking to `/shelter/messages/[applicationId]` or `/foster/messages/[applicationId]` when the application is accepted/completed
+- [x] **"Reviewing" status transition** — "Mark as Reviewing" in `AcceptDeclineButtons` + `POST /api/applications/[id]/review` route with rate limiting and notify
+- [x] **Foster application withdrawal** — `WithdrawApplicationButton` in `ApplicationStatusCard`; `DELETE /api/applications/[id]` guarded to `submitted`/`reviewing` only
+- [x] **"View Conversation" link from application pages** — "Message Foster/Parent" button on shelter app detail and foster `ApplicationStatusCard` when `accepted`/`completed`
 
 ## 19. Dog & Shelter Management Gaps
 
-- [ ] **Manual dog status override** — if an accepted placement falls through, shelters have no way to reset a dog from `pending` back to `available`; add a status dropdown or "Re-list Dog" action on the edit dog page + a `PATCH /api/dogs/[id]/status` route
-- [ ] **Shelter placed/completed dogs history** — `/shelter/dogs` only shows active dogs; add a "Placed" tab or separate page listing dogs with `status = 'placed'` and their associated completed application records
+- [x] **Manual dog status override** — `DogRelistButton` on edit dog page + `PATCH /api/dogs/[id]/status` using `relist_dog` atomic RPC
+- [x] **Shelter placed/completed dogs history** — "Placed" tab on `/shelter/dogs` shows dogs with `status = 'placed'` and linked completed application records
 
 ## 20. Browse & Discovery Gaps
 
-- [ ] **Text / keyword / breed search** — the filter sidebar has no free-text input; add a search box that filters by dog `name` and `breed` (client-side against loaded data or a Supabase `ilike` query)
-- [ ] **Pre-populate browse filters from foster preferences** — `foster_parents` has `pref_size`, `pref_age`, and `pref_medical` columns collected during onboarding but browse never uses them; on first load (no URL params), initialise `FilterState` from the signed-in foster's saved preferences
-- [ ] **Public shelter profile page** — dog cards show the shelter name but it is not clickable; add a `/shelter/[slug]` public page showing shelter bio, logo, location, and active listings so fosters can vet a shelter before applying
-- [ ] **Pagination on all list pages** — pagination is noted for browse only; shelter applications, foster applications, shelter dogs, and message thread lists all fetch all records; add cursor/page-based pagination or infinite scroll
+- [x] **Text / keyword / breed search** — debounced search input in `BrowseFilterForm` filters by `name` / `breed` client-side
+- [x] **Pre-populate browse filters from foster preferences** — browse page reads foster `pref_size`, `pref_age`, `pref_medical` and initialises `FilterState` when no URL params are set
+- [x] **Public shelter profile page** — `src/app/shelters/[slug]/page.tsx`; shows shelter bio, logo, location, active dogs, and ratings; `/src/app/shelters/page.tsx` for shelter directory
+- [~] **Pagination** — browse page has load-more infinite scroll (`PAGE_SIZE=24`); other list pages (applications, shelter dogs, messages) still fetch all records
 
 ## 21. Account Settings
 
-- [ ] **Change password** — no auth-level account settings page exists; add `/account/settings` (or extend shelter settings / foster profile) with a "Change Password" section calling `supabase.auth.updateUser({ password })`
-- [ ] **Change email** — similarly, users cannot update their login email; add an email-change form that calls `supabase.auth.updateUser({ email })` and handles the re-confirmation flow
-- [ ] **Account deletion** — users cannot delete their accounts; required by GDPR / CCPA; add a "Delete Account" danger-zone section that anonymises profile data, cancels active applications, and calls `supabase.auth.admin.deleteUser()` via a server action
+- [x] **Change password** — "Change Password" section in `AccountSettingsForm` calls `supabase.auth.updateUser({ password })`
+- [x] **Change email** — `AccountSettingsForm` has `handleEmailChange()` calling `supabase.auth.updateUser({ email })` with re-confirmation email via Supabase
+- [x] **Account deletion** — "Delete Account" danger-zone in `AccountSettingsForm`; anonymises profile data and calls delete via server action
 
 ## 22. Two-Way Trust & Ratings
 
-- [ ] **Foster-to-shelter ratings** — only shelters can rate foster parents; add a reverse rating flow so fosters can rate their shelter experience after a completed placement; requires a new `shelter_ratings` table (or a `rater_role` column on `ratings`) + `POST /api/shelter-ratings`
-- [ ] **Shelter verification workflow** — `shelters.is_verified` is always `false`; add a verification request button on shelter settings, an admin review queue, and surface the verified badge on shelter profiles and dog listings
+- [x] **Foster-to-shelter ratings** — `shelter_ratings` table (migration `20240107000000`), `POST /api/shelter-ratings` route, and rating UI implemented
+- [~] **Shelter verification workflow** — `is_verified` badge shown on shelter profiles and dog listings; verification set manually via SQL (OPS-5); no admin queue or request flow yet
 
 ## 23. Collaboration & Scale
 
 - [ ] **Shelter multi-staff access** — each shelter is bound to a single `user_id`; add a `shelter_members` join table with roles (owner / staff) + an invitation flow so multiple staff can manage the same shelter account
-- [ ] **In-app notification center** — the only notification surface is the unread message badge; add a notification bell + dropdown/page for events like "your application was accepted," "a foster applied to your dog," and "new message received" backed by a `notifications` table
+- [x] **In-app notification center** — notification bell + dropdown implemented; `notifications` table backed; wired to application accept/decline/complete events (Steps 48–49)
 
 ## 24. Legal & Compliance
 
-- [ ] **Terms of Service page** — no legal pages exist; add `/terms` with ToS content; link from signup and footer
-- [ ] **Privacy Policy page** — add `/privacy` covering data collected (location, housing info, children/pets details, EIN); link from signup and footer
-- [ ] **Terms acceptance on signup** — add a required checkbox on the signup form confirming the user accepts the ToS and Privacy Policy; store acceptance timestamp on the user record
+- [x] **Terms of Service page** — `/terms` page implemented with ToS content; linked from signup and footer
+- [x] **Privacy Policy page** — `/privacy` page implemented; linked from signup and footer
+- [~] **Terms acceptance on signup** — required checkbox + Zod validation wired in signup form; `terms_accepted_at` timestamp not yet stored on the user record
 
 ---
 
@@ -216,7 +216,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25b. Landing Page
 
-- [ ] **Hero section redesign** — replace the centered icon-on-a-circle with a full-bleed asymmetric layout: large headline on the left, a real dog photography placeholder (or illustrated scene) on the right; add a warm gradient wash behind the headline instead of the flat `bg-gradient-to-b from-background to-muted`
+- [~] **Hero section redesign** — hero has a real dog photo (`HERO_IMAGE_SRC`, licensed Unsplash) and stacked layout; not the full asymmetric two-column design; How-It-Works is card-based but minimal; needs photo commission before broad launch
 - [x] **Animated headline or subtle entrance** — fade/slide-in on hero icon, headline, subtext, and CTAs using `tailwindcss-animate` (`animate-in` + staggered delays); `motion-reduce:animate-none` for accessibility
 - [ ] **Social proof / stats bar** — add a row of trust signals below the CTA buttons (e.g. "2,400+ dogs fostered · 180+ partner shelters · ★ 4.9 avg foster rating") in a muted banner strip; even as placeholder copy it signals maturity
 - [ ] **"How It Works" step cards** — replace the three plain icon circles with illustrated or icon-rich cards that have a number badge, a more descriptive graphic, and a subtle background tint per step; give them a border and shadow-sm so they read as cards, not floating text
@@ -245,7 +245,7 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 - [x] **Sticky filter sidebar** — the filter sidebar scrolls away with the page; add `sticky top-6` so filters stay in view while browsing the grid
 - [x] **Filter sidebar as floating card** — wrap the filter sidebar in a `Card` with `shadow-sm` and `rounded-xl` so it has visual weight and looks like a panel, not bare text on the page background
-- [ ] **Filter chips / pill selectors** — replace the checkbox lists for Size and Age with horizontal pill/chip toggle buttons (outlined → filled on select) which are more mobile-friendly and visually legible; keep checkboxes only for the binary medical toggle
+- [x] **Filter chips / pill selectors** — `FilterPill` component in `filter-sidebar.tsx` renders Size/Age as pill-toggle buttons with `role="checkbox"` aria semantics
 - [x] **Results count + active filter chips** — show a "12 dogs found" count above the grid with removable chips for each active filter so users can see and undo filters without scrolling back to the sidebar
 - [x] **Mobile filter sheet** — on small screens the 64-width sidebar is hidden but there is no "Filter" button to access it; add a floating `Filter` pill button fixed to the bottom of the screen on mobile that opens a `Sheet` containing the filter sidebar
 
@@ -258,17 +258,17 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25g. Empty States
 
-- [ ] **Illustrated empty states** — all empty states currently show plain text with no visual; add a unique SVG illustration or icon composition per context (e.g. a sleepy dog for "no applications", a magnifying glass with paw for "no dogs match filters", a speech bubble for "no messages")
+- [~] **Illustrated empty states** — `EmptyState` uses Lucide icon glyphs (paw, dog, messages, applications, history, shelter, notifications) at 40–48px; not rich custom SVG illustrations
 - [~] **Empty state CTA buttons** — `EmptyState` is a client component: use `href` from Server Components, `onClick` from Client Components; browse (clear filters), messages, shelter dashboard, and shelter applications list now wire CTAs — finish auditing any remaining empty views
 
 ### 25h. Forms & Inputs
 
 - [x] **Input focus ring** — the default focus ring uses `--ring` (same dark navy as the text); replace with a warm-colored focus ring (`ring-primary/50` or the new `--warm` token) so focused inputs are clearly highlighted
-- [ ] **Section headers inside forms** — `CardTitle` headings like "Personal Info" and "Foster Preferences" are plain `font-semibold` text; add a colored left-border accent line or a small icon before each section title to create visual anchoring
-- [ ] **Avatar upload area redesign** — the current upload area is a `h-16 w-16` circle with an `Upload` icon; replace with a dashed-border drop zone (`border-2 border-dashed border-muted-foreground/30 hover:border-primary`) that shows a preview when a file is selected, and a subtle "Drag & drop or click to upload" label
-- [ ] **Inline field validation styling** — required fields have no visual indicator (no asterisk, no color); add a subtle red `*` after required labels and a green checkmark icon that appears inside the input when the field is valid
-- [ ] **Profile completeness bar** — the `ProfileCompleteness` banner is plain muted/border; restyle it as a warm amber/honey banner with a progress bar that fills with the warm accent color and animated transitions when new fields are completed
-- [ ] **Floating save button** — on long forms (foster profile, shelter settings) the save button is at the very bottom and requires scrolling; add a sticky `bottom-0` save bar that appears once the user has made a change (dirty state detection)
+- [x] **Section headers inside forms** — `FormEyebrow` component used in `foster-profile-form.tsx` and `shelter-settings-form.tsx` for section separation with description subtext
+- [x] **Avatar upload area redesign** — `AvatarLogoField` has dashed-border drop zone with live preview, clear button, and "click or drag to upload" affordance
+- [ ] **Inline field validation styling** — required fields have no visual indicator; add red `*` after required labels and green checkmark on valid inputs
+- [ ] **Profile completeness bar** — `ProfileCompleteness` banner not yet styled with warm amber progress bar
+- [x] **Floating save button** — `StickySaveBar` with dirty-state detection wired in `DogForm`, `FosterProfileForm`, and `ShelterSettingsForm`
 
 ### 25i. Dashboard (Shelter)
 
@@ -292,17 +292,17 @@ Status legend: `[ ]` not started · `[~]` partial (UI exists, no backend) · `[x
 
 ### 25l. Micro-interactions & Motion
 
-- [ ] **Page transition** — add a subtle `opacity-0 → opacity-100` fade on route change using a layout-level animation wrapper so navigating between pages feels smooth rather than an instant flash
+- [ ] **Page transition** — no layout-level route-change animation wrapper yet
 - [x] **Button loading state** — buttons in loading state currently just change label text; add an inline `Loader2` spinning icon (from lucide) before the label so the affordance is clearer
-- [ ] **Card entrance animations** — dog browse cards, application cards, and dashboard stat cards should fade-and-slide-up on mount using `animate-fade-in` with staggered `animation-delay` based on index, so grids don't pop in all at once
+- [x] **Card entrance animations** — `StaggerItem` wraps browse dog cards, application cards, and stat cards with `animate-in fade-in slide-in-from-bottom-1` and staggered `animation-delay` per index
 - [x] **Toast redesign** — Sonner toasts are styled by default; customise with the brand palette — success toasts with a warm green + paw checkmark icon, error toasts with a muted red, info toasts with the brand warm color
 
 ### 25m. Accessibility & Responsive Polish
 
 - [x] **Keyboard focus visibility** — run through all interactive elements; many shadcn defaults have `focus-visible:ring-2` but the ring color (dark navy on white) has low contrast ratio; switch to a high-contrast ring using the new warm accent token
-- [ ] **Responsive browse layout** — on screens between `sm` and `md` the filter sidebar and grid are squeezed into a cramped two-column layout; add a collapsible sidebar toggle at the `md` breakpoint so the grid can use full width when filters are hidden
+- [x] **Responsive browse layout** — `FilterSidebar` is `hidden md:block`; mobile filter `Sheet` with floating FAB button; collapsible panel fully implemented
 - [x] **Mobile form inputs** — `Input` / `SelectTrigger` use `h-11 md:h-10`; `Textarea` has taller min-height + padding on mobile; browse filters use `min-h-[44px]` rows for checkbox/radio rows
-- [ ] **Print stylesheet** — `/shelter/applications/[id]` and foster profiles are the kind of pages shelter staff may want to print; add a `@media print` block that hides the nav, action buttons, and sidebar and formats the content as a clean single-column document
+- [x] **Print stylesheet** — `@media print` block in `globals.css` hides nav/buttons/sidebar and formats content as single-column; `[data-print-hide]` + `.print:hidden` utilities
 
 ### 25n. Main content width & alignment (portal pages)
 
@@ -320,25 +320,25 @@ On wide screens the main content column (`flex-1` in `(foster)/` and `(shelter)/
 
 ### RED — must fix before real users
 
-- [ ] **Database indexes** — add indexes on `dogs(status, shelter_id)`, `applications(foster_id, shelter_id, dog_id, status)`, `messages(application_id, read)`, `shelters(user_id)`, `foster_parents(user_id)` (new migration)
-- [ ] **Atomic status transitions** — replace separate UPDATE calls in accept/complete API routes with Postgres functions or `supabase.rpc()` calls that run both updates in a single transaction; current code can leave app `accepted` but dog still `available` if second query fails
-- [ ] **Unique constraints** — add `UNIQUE(dog_id, foster_id)` on `applications` and `UNIQUE(application_id)` on `ratings` to enforce idempotency at the DB level (current guards are UI/API-only, concurrent requests can bypass)
-- [ ] **RLS: block applications to non-available dogs** — add INSERT policy check `dog_id IN (SELECT id FROM dogs WHERE status = 'available')` so fosters cannot apply to pending/placed dogs at the DB level
-- [ ] **`getUser()` error handling** — audit all ~20 call sites (`auth-guard`, `role-guard`, `auth-routing`, server pages); check `error` field and handle gracefully instead of treating network/token errors as “no user” → redirect to login
-- [ ] **Server page error handling** — wrap Supabase queries in try-catch on all server-rendered pages (dashboard, applications, messages, history); show inline error states instead of crashing to generic `error.tsx`
+- [x] **Database indexes** — migration `20240109000000_add_indexes.sql` adds all required indexes
+- [x] **Atomic status transitions** — migrations `20240110000000_atomic_transitions.sql`; accept/complete API routes use `accept_application` / `complete_application` RPCs
+- [x] **Unique constraints** — migration `20240111000000_unique_constraints.sql` adds `UNIQUE(dog_id, foster_id)` on `applications` and `UNIQUE(application_id)` on `ratings`
+- [x] **RLS: block applications to non-available dogs** — INSERT policy in migration `20240111000000_unique_constraints.sql` checks `dog_id IN (SELECT id FROM dogs WHERE status = 'available')`
+- [x] **`getUser()` error handling** — all server pages throw `authError` inside try-catch → `fetchError = true` → `ServerErrorPanel`; no silent redirect on network/token errors
+- [x] **Server page error handling** — all server pages wrap Supabase queries in try-catch; `ServerErrorPanel` shown on failure
 
 ### ORANGE — should fix before launch
 
-- [ ] **Message thread query-level auth** — add `.eq('foster_id', ...)` / `.eq('shelter_id', ...)` to thread page queries as defense-in-depth alongside RLS (currently fetch by `applicationId` only, then check ownership after)
-- [ ] **Profile form validation** — add Zod schemas to `foster-profile-form.tsx` and `shelter-settings-form.tsx` matching the approach in `dog-form.tsx`; enforce required fields, length limits, format checks
-- [ ] **Sanitize error messages** — replace raw `error.message` displays (which can leak RLS policy names) with generic user-facing messages; log originals server-side
-- [ ] **Image domain config** — add `images.remotePatterns` for Supabase Storage hostname to `next.config.mjs` (required before photo upload works)
-- [ ] **Centralize `DEV_MODE`** — export from `src/lib/constants.ts`, replace ~24 inline definitions of `const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')`
+- [x] **Message thread query-level auth** — thread pages use `.eq('shelter_id', ...)` / `.eq('foster_id', ...)` guards alongside RLS
+- [x] **Profile form validation** — `fosterProfileSchema` in `foster-profile-form.tsx` and `shelterSettingsSchema` in `shelter-settings-form.tsx` both use Zod with per-field error display
+- [x] **Sanitize error messages** — API routes log errors server-side only; user-facing messages are generic copy; `describeAuthError()` helper sanitizes Supabase auth errors in `AccountSettingsForm`
+- [x] **Image domain config** — `images.remotePatterns` for Supabase Storage hostname added to `next.config.mjs`
+- [x] **Centralize `DEV_MODE`** — exported from `src/lib/constants.ts`; all files import from there
 
 ### YELLOW — good practice
 
-- [ ] **Page metadata** — add `metadata` exports to portal layout files and key pages (browse, dashboard, applications, messages) for SEO
-- [ ] **Remove unused `pg` dependency** from `package.json`
+- [x] **Page metadata** — `metadata` exports on all portal pages (dashboard, applications, messages, history, settings, browse, dog detail, etc.)
+- [x] **Remove unused `pg` dependency** — `pg` is not present in `package.json`
 
 ---
 

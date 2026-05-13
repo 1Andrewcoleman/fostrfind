@@ -49,7 +49,7 @@ export default async function ShelterApplicationsPage(): Promise<React.JSX.Eleme
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl">
       <h1 className="text-2xl font-bold">Applications</h1>
       {fetchError ? <ServerErrorPanel /> : <ShelterApplicationsList applications={applications} />}
     </div>

@@ -1530,35 +1530,35 @@ Import `Bell` from `lucide-react`. This gives the notifications page a persisten
 
 > Do not implement any of these items during the pilot phase without explicit instruction. They are documented here for planning purposes only. When the time comes, each item should be specced as a full numbered step following the same format as Steps 46–49 above.
 
-| Priority | Item | Source | Notes |
-|---|---|---|---|
-| High | CI/CD pipeline (GitHub Actions → Vercel) | §15 | Automate test + build on every PR. Wire `npm test` + `tsc --noEmit` as required checks. |
-| High | Geocoding pipeline for real addresses | §22 deferred log | Distance filter works with seeded coordinates but not real shelter/foster addresses. Requires a Mapbox or Google Geocoding API call at onboarding time. |
-| High | Supabase auth rate limits audit | Phase 3 deferred log | Review `auth.rate_limit.*` settings in Supabase dashboard. Document and set explicitly before public growth. |
-| High | New-message email notification (debounced) | §12 deferred log | Currently skipped. Add per-thread 15-minute debounce before re-enabling Resend trigger on message send. |
-| Medium | Saved dogs / favorites | §6.5 | `dog_saves` table, heart icon on dog detail, saved list in foster nav. |
-| Medium | Shelter verification workflow | §22 | Admin review queue for `is_verified`. Currently set manually via SQL (OPS-5). Needs an admin interface or a request + email flow. |
-| Medium | Error tracking for client-side analytics | Remaining Items | PostHog or Mixpanel. Wire after pilot to understand usage patterns. |
-| Medium | Application audit trail / soft-delete | Remaining Items deferred log | Hard `DELETE` on withdrawal loses history. Add `withdrawn_at` column and swap to soft delete for dispute handling. |
-| Medium | `og:image` for dog share links | §6.3 deferred log | `ShareButton` works but shared links preview without an image. Blocked on dog photo being required. |
-| Medium | Dynamic sitemap entries for `/shelters/[slug]` and `/foster/dog/[id]` | §6.1 deferred log | Currently `sitemap.ts` only emits public static routes. |
-| Medium | Photo drag-and-drop reorder in `DogForm` | §2 deferred log | Dog thumbnails render in insertion order; first photo is used for browse card. No reorder UI. |
-| Medium | Orphaned storage objects cleanup | §19 deferred log | Avatar/logo/dog photos remain in Supabase Storage after account deletion. Add explicit `storage.from().remove()` pass in `DELETE /api/account/delete`. |
-| Low | Mutual reporting (foster ↔ shelter) | §6.4 | `reports` table, structured form, email triage queue. Requires product/legal alignment on categories and moderation flow. |
-| Low | Map view of shelters in radius | §6.6 | Blocked on geocoding pipeline (High item above). Add map component after geocoding is production-ready. |
-| Low | Multi-staff shelter access | §23 | `shelter_members` join table, invitation flow, owner/staff roles. Significant scope — defer until pilot feedback confirms demand. |
-| Low | Herds — shelter emergency groups | §6.2 deferred log | Broadcast/group chat for shelter rosters. Schema is forward-compatible (composite PK on `shelter_fosters`). |
-| Low | SMS invite path for roster invites | §6.2 deferred log | Currently email-only. Requires Twilio integration and `phone` column on `shelter_foster_invites`. |
-| Low | Print stylesheet QA on real hardware | §6 Phase 5-b | Print CSS shipped but only tested in Chrome devtools. Validate on a real printer before advertising printable records. |
-| Low | `terms_accepted_at` persistence | §21 deferred log | Signup checkbox exists but acceptance timestamp is not stored. Needs a migration before legal defensibility matters. |
-| Low | Session expiry graceful handling | §13 | Graceful refresh/redirect on expired tokens beyond the existing layout-level auth check. |
-| Low | CSRF protection audit | §13 | Evaluate necessity with Supabase auth pattern. Low risk today; revisit at scale. |
-| Low | Redis-backed rate limiting | §30 deferred log | In-memory rate limit doesn't survive serverless restarts or multi-region. Swap for Upstash Redis when deploying at scale. |
-| Low | Error boundary keyboard accessibility | §6 Phase 5-b | Collapsed sidebar keyboard nav not fully tested. Confirm arrow-key focus order on toggle. |
-| Low | Social media links in public footer | §38 deferred log | `public-footer.tsx` has only a Mail icon. Add Instagram/Twitter/LinkedIn once real handles exist. |
-| Low | Hero photo commission | §37 deferred log | Current hero uses a licensed Unsplash URL (`photo-1583337130417-3346a1be7dee`). Replace with owned/licensed asset before broad public launch. |
-| Low | Note edit/delete in shelter roster | §6.2 deferred log | `shelter_foster_notes` has `updated_at` trigger. Just needs a PUT/DELETE route and UI. |
-| Low | Ghost-invite TTL / expiry | §6.2 deferred log | Pending invites never expire. Add cron job or TTL column when invite list gets noisy. |
+| Priority | Item | Source | Status | Notes |
+|---|---|---|---|---|
+| High | CI/CD pipeline (GitHub Actions → Vercel) | §15 | Partial — Dependabot only | `.github/workflows/dependabot.yml` exists; no build/test/deploy workflow yet. Wire `npm test` + `tsc --noEmit` as required checks. |
+| High | Geocoding pipeline for real addresses | §22 deferred log | Open | Distance filter works with seeded coordinates but not real shelter/foster addresses. Requires a Mapbox or Google Geocoding API call at onboarding time. |
+| High | Supabase auth rate limits audit | Phase 3 deferred log | Open | Review `auth.rate_limit.*` settings in Supabase dashboard. Document and set explicitly before public growth. |
+| High | New-message email notification (debounced) | §12 deferred log | Open | `POST /api/messages` fires in-app notification only. Add per-thread 15-minute debounce before enabling Resend trigger. |
+| Medium | Saved dogs / favorites | §6.5 | **Done** | `dog_saves` table, `POST/DELETE /api/dogs/[id]/save`, heart on dog detail, `/foster/saved` page, save counts on shelter dog cards — all shipped. |
+| Medium | Shelter verification workflow | §22 | Partial — badge only | `is_verified` badge rendered; set manually via SQL (OPS-5). Needs admin queue or request flow. |
+| Medium | Error tracking for client-side analytics | Remaining Items | Open | No PostHog/Mixpanel wired. Add after pilot to understand usage patterns. |
+| Medium | Application audit trail / soft-delete | Remaining Items deferred log | **Done** | `withdrawn` is now a status (not a row delete). Shelter's application history is preserved. See deferred log 2026-05-04 item 7. |
+| Medium | `og:image` for dog share links | §6.3 deferred log | Open | `ShareButton` works but shared links preview without an image. Blocked on dog photo being required on all dogs. |
+| Medium | Dynamic sitemap entries for `/shelters/[slug]` and `/foster/dog/[id]` | §6.1 deferred log | Open | Currently `sitemap.ts` only emits public static routes. |
+| Medium | Photo drag-and-drop reorder in `DogForm` | §2 deferred log | Partial — preview only | `PhotoThumb` grid shows previews and remove buttons; no drag-to-reorder yet. |
+| Medium | Orphaned storage objects cleanup | §19 deferred log | Open | Avatar/logo/dog photos remain in Supabase Storage after account deletion. Add explicit `storage.from().remove()` pass in `DELETE /api/account/delete`. |
+| Low | Mutual reporting (foster ↔ shelter) | §6.4 | **Done** | `reports` table, `POST /api/reports`, `ReportApplicationDialog` wired into both portals. |
+| Low | Map view of shelters in radius | §6.6 | Open | Blocked on geocoding pipeline (High item above). Add map component after geocoding is production-ready. |
+| Low | Multi-staff shelter access | §23 | Open | `shelter_members` join table, invitation flow, owner/staff roles. Significant scope — defer until pilot feedback confirms demand. |
+| Low | Herds — shelter emergency groups | §6.2 deferred log | Open | Broadcast/group chat for shelter rosters. Schema is forward-compatible (composite PK on `shelter_fosters`). |
+| Low | SMS invite path for roster invites | §6.2 deferred log | Open | Currently email-only. Requires Twilio integration and `phone` column on `shelter_foster_invites`. |
+| Low | Print stylesheet QA on real hardware | §6 Phase 5-b | Open | Print CSS shipped in `globals.css`; only tested in Chrome devtools. Validate on a real printer before advertising printable records. |
+| Low | `terms_accepted_at` persistence | §21 deferred log | Open | Signup checkbox + Zod validation wired; acceptance timestamp not stored. Needs a migration before legal defensibility matters. |
+| Low | Session expiry graceful handling | §13 | Open | Graceful refresh/redirect on expired tokens beyond the existing layout-level auth check. |
+| Low | CSRF protection audit | §13 | Open | Evaluate necessity with Supabase auth pattern. Low risk today; revisit at scale. |
+| Low | Redis-backed rate limiting | §30 deferred log | Open | In-memory rate limit doesn't survive serverless restarts or multi-region. Swap for Upstash Redis when deploying at scale. |
+| Low | Error boundary keyboard accessibility | §6 Phase 5-b | Open | Collapsed sidebar keyboard nav not fully tested. Confirm arrow-key focus order on toggle. |
+| Low | Social media links in public footer | §38 deferred log | Open | `public-footer.tsx` has only a Mail icon. Add Instagram/Twitter/LinkedIn once real handles exist. |
+| Low | Hero photo commission | §37 deferred log | Open | Current hero uses a licensed Unsplash URL (`photo-1583337130417-3346a1be7dee`). Replace with owned/licensed asset before broad public launch. |
+| Low | Note edit/delete in shelter roster | §6.2 deferred log | Open | `shelter_foster_notes` has `updated_at` trigger. Just needs a PUT/DELETE route and UI. |
+| Low | Ghost-invite TTL / expiry | §6.2 deferred log | Open | Pending invites never expire. Add cron job or TTL column when invite list gets noisy. |
 
 ---
 

@@ -28,7 +28,7 @@ interface SavedRow {
 export default async function FosterSavedPage(): Promise<React.JSX.Element> {
   if (DEV_MODE) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-5xl">
         <PageHeader />
         <p className="text-sm text-muted-foreground">
           Saved dogs require a live Supabase connection. Set
@@ -88,7 +88,7 @@ export default async function FosterSavedPage(): Promise<React.JSX.Element> {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-5xl">
       <PageHeader />
 
       {fetchError ? (

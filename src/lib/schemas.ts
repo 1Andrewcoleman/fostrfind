@@ -252,3 +252,65 @@ export const shelterSettingsSchema = z.object({
     }),
 })
 export type ShelterSettingsInput = z.infer<typeof shelterSettingsSchema>
+
+// ---------- Onboarding (creation-time profiles) ----------
+//
+// These mirror `shelterSettingsSchema` and `fosterProfileSchema` but are
+// scoped to the fields the onboarding page actually collects. Settings /
+// profile editing add the remaining fields (slug, avatar/logo URLs,
+// preferences, max_distance) once the row exists.
+//
+// EIN is shelter-only — the IRS Employer Identification Number for 501c3
+// status. We accept the user-typed string as-is up to a generous length;
+// the column is TEXT and stricter formatting validation is deferred to
+// the post-launch verification flow.
+const EIN_MAX = 20
+
+export const shelterOnboardingSchema = z.object({
+  name: z.string().trim().min(1, 'Shelter name is required').max(NAME_MAX),
+  email: emailSchema,
+  phone: optionalTrimmedString(40, 'Phone number is too long'),
+  location: z.string().trim().min(1, 'Location is required').max(LOCATION_MAX),
+  ein: optionalTrimmedString(EIN_MAX, 'EIN is too long'),
+  bio: optionalTrimmedString(BIO_MAX, `Keep your bio under ${BIO_MAX} characters`),
+  website: z
+    .string()
+    .trim()
+    .max(200)
+    .transform((v) => (v === '' ? undefined : v))
+    .optional()
+    .refine((v) => v === undefined || URL_LOOSE_REGEX.test(v), {
+      message: 'Enter a valid website URL',
+    }),
+  instagram: z
+    .string()
+    .trim()
+    .max(60)
+    .transform((v) => (v === '' ? undefined : v))
+    .optional()
+    .refine((v) => v === undefined || /^@?[a-zA-Z0-9._]+$/.test(v), {
+      message: 'Enter a valid Instagram handle',
+    }),
+})
+export type ShelterOnboardingInput = z.infer<typeof shelterOnboardingSchema>
+
+// Foster onboarding does NOT collect dog preferences (size/age/medical)
+// or max_distance — those live on /foster/profile after signup. The
+// onboarding form keeps the friction low; preferences default to the
+// columns' DB defaults (empty arrays, false, 50 miles).
+export const fosterOnboardingSchema = z.object({
+  first_name: z.string().trim().min(1, 'First name is required').max(NAME_MAX),
+  last_name: z.string().trim().min(1, 'Last name is required').max(NAME_MAX),
+  email: emailSchema,
+  phone: optionalTrimmedString(40, 'Phone number is too long'),
+  location: z.string().trim().min(1, 'Location is required').max(LOCATION_MAX),
+  housing_type: z.enum(HOUSING_TYPES).nullable().optional(),
+  has_yard: z.boolean(),
+  has_other_pets: z.boolean(),
+  other_pets_info: optionalTrimmedString(500),
+  has_children: z.boolean(),
+  children_info: optionalTrimmedString(500),
+  experience: z.enum(EXPERIENCE_LEVELS).nullable().optional(),
+  bio: optionalTrimmedString(BIO_MAX, `Keep your bio under ${BIO_MAX} characters`),
+})
+export type FosterOnboardingInput = z.infer<typeof fosterOnboardingSchema>

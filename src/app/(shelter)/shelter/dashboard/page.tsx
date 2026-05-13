@@ -12,7 +12,7 @@ import { ServerErrorPanel } from '@/components/server-error-panel'
 import { ApplicationCard } from '@/components/shelter/application-card'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
-import { getGreeting } from '@/lib/helpers'
+import { DashboardGreeting } from '@/components/dashboard-greeting'
 import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -123,7 +123,7 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold">{getGreeting()}, {shelterName}</h1>
+          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={shelterName} /></h1>
           <p className="text-muted-foreground text-sm mt-1">Here&apos;s what&apos;s happening today.</p>
         </div>
         <Button asChild>

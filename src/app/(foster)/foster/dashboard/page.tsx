@@ -12,7 +12,7 @@ import { ApplicationStatusCard } from '@/components/foster/application-status-ca
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
-import { getGreeting } from '@/lib/helpers'
+import { DashboardGreeting } from '@/components/dashboard-greeting'
 import { isNextControlFlowError } from '@/lib/server-errors'
 import type { ApplicationWithDetails } from '@/types/database'
 
@@ -133,9 +133,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold">
-            {getGreeting()}, {firstName}
-          </h1>
+          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={firstName} /></h1>
           <p className="text-muted-foreground text-sm mt-1">
             Here&apos;s what&apos;s happening with your foster journey.
           </p>

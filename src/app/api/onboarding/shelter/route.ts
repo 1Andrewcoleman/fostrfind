@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
-import { shelterOnboardingSchema } from '@/lib/schemas'
+import { shelterOnboardingServerSchema } from '@/lib/schemas'
 import { slugify } from '@/lib/helpers'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -25,8 +25,9 @@ import { privateJson } from '@/lib/api-response'
  *
  * Status contract:
  *   - 201: created (sanitized shelter row returned)
- *   - 400: malformed JSON
+ *   - 400: malformed JSON or account email unavailable
  *   - 401: unauthenticated
+ *   - 403: email not yet confirmed (user.email_confirmed_at is null)
  *   - 409: caller already has a shelters row (single-shelter invariant)
  *   - 422: schema validation failure (per-field errors in `details`)
  *   - 429: rate limit exceeded
@@ -52,6 +53,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Email must be present and confirmed. We store user.email (not the
+  // request body) as shelters.email so a user cannot impersonate another.
+  if (!user.email) {
+    return NextResponse.json({ error: 'Account email is unavailable' }, { status: 400 })
+  }
+  if (!user.email_confirmed_at) {
+    return NextResponse.json(
+      { error: 'Please verify your email before completing onboarding' },
+      { status: 403 },
+    )
+  }
+
   // 5 onboardings/min/user. Users complete onboarding once; this is tight
   // enough to blunt scripted enumeration / spam without rejecting a user
   // who hits a transient 5xx and retries.
@@ -65,7 +78,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const parsed = shelterOnboardingSchema.safeParse(raw)
+  const parsed = shelterOnboardingServerSchema.safeParse(raw)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
@@ -95,11 +108,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  // Sanitize once at the boundary. Email is left alone — it's already
-  // validated as a well-formed RFC 5322 address by the schema, and any
-  // `<` or `>` characters in a legit address are syntactically excluded.
-  // Bio uses sanitizeMultiline to preserve paragraph breaks; everything
-  // else collapses whitespace via sanitizeText.
+  // Sanitize once at the boundary. Email is taken from the verified auth
+  // context (user.email), not the request body. Bio uses sanitizeMultiline
+  // to preserve paragraph breaks; everything else collapses whitespace via
+  // sanitizeText.
   const cleanedName = sanitizeText(data.name)
   const cleanedLocation = sanitizeText(data.location)
   const cleanedPhone = data.phone ? sanitizeText(data.phone) || null : null
@@ -122,7 +134,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       user_id: user.id,
       name: cleanedName,
       slug,
-      email: data.email,
+      email: user.email,
       phone: cleanedPhone,
       location: cleanedLocation,
       ein: cleanedEin,

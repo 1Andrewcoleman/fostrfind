@@ -12,11 +12,14 @@ import { vi } from 'vitest'
  */
 
 type AuthResult = {
-  data: { user: { id: string } | null }
+  data: { user: { id: string; email?: string; email_confirmed_at?: string } | null }
   error: { message: string } | null
 }
 
-export function buildAuth(user: { id: string } | null, error: { message: string } | null = null): AuthResult {
+export function buildAuth(
+  user: { id: string; email?: string; email_confirmed_at?: string } | null,
+  error: { message: string } | null = null,
+): AuthResult {
   return { data: { user }, error }
 }
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
-import { fosterOnboardingSchema } from '@/lib/schemas'
+import { fosterOnboardingServerSchema } from '@/lib/schemas'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -21,8 +21,9 @@ import { privateJson } from '@/lib/api-response'
  *
  * Status contract:
  *   - 201: created (sanitized foster row returned)
- *   - 400: malformed JSON
+ *   - 400: malformed JSON or account email unavailable
  *   - 401: unauthenticated
+ *   - 403: email not yet confirmed (user.email_confirmed_at is null)
  *   - 409: caller already has a foster_parents row
  *   - 422: schema validation failure (per-field errors in `details`)
  *   - 429: rate limit exceeded
@@ -48,6 +49,19 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // Email must be present and confirmed. We store user.email (not the
+  // request body) as foster_parents.email so a user cannot claim invites
+  // intended for an address they don't own.
+  if (!user.email) {
+    return NextResponse.json({ error: 'Account email is unavailable' }, { status: 400 })
+  }
+  if (!user.email_confirmed_at) {
+    return NextResponse.json(
+      { error: 'Please verify your email before completing onboarding' },
+      { status: 403 },
+    )
+  }
+
   // 5 onboardings/min/user. Same justification as the shelter route —
   // users complete onboarding once; tight bound blunts scripted abuse.
   const rl = rateLimit('onboarding:foster', user.id, { limit: 5, windowMs: 60_000 })
@@ -60,7 +74,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const parsed = fosterOnboardingSchema.safeParse(raw)
+  const parsed = fosterOnboardingServerSchema.safeParse(raw)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
@@ -92,8 +106,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Sanitize once at the boundary. `sanitizeText` for everything except
   // bio / other_pets_info / children_info which preserve line breaks via
-  // `sanitizeMultiline`. Email is validated by the schema and is left
-  // verbatim.
+  // `sanitizeMultiline`. Email is taken from the verified auth context
+  // (user.email), never from the request body.
   const cleanedFirstName = sanitizeText(data.first_name)
   const cleanedLastName = sanitizeText(data.last_name)
   const cleanedLocation = sanitizeText(data.location)
@@ -112,7 +126,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       user_id: user.id,
       first_name: cleanedFirstName,
       last_name: cleanedLastName,
-      email: data.email,
+      email: user.email,
       phone: cleanedPhone,
       location: cleanedLocation,
       housing_type: data.housing_type ?? null,
@@ -145,7 +159,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // failure must NOT block the foster from reaching their dashboard;
   // the invites remain readable by email in /foster/invites and can be
   // accepted there instead.
-  const normalizedEmail = normalizeInviteEmail(data.email)
+  const normalizedEmail = normalizeInviteEmail(user.email)
   if (normalizedEmail) {
     const { error: claimErr } = await supabase
       .from('shelter_foster_invites')

@@ -12,6 +12,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { POST } from '@/app/api/onboarding/shelter/route'
 
 const USER_ID = 'user-shelter-onboarder-1'
+const USER_EMAIL = 'info@happypaws.org'
+const USER_EMAIL_CONFIRMED = '2026-01-01T00:00:00Z'
 
 function happyBody(overrides: Record<string, unknown> = {}) {
   return {
@@ -67,7 +69,7 @@ describe('POST /api/onboarding/shelter', () => {
   })
 
   it('returns 429 when rate limit is exhausted', async () => {
-    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
+    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }) })
     vi.mocked(createClient).mockResolvedValue(client)
     vi.mocked(rateLimit).mockReturnValue({
       success: false,
@@ -82,7 +84,7 @@ describe('POST /api/onboarding/shelter', () => {
   })
 
   it('returns 400 when the body is not valid JSON', async () => {
-    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
+    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }) })
     vi.mocked(createClient).mockResolvedValue(client)
 
     const res = await POST(
@@ -96,23 +98,24 @@ describe('POST /api/onboarding/shelter', () => {
   })
 
   it('returns 422 when required fields are missing or invalid', async () => {
-    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
+    const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }) })
     vi.mocked(createClient).mockResolvedValue(client)
 
     const res = await callRoute(
-      happyBody({ name: '', email: 'not-an-email', location: '' }),
+      happyBody({ name: '', location: '' }),
     )
     expect(res.status).toBe(422)
     const body = await res.json()
     expect(body.error).toBe('Validation failed')
     expect(body.details.name).toBeDefined()
-    expect(body.details.email).toBeDefined()
     expect(body.details.location).toBeDefined()
+    // email is not part of the server onboarding schema — it comes from
+    // the auth context (user.email), so there is no email validation error
   })
 
   it('returns 409 when the user already has a shelter row', async () => {
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [{ data: { id: 'existing-shelter-id' } }],
       },
@@ -128,7 +131,7 @@ describe('POST /api/onboarding/shelter', () => {
 
   it('returns 500 when the existing-row check fails', async () => {
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [
           {
@@ -152,7 +155,7 @@ describe('POST /api/onboarding/shelter', () => {
 
   it('returns 500 when the insert fails', async () => {
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [
           // existing-row check passes
@@ -174,7 +177,7 @@ describe('POST /api/onboarding/shelter', () => {
 
   it('returns 409 on Postgres unique-violation race', async () => {
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [
           { maybeSingle: { data: null, error: null } },
@@ -204,7 +207,7 @@ describe('POST /api/onboarding/shelter', () => {
     let capturedInsertPayload: Record<string, unknown> | null = null
 
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [
           { maybeSingle: { data: null, error: null } },
@@ -251,17 +254,68 @@ describe('POST /api/onboarding/shelter', () => {
     expect(payload.user_id).toBe(USER_ID)
     expect(payload.name).toBe('Happy Paws Rescue')
     expect(payload.location).toBe('Austin, TX')
-    expect(payload.email).toBe('info@happypaws.org')
+    // email is pinned to user.email (from auth), not the request body
+    expect(payload.email).toBe(USER_EMAIL)
     expect(payload.ein).toBe('12-3456789')
     // Slug format: slugified name + 4 random chars from base36
     expect(payload.slug).toMatch(/^happy-paws-rescue-[a-z0-9]{1,4}$/)
+  })
+
+  it('returns 403 when the user email is not yet confirmed', async () => {
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL }),
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute()
+    expect(res.status).toBe(403)
+    expect((await res.json()).error).toContain('verify your email')
+  })
+
+  it('pins insert email to user.email regardless of the email in the request body', async () => {
+    let capturedInsertPayload: Record<string, unknown> | null = null
+
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID, email: 'auth@shelter.example', email_confirmed_at: USER_EMAIL_CONFIRMED }),
+      tableResults: {
+        shelters: [
+          { maybeSingle: { data: null, error: null } },
+          {
+            single: {
+              data: { id: 'new-shelter-id', slug: 'happy-paws-rescue-abcd', name: 'Happy Paws Rescue' },
+              error: null,
+            },
+          },
+        ],
+      },
+    })
+    const originalFrom = client.from.bind(client)
+    client.from = ((table: string) => {
+      const chain = originalFrom(table)
+      if (table === 'shelters') {
+        const originalInsert = chain.insert.bind(chain)
+        chain.insert = ((payload: Record<string, unknown>) => {
+          capturedInsertPayload = payload
+          return originalInsert(payload)
+        }) as typeof chain.insert
+      }
+      return chain
+    }) as typeof client.from
+
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    // Body supplies a different email — the server must ignore it.
+    const res = await callRoute(happyBody({ email: 'hacker@attacker.com' }))
+    expect(res.status).toBe(201)
+    expect(capturedInsertPayload).not.toBeNull()
+    expect((capturedInsertPayload as unknown as Record<string, unknown>).email).toBe('auth@shelter.example')
   })
 
   it('strips HTML tags from the bio before insert', async () => {
     let capturedInsertPayload: Record<string, unknown> | null = null
 
     const { client } = buildMockClient({
-      auth: buildAuth({ id: USER_ID }),
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
       tableResults: {
         shelters: [
           { maybeSingle: { data: null, error: null } },

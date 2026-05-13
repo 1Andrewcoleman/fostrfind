@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
-import { shelterSettingsSchema } from '@/lib/schemas'
+import { shelterSettingsPatchSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
 
@@ -79,7 +79,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const parsed = shelterSettingsSchema.safeParse(raw)
+  const parsed = shelterSettingsPatchSchema.safeParse(raw)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
@@ -113,7 +113,6 @@ export async function PATCH(
   const updatePayload = {
     name: cleanedName,
     slug: data.slug,
-    email: data.email,
     phone: cleanedPhone,
     location: cleanedLocation,
     bio: cleanedBio,

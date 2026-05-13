@@ -146,7 +146,6 @@ describe('PATCH /api/shelters/[id]', () => {
       happyBody({
         name: '',
         slug: 'BAD SLUG WITH SPACES',
-        email: 'not-an-email',
       }),
     )
     expect(res.status).toBe(422)
@@ -154,7 +153,8 @@ describe('PATCH /api/shelters/[id]', () => {
     expect(body.error).toBe('Validation failed')
     expect(body.details.name).toBeDefined()
     expect(body.details.slug).toBeDefined()
-    expect(body.details.email).toBeDefined()
+    // email is not part of the PATCH schema; email changes go through
+    // Supabase Auth updateUser — so there is no email validation error here
   })
 
   it('returns 200 with the updated row on the happy path and sanitizes fields', async () => {
@@ -193,7 +193,7 @@ describe('PATCH /api/shelters/[id]', () => {
     const res = await callRoute(
       happyBody({
         name: 'Happy <b>Tails</b> Rescue',
-        location: 'Austin<script>x</script>, TX',
+        location: 'Austin<script></script>, TX',
       }),
     )
     expect(res.status).toBe(200)
@@ -202,6 +202,43 @@ describe('PATCH /api/shelters/[id]', () => {
     const payload = capturedUpdatePayload as unknown as Record<string, unknown>
     expect(payload.name).toBe('Happy Tails Rescue')
     expect(payload.location).toBe('Austin, TX')
+  })
+
+  it('does not include email in the update payload', async () => {
+    // email is removed from shelterSettingsPatchSchema so a body-supplied
+    // email can never overwrite shelters.email. Email changes must go
+    // through Supabase Auth updateUser which triggers re-verification.
+    const updated = { id: SHELTER_ID, user_id: USER_ID, name: 'Happy Tails Rescue' }
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID }),
+      tableResults: {
+        shelters: [
+          { data: { id: SHELTER_ID, user_id: USER_ID } },
+          { single: { data: updated, error: null } },
+        ],
+      },
+    })
+
+    let capturedUpdatePayload: Record<string, unknown> | null = null
+    const originalFrom = client.from.bind(client)
+    client.from = ((table: string) => {
+      const chain = originalFrom(table)
+      if (table === 'shelters') {
+        const originalUpdate = chain.update.bind(chain)
+        chain.update = ((payload: Record<string, unknown>) => {
+          capturedUpdatePayload = payload
+          return originalUpdate(payload)
+        }) as typeof chain.update
+      }
+      return chain
+    }) as typeof client.from
+
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute(happyBody({ email: 'hacker@attacker.com' }))
+    expect(res.status).toBe(200)
+    expect(capturedUpdatePayload).not.toBeNull()
+    expect('email' in (capturedUpdatePayload as unknown as Record<string, unknown>)).toBe(false)
   })
 
   it('strips HTML tags from the bio field before update', async () => {

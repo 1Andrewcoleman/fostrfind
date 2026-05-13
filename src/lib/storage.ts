@@ -3,6 +3,7 @@ import {
   ALLOWED_IMAGE_EXTENSIONS,
   ALLOWED_IMAGE_TYPES,
   MAX_FILE_SIZE_BYTES,
+  STORAGE_BUCKETS,
   STORAGE_BUCKET_VALUES,
   type StorageBucket,
 } from '@/lib/constants'
@@ -18,6 +19,9 @@ import {
  * detect the actual format regardless of what the client claims in the
  * Content-Type or filename. This prevents polyglot uploads and misclassified
  * files from reaching Supabase Storage.
+ *
+ * Bucket access is role-gated: shelter users may only upload to dog-photos
+ * and shelter-logos; foster users may only upload to foster-avatars.
  */
 
 export type ValidationError =
@@ -87,41 +91,41 @@ async function detectImageMime(file: File): Promise<string | null> {
   return null
 }
 
+export type ImageFileResult =
+  | { ok: true; detectedMime: string }
+  | { ok: false; error: ValidationError }
+
 /**
  * Server-side validation: reads actual magic bytes to detect the real format.
  * The `file.type` field supplied by the browser is ignored for the type
  * check; we inspect the raw bytes instead.
  *
- * Returns `null` when the file is acceptable, or a `ValidationError` that
- * the caller should convert to an appropriate HTTP error response.
+ * Returns `{ ok: true, detectedMime }` when the file is acceptable so
+ * callers can use the verified MIME type for path building and Content-Type
+ * metadata — never the client-supplied value.
  *
  * Use `validateImageFileFast` for client-side UX checks.
  */
-export async function validateImageFile(file: File): Promise<ValidationError | null> {
-  if (!file || file.size === 0) return { kind: 'empty' }
-  if (file.size > MAX_FILE_SIZE_BYTES) return { kind: 'too-large', bytes: file.size }
+export async function validateImageFile(file: File): Promise<ImageFileResult> {
+  if (!file || file.size === 0) return { ok: false, error: { kind: 'empty' } }
+  if (file.size > MAX_FILE_SIZE_BYTES) {
+    return { ok: false, error: { kind: 'too-large', bytes: file.size } }
+  }
 
   let detectedMime: string | null = null
   try {
     detectedMime = await detectImageMime(file)
   } catch {
-    return { kind: 'invalid-type', received: null }
+    return { ok: false, error: { kind: 'invalid-type', received: null } }
   }
 
   if (!detectedMime || !ALLOWED_IMAGE_TYPES.includes(detectedMime as (typeof ALLOWED_IMAGE_TYPES)[number])) {
-    return { kind: 'invalid-type', received: detectedMime }
+    return { ok: false, error: { kind: 'invalid-type', received: detectedMime } }
   }
 
-  return null
+  return { ok: true, detectedMime }
 }
 
-/**
- * The detected MIME type is now the source of truth for determining the
- * file extension, but since validateImageFile is called before buildUploadPath,
- * we still derive extension from the detected type at the call site.
- *
- * This helper remains here for callers that have already validated the file.
- */
 export type BucketValidation =
   | { ok: true; bucket: StorageBucket }
   | { ok: false; received: string | null }
@@ -141,25 +145,61 @@ export function extensionForMimeType(mime: string): string {
 
 /**
  * Build the `{userId}/{uuid}.{ext}` path used by all three buckets.
- * Uses `crypto.randomUUID()` (Node ≥ 19 and all modern browsers) so
- * two concurrent uploads never clobber each other.
+ * Uses the server-detected MIME type (from validateImageFile), never the
+ * client-supplied file.type, so the extension always reflects reality.
  */
-export function buildUploadPath(userId: string, file: File): string {
-  const ext = extensionForMimeType(file.type)
+export function buildUploadPath(userId: string, detectedMime: string): string {
+  const ext = extensionForMimeType(detectedMime)
   return `${userId}/${crypto.randomUUID()}.${ext}`
+}
+
+/**
+ * Role required to upload to each bucket.
+ * dog-photos and shelter-logos are shelter-only; foster-avatars is foster-only.
+ */
+const BUCKET_REQUIRED_ROLE: Record<StorageBucket, 'shelter' | 'foster'> = {
+  [STORAGE_BUCKETS.DOG_PHOTOS]: 'shelter',
+  [STORAGE_BUCKETS.SHELTER_LOGOS]: 'shelter',
+  [STORAGE_BUCKETS.FOSTER_AVATARS]: 'foster',
+}
+
+/**
+ * Returns true when the authenticated user has the role required for the
+ * given bucket. Queries the appropriate profile table — a user who has
+ * completed onboarding as a shelter cannot upload to foster-avatars, and
+ * vice versa.
+ */
+export async function checkBucketRole(
+  supabase: SupabaseClient,
+  bucket: StorageBucket,
+  userId: string,
+): Promise<boolean> {
+  const requiredRole = BUCKET_REQUIRED_ROLE[bucket]
+  const table = requiredRole === 'shelter' ? 'shelters' : 'foster_parents'
+  const { count } = await supabase
+    .from(table)
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+  return (count ?? 0) > 0
 }
 
 type UploadResult = { url: string; path: string } | { error: string; status: number }
 
+/**
+ * Upload a validated image to Supabase Storage.
+ * `detectedMime` must come from `validateImageFile` — never from file.type —
+ * so the stored Content-Type metadata matches the actual file content.
+ */
 export async function uploadImage(
   supabase: SupabaseClient,
   bucket: StorageBucket,
   path: string,
   file: File,
+  detectedMime: string,
 ): Promise<UploadResult> {
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(path, file, { contentType: file.type, cacheControl: '3600', upsert: false })
+    .upload(path, file, { contentType: detectedMime, cacheControl: '3600', upsert: false })
 
   if (uploadError) {
     console.error('[storage] upload failed:', uploadError.message)

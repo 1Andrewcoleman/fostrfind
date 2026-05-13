@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import {
   buildUploadPath,
+  checkBucketRole,
   uploadImage,
   validateBucketName,
   validateImageFile,
@@ -20,10 +21,11 @@ import { privateJson } from '@/lib/api-response'
  *
  * Returns: { url, path } on success.
  *
- * Auth: any signed-in user can upload to any of the three public
- * buckets. The storage path is forced to `{userId}/{uuid}.{ext}` so
- * the "owner can delete" RLS policy works correctly — callers cannot
- * specify a path or overwrite someone else's file.
+ * Auth: authenticated users may only upload to the bucket that matches
+ * their role — shelter users to dog-photos / shelter-logos, foster users
+ * to foster-avatars. The storage path is forced to `{userId}/{uuid}.{ext}`
+ * (derived from magic-byte-detected MIME, not the client-supplied type)
+ * so callers cannot specify a path or overwrite someone else's file.
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request, ['multipart/form-data'])
@@ -54,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Uploads are expensive (bandwidth + storage writes). Cap at 30 per
   // minute per user — enough for realistic profile/dog onboarding flows
-  // but well below what a script could exfiltrate our storage quota with.
+  // but well below what a script could exhaust our storage quota with.
   const rl = rateLimit('upload:photo', user.id, { limit: 30, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
@@ -80,10 +82,24 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  // validateImageFile is now async — it reads file bytes and inspects magic
-  // bytes rather than trusting the client-supplied Content-Type header.
-  const fileError = await validateImageFile(file)
-  if (fileError) {
+  // Role check: each bucket is restricted to the matching user type.
+  // This is enforced server-side in addition to Supabase RLS so that a
+  // foster cannot store files under the shelter's namespace and vice versa.
+  const roleOk = await checkBucketRole(supabase, bucketResult.bucket, user.id)
+  if (!roleOk) {
+    console.warn('[upload/photo] role mismatch: user', user.id, 'bucket', bucketResult.bucket)
+    return NextResponse.json(
+      { error: 'Your account type cannot upload to this bucket' },
+      { status: 403 },
+    )
+  }
+
+  // Validate image via magic bytes — ignores client-supplied Content-Type.
+  // On success, detectedMime is the authoritative format used for the
+  // storage path extension and Content-Type metadata.
+  const fileResult = await validateImageFile(file)
+  if (!fileResult.ok) {
+    const { error: fileError } = fileResult
     if (fileError.kind === 'too-large') {
       return NextResponse.json(
         { error: 'File is too large. Maximum size is 10 MB.' },
@@ -99,8 +115,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Empty file' }, { status: 400 })
   }
 
-  const path = buildUploadPath(user.id, file)
-  const result = await uploadImage(supabase, bucketResult.bucket, path, file)
+  const { detectedMime } = fileResult
+  const path = buildUploadPath(user.id, detectedMime)
+  const result = await uploadImage(supabase, bucketResult.bucket, path, file, detectedMime)
 
   if ('error' in result) {
     return NextResponse.json({ error: result.error }, { status: result.status })

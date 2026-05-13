@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  AFTERNOON_GREETINGS,
+  EVENING_GREETINGS,
+  MORNING_GREETINGS,
   calculateAverageRating,
   formatDate,
   formatDateShort,
@@ -172,15 +175,21 @@ describe('pluralize', () => {
 })
 
 describe('getGreeting', () => {
-  it('returns morning before noon', () => {
-    expect(getGreeting(new Date('2026-04-20T09:00:00'))).toBe('Good morning')
+  it('returns a morning greeting before noon', () => {
+    expect(MORNING_GREETINGS).toContain(getGreeting(new Date('2026-04-20T09:00:00')))
   })
 
-  it('returns afternoon between noon and 5pm', () => {
-    expect(getGreeting(new Date('2026-04-20T14:00:00'))).toBe('Good afternoon')
+  it('returns an afternoon greeting between noon and 5pm', () => {
+    expect(AFTERNOON_GREETINGS).toContain(getGreeting(new Date('2026-04-20T14:00:00')))
   })
 
-  it('returns evening after 5pm', () => {
-    expect(getGreeting(new Date('2026-04-20T19:00:00'))).toBe('Good evening')
+  it('returns an evening greeting after 5pm', () => {
+    expect(EVENING_GREETINGS).toContain(getGreeting(new Date('2026-04-20T19:00:00')))
+  })
+
+  it('each pool has exactly 10 entries', () => {
+    expect(MORNING_GREETINGS).toHaveLength(10)
+    expect(AFTERNOON_GREETINGS).toHaveLength(10)
+    expect(EVENING_GREETINGS).toHaveLength(10)
   })
 })

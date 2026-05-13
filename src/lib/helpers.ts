@@ -56,11 +56,52 @@ export function pluralize(count: number, singular: string, plural?: string): str
   return count === 1 ? `${count} ${singular}` : `${count} ${plural ?? singular + 's'}`
 }
 
+export const MORNING_GREETINGS = [
+  'Good morning',
+  'Morning',
+  'Rise and shine',
+  'Top of the morning',
+  'Wakey wakey',
+  "Hope the coffee's hot",
+  'Starting the day right',
+  'Up and at \'em',
+  'Good day',
+  "Glad you're up",
+] as const
+
+export const AFTERNOON_GREETINGS = [
+  'Good afternoon',
+  'Afternoon',
+  "Hope the day's going well",
+  'Keeping busy',
+  'Good to see you',
+  'Hope lunch hit the spot',
+  "Hope you're having a good one",
+  "Glad you're here",
+  'Getting things done',
+  'Powering through',
+] as const
+
+export const EVENING_GREETINGS = [
+  'Good evening',
+  'Evening',
+  'Hope the day went well',
+  'Winding down',
+  "Hope it's been a good one",
+  'Nice to see you tonight',
+  'Almost at the finish line',
+  'Hanging in there',
+  "Hope you're doing well",
+  'End of another day',
+] as const
+
 export function getGreeting(date: Date = new Date()): string {
   const hour = date.getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 17) return 'Good afternoon'
-  return 'Good evening'
+  const pool =
+    hour < 12 ? MORNING_GREETINGS :
+    hour < 17 ? AFTERNOON_GREETINGS :
+    EVENING_GREETINGS
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 /**

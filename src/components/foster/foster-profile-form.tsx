@@ -35,7 +35,6 @@ import {
   STORAGE_BUCKETS,
 } from '@/lib/constants'
 import { fosterProfileSchema } from '@/lib/schemas'
-import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { useDirtyState } from '@/lib/use-dirty-state'
 import type { FosterParent } from '@/types/database'
 
@@ -114,6 +113,14 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
     setErrors({})
 
     try {
+      // The foster profile row is always pre-created by the onboarding
+      // flow, so an absent initialData is a real bug we should surface
+      // rather than silently no-op. The PATCH route is keyed by id.
+      if (!initialData?.id) {
+        toast.error('Your profile is not ready to save yet. Please refresh and try again.')
+        return
+      }
+
       const supabase = createClient()
       const {
         data: { user },
@@ -130,9 +137,10 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         return
       }
 
-      // Client-side validation before we attempt any side effects. This
-      // mirrors the server-side constraints so users see inline errors
-      // instead of a generic "Failed to save" after a round trip.
+      // Client-side validation up-front so users see inline errors
+      // instead of a 422 round trip. The server re-runs the same Zod
+      // schema (and `sanitizeText` / `sanitizeMultiline`) so this is a
+      // UX shortcut, not a trust boundary — the server is authoritative.
       const parsed = fosterProfileSchema.safeParse({
         first_name: foster.first_name ?? '',
         last_name: foster.last_name ?? '',
@@ -179,38 +187,49 @@ export function FosterProfileForm({ initialData }: FosterProfileFormProps) {
         return
       }
 
-      // Strip HTML-ish content from free-text fields before persisting
-      // so exports / emails / future plaintext views stay safe.
       const payload = {
         ...parsed.data,
-        first_name: sanitizeText(parsed.data.first_name),
-        last_name: sanitizeText(parsed.data.last_name),
-        location: sanitizeText(parsed.data.location),
-        phone: parsed.data.phone ? sanitizeText(parsed.data.phone) || null : null,
-        other_pets_info: parsed.data.other_pets_info
-          ? sanitizeMultiline(parsed.data.other_pets_info) || null
-          : null,
-        children_info: parsed.data.children_info
-          ? sanitizeMultiline(parsed.data.children_info) || null
-          : null,
-        bio: parsed.data.bio ? sanitizeMultiline(parsed.data.bio) || null : null,
-        housing_type: parsed.data.housing_type ?? null,
-        experience: parsed.data.experience ?? null,
         avatar_url: avatarUrl,
       }
 
-      // The foster profile row is always pre-created by the onboarding
-      // flow, so we .update rather than .upsert here. An earlier
-      // .upsert(..., { onConflict: 'user_id' }) silently failed because
-      // foster_parents has no UNIQUE(user_id) constraint — logged under
-      // roadmap §25 for a proper DB-level fix.
-      const { error } = await supabase
-        .from('foster_parents')
-        .update(payload)
-        .eq('user_id', user.id)
+      // PATCH the row via the server route so Zod validation + the
+      // sanitize-at-boundary contract live somewhere the browser can't
+      // bypass. The route returns 422 with field-level details on a
+      // validation miss; we surface those inline so users can recover
+      // even if the client schema and server schema ever drift.
+      let res: Response
+      try {
+        res = await fetch(`/api/foster-parents/${initialData.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } catch {
+        toast.error('Network error. Please check your connection and try again.')
+        return
+      }
 
-      if (error) {
-        toast.error('Failed to save profile. Please try again.')
+      if (!res.ok) {
+        let body: { error?: string; details?: Record<string, string[]> } = {}
+        try {
+          body = (await res.json()) as typeof body
+        } catch {
+          // Non-JSON error body — fall through to generic message below.
+        }
+
+        if (res.status === 422 && body.details) {
+          const fieldErrors: Record<string, string> = {}
+          for (const [key, messages] of Object.entries(body.details)) {
+            if (Array.isArray(messages) && messages.length > 0) {
+              fieldErrors[key] = messages[0]
+            }
+          }
+          setErrors(fieldErrors)
+          toast.error('Please fix the highlighted fields.')
+          return
+        }
+
+        toast.error(body.error ?? 'Failed to save profile. Please try again.')
         return
       }
 

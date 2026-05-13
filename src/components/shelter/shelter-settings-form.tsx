@@ -17,10 +17,8 @@ import {
   AvatarLogoField,
   type AvatarLogoFieldHandle,
 } from '@/components/avatar-logo-field'
-import { createClient } from '@/lib/supabase/client'
 import { STORAGE_BUCKETS } from '@/lib/constants'
 import { shelterSettingsSchema } from '@/lib/schemas'
-import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { useDirtyState } from '@/lib/use-dirty-state'
 import type { Shelter } from '@/types/database'
 
@@ -74,6 +72,10 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
     setErrors({})
 
     try {
+      // Client-side validation up-front so users see inline errors
+      // instead of a 422 round trip. The server re-runs the same Zod
+      // schema (and `sanitizeText` / `sanitizeMultiline`) so this is a
+      // UX shortcut, not a trust boundary — the server is authoritative.
       const parsed = shelterSettingsSchema.safeParse(shelter)
       if (!parsed.success) {
         const fieldErrors: Record<string, string> = {}
@@ -101,26 +103,50 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
         return
       }
 
-      const supabase = createClient()
+      const payload = {
+        ...parsed.data,
+        logo_url: logoUrl,
+      }
 
-      const { error } = await supabase
-        .from('shelters')
-        .update({
-          name: sanitizeText(parsed.data.name),
-          slug: parsed.data.slug,
-          email: parsed.data.email,
-          phone: parsed.data.phone ? sanitizeText(parsed.data.phone) || null : null,
-          location: sanitizeText(parsed.data.location),
-          bio: parsed.data.bio ? sanitizeMultiline(parsed.data.bio) || null : null,
-          website: parsed.data.website ? sanitizeText(parsed.data.website) || null : null,
-          instagram: parsed.data.instagram ? sanitizeText(parsed.data.instagram) || null : null,
-          logo_url: logoUrl,
+      // PATCH the row via the server route so Zod validation + the
+      // sanitize-at-boundary contract live somewhere the browser can't
+      // bypass. The route returns 422 with field-level details on a
+      // validation miss; we surface those inline so users can recover
+      // even if the client schema and server schema ever drift.
+      let res: Response
+      try {
+        res = await fetch(`/api/shelters/${initialData.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         })
-        .eq('id', initialData.id)
+      } catch {
+        toast.error('Network error. Please check your connection and try again.')
+        return
+      }
 
-      if (error) {
-        console.error('[shelter-settings] update failed:', error.message)
-        toast.error('Failed to save settings. Please try again.')
+      if (!res.ok) {
+        let body: { error?: string; details?: Record<string, string[]> } = {}
+        try {
+          body = (await res.json()) as typeof body
+        } catch {
+          // Non-JSON error body — fall through to generic message below.
+        }
+
+        if (res.status === 422 && body.details) {
+          const fieldErrors: Record<string, string> = {}
+          for (const [key, messages] of Object.entries(body.details)) {
+            if (Array.isArray(messages) && messages.length > 0) {
+              fieldErrors[key] = messages[0]
+            }
+          }
+          setErrors(fieldErrors)
+          toast.error('Please fix the highlighted fields.')
+          return
+        }
+
+        console.error('[shelter-settings] update failed:', res.status, body.error)
+        toast.error(body.error ?? 'Failed to save settings. Please try again.')
         return
       }
 

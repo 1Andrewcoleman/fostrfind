@@ -36,7 +36,7 @@ export async function updateSession(request: NextRequest) {
   // request, so we log and continue. Downstream RLS / guards will
   // reject the request if the session truly isn't valid.
   const { error: authError } = await supabase.auth.getUser()
-  if (authError) {
+  if (authError && authError.name !== 'AuthSessionMissingError') {
     console.error('[middleware] getUser failed:', authError.message)
   }
 

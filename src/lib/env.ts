@@ -78,10 +78,12 @@ export function validateEnv(): void {
     // Guard NODE_ENV === 'production' AND any deployment where NEXT_PUBLIC_SUPABASE_URL
     // is a real URL — this catches preview/staging where NODE_ENV may not be 'production'.
     const hasRealUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
-    if (isProd || hasRealUrl) {
+    const isDeployed = isProd || hasRealUrl || process.env.VERCEL === '1'
+    if (isDeployed) {
       throw new Error(
         '[env] Refusing to boot with NEXT_PUBLIC_DEV_MODE=true in a deployed environment. ' +
-          'NEXT_PUBLIC_DEV_MODE is for local development only — remove it from the hosting environment.',
+          'NEXT_PUBLIC_DEV_MODE is for local development only — remove it from the hosting ' +
+          'environment variables (Vercel, staging, etc.).',
       )
     }
 

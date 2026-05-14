@@ -5,6 +5,7 @@ import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { fosterProfilePatchSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
+import { isAllowedStorageUrl } from '@/lib/url-validation'
 
 /**
  * PATCH /api/foster-parents/[id] — update a foster profile.
@@ -97,6 +98,16 @@ export async function PATCH(
     raw && typeof raw === 'object' && 'avatar_url' in raw
       ? (raw as { avatar_url?: unknown }).avatar_url
       : undefined
+  if (
+    typeof incomingAvatarUrl === 'string' &&
+    incomingAvatarUrl.length > 0 &&
+    !isAllowedStorageUrl(incomingAvatarUrl)
+  ) {
+    return NextResponse.json(
+      { error: 'Validation failed', details: { avatar_url: ['Must be a Supabase Storage URL'] } },
+      { status: 422 },
+    )
+  }
   const avatarUrl =
     typeof incomingAvatarUrl === 'string' && incomingAvatarUrl.length > 0
       ? incomingAvatarUrl

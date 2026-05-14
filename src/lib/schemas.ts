@@ -7,6 +7,7 @@
 // migration of those forms).
 
 import { z } from 'zod'
+import { isAllowedStorageUrl } from '@/lib/url-validation'
 import {
   DOG_SIZES,
   DOG_AGES,
@@ -376,7 +377,12 @@ const dogOptionalLongField = (maxLen: number) =>
 // clearing the photos column for any caller that omits the key. The POST
 // schema applies the default explicitly below.
 const dogPhotosBaseField = z
-  .array(z.string().url('Photo URL is malformed'))
+  .array(
+    z
+      .string()
+      .url('Photo URL is malformed')
+      .refine(isAllowedStorageUrl, 'Photo must be a Supabase Storage URL'),
+  )
   .max(MAX_DOG_PHOTOS, `At most ${MAX_DOG_PHOTOS} photos`)
 
 const dogSharedFields = {

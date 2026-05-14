@@ -27,7 +27,7 @@ function happyBody(overrides: Record<string, unknown> = {}): Record<string, unkn
     bio: 'We rehome wonderful dogs.',
     website: 'https://happytails.example',
     instagram: '@happytails',
-    logo_url: 'https://example.com/logo.png',
+    logo_url: 'https://testproject.supabase.co/storage/v1/object/public/logos/logo.png',
     ...overrides,
   }
 }
@@ -239,6 +239,21 @@ describe('PATCH /api/shelters/[id]', () => {
     expect(res.status).toBe(200)
     expect(capturedUpdatePayload).not.toBeNull()
     expect('email' in (capturedUpdatePayload as unknown as Record<string, unknown>)).toBe(false)
+  })
+
+  it('returns 422 when logo_url is not a Supabase Storage URL', async () => {
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID }),
+      tableResults: {
+        shelters: [{ data: { id: SHELTER_ID, user_id: USER_ID } }],
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute(happyBody({ logo_url: 'https://evil.com/logo.jpg' }))
+    expect(res.status).toBe(422)
+    const body = await res.json()
+    expect(body.details.logo_url).toBeDefined()
   })
 
   it('strips HTML tags from the bio field before update', async () => {

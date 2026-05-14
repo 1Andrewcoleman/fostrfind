@@ -56,7 +56,7 @@ describe('POST /api/shelter/foster-invites/[id]/cancel', () => {
       auth: buildAuth({ id: SHELTER_USER_ID }),
       tableResults: {
         shelter_foster_invites: [
-          { data: { id: INVITE_ID, status: 'cancelled' } },
+          { data: { id: INVITE_ID, status: 'cancelled', shelter: { name: 'Test Shelter', user_id: SHELTER_USER_ID } } },
         ],
       },
     })
@@ -64,12 +64,25 @@ describe('POST /api/shelter/foster-invites/[id]/cancel', () => {
     expect((await callRoute()).status).toBe(409)
   })
 
+  it('returns 403 when the caller does not own the invite shelter', async () => {
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: SHELTER_USER_ID }),
+      tableResults: {
+        shelter_foster_invites: [
+          { data: { id: INVITE_ID, status: 'pending', shelter: { name: 'Other Shelter', user_id: 'different-user-id' } } },
+        ],
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+    expect((await callRoute()).status).toBe(403)
+  })
+
   it('returns 200 on happy path', async () => {
     const { client } = buildMockClient({
       auth: buildAuth({ id: SHELTER_USER_ID }),
       tableResults: {
         shelter_foster_invites: [
-          { data: { id: INVITE_ID, status: 'pending' } },
+          { data: { id: INVITE_ID, status: 'pending', shelter: { name: 'Test Shelter', user_id: SHELTER_USER_ID } } },
           { data: null, error: null },
         ],
       },

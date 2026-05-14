@@ -129,6 +129,22 @@ describe('POST /api/onboarding/shelter', () => {
     })
   })
 
+  it('returns 409 when the caller already has a foster profile', async () => {
+    const { client } = buildMockClient({
+      auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),
+      tableResults: {
+        shelters: [{ maybeSingle: { data: null, error: null } }],
+        foster_parents: [{ data: { id: 'fp-existing-1' } }],
+      },
+    })
+    vi.mocked(createClient).mockResolvedValue(client)
+
+    const res = await callRoute()
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.error).toMatch(/foster profile/)
+  })
+
   it('returns 500 when the existing-row check fails', async () => {
     const { client } = buildMockClient({
       auth: buildAuth({ id: USER_ID, email: USER_EMAIL, email_confirmed_at: USER_EMAIL_CONFIRMED }),

@@ -50,7 +50,7 @@ export async function PATCH(
 
   // 20 updates/min/user — generous for a form the user typically saves
   // a handful of times per session, tight enough to blunt scripted abuse.
-  const rl = rateLimit('foster-parents:update', user.id, { limit: 20, windowMs: 60_000 })
+  const rl = await rateLimit('foster-parents:update', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // Defense-in-depth ownership check alongside the existing RLS policy.

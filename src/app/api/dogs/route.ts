@@ -51,7 +51,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // 30 creates/min/user comfortably covers a shelter onboarding a batch of
   // dogs while blunting scripted spam. Matches the foster-invite limit so
   // operators don't have to keep two different mental models.
-  const rl = rateLimit('dogs:create', user.id, { limit: 30, windowMs: 60_000 })
+  const rl = await rateLimit('dogs:create', user.id, { limit: 30, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // Resolve the caller's shelter BEFORE parsing the body so users without a

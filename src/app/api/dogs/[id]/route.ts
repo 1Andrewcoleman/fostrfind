@@ -43,7 +43,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('dogs:delete', user.id, { limit: 10, windowMs: 60_000 })
+  const rl = await rateLimit('dogs:delete', user.id, { limit: 10, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch the dog and verify shelter ownership in one query
@@ -138,7 +138,7 @@ export async function PATCH(
 
   // Matches `dogs:create` so a shelter operator updating their listings sees
   // the same envelope they'd see when adding new ones.
-  const rl = rateLimit('dogs:update', user.id, { limit: 30, windowMs: 60_000 })
+  const rl = await rateLimit('dogs:update', user.id, { limit: 30, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // Verify ownership BEFORE parsing the body so a 404/403 surfaces ahead of

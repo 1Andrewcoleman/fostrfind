@@ -32,7 +32,7 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   // Rate limit: 60/min is generous for normal notification management (click
   // "mark all read" a handful of times) while blocking scripted hammering,
   // especially the { all: true } path which triggers a full-table UPDATE.
-  const rl = rateLimit('notifications:read', user.id, { limit: 60, windowMs: 60_000 })
+  const rl = await rateLimit('notifications:read', user.id, { limit: 60, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let raw: unknown

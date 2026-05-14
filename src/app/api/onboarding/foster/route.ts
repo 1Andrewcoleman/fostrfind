@@ -64,7 +64,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // 5 onboardings/min/user. Same justification as the shelter route —
   // users complete onboarding once; tight bound blunts scripted abuse.
-  const rl = rateLimit('onboarding:foster', user.id, { limit: 5, windowMs: 60_000 })
+  const rl = await rateLimit('onboarding:foster', user.id, { limit: 5, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let raw: unknown

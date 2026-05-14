@@ -47,7 +47,7 @@ beforeEach(() => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key'
   delete process.env.NEXT_PUBLIC_APP_URL
 
-  vi.mocked(rateLimit).mockReturnValue({
+  vi.mocked(rateLimit).mockResolvedValue({
     success: true,
     remaining: 2,
     resetAt: Date.now() + 60_000,
@@ -143,7 +143,7 @@ describe('POST /api/account/delete — auth and body guards', () => {
   it('returns 429 when rate limited', async () => {
     const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
     vi.mocked(createClient).mockResolvedValue(client)
-    vi.mocked(rateLimit).mockReturnValue({
+    vi.mocked(rateLimit).mockResolvedValue({
       success: false,
       remaining: 0,
       resetAt: Date.now() + 60_000,

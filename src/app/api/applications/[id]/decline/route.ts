@@ -43,7 +43,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('applications:decline', user.id, { limit: 20, windowMs: 60_000 })
+  const rl = await rateLimit('applications:decline', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application and verify shelter ownership (+ data for the foster notification)

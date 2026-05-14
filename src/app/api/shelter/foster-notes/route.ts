@@ -37,7 +37,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('foster-notes:create', user.id, {
+  const rl = await rateLimit('foster-notes:create', user.id, {
     limit: 60,
     windowMs: 60_000,
   })

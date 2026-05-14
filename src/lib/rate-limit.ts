@@ -1,81 +1,61 @@
-// In-memory rate limiter for API routes.
+// Rate limiter: distributed (Upstash Redis) when env vars are present,
+// in-memory fallback otherwise.
 //
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │  PRODUCTION HARDENING NOTE (hardening-audit finding 8.1)               │
-// │                                                                         │
-// │  This implementation is process-local and does NOT coordinate across   │
-// │  serverless / multi-instance deployments. Attackers can bypass limits  │
-// │  by spreading requests across multiple Vercel function instances.       │
-// │                                                                         │
-// │  Migration path to distributed limiting with Upstash Redis:            │
-// │                                                                         │
-// │    1. Create a free Upstash Redis database at console.upstash.com      │
-// │    2. Add env vars: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN   │
-// │       (also to .env.example and to Vercel's env settings)              │
-// │    3. Install: npm install @upstash/redis @upstash/ratelimit           │
-// │    4. Replace this module with:                                         │
-// │                                                                         │
-// │       import { Ratelimit } from '@upstash/ratelimit'                   │
-// │       import { Redis } from '@upstash/redis'                           │
-// │                                                                         │
-// │       const redis = Redis.fromEnv()                                    │
-// │                                                                         │
-// │       export async function rateLimit(                                  │
-// │         route: string, identifier: string, opts: RateLimitOptions      │
-// │       ): Promise<RateLimitResult> {                                     │
-// │         const rl = new Ratelimit({                                      │
-// │           redis,                                                        │
-// │           limiter: Ratelimit.fixedWindow(                              │
-// │             opts.limit,                                                 │
-// │             `${Math.ceil(opts.windowMs / 1000)} s`,                    │
-// │           ),                                                            │
-// │           prefix: `fostr:${route}`,                                    │
-// │         })                                                              │
-// │         const { success, remaining, reset } = await rl.limit(id)      │
-// │         return { success, remaining, resetAt: reset,                   │
-// │           retryAfter: success ? 0 : Math.ceil((reset-Date.now())/1e3) }│
-// │       }                                                                 │
-// │                                                                         │
-// │    5. Update every caller: const rl = await rateLimit(...)             │
-// └─────────────────────────────────────────────────────────────────────────┘
+// Uses a factory so the Upstash client is created lazily on first use,
+// avoiding top-level await and build-time env requirements.
 //
-// Semantics:
-//   - Each (key, identifier) pair gets `limit` tokens per `windowMs`.
-//   - `check()` decrements a counter; when it exceeds the limit, the
-//     caller is told to back off with a `retryAfter` hint (seconds).
-//   - Windows are fixed (not sliding) — cheap, good enough for abuse
-//     prevention, and predictable for clients.
-//
-// Usage from a route handler:
-//
-//   const identifier = await getRateLimitIdentifier(request)
-//   const rl = rateLimit('applications:accept', identifier, {
-//     limit: 20,
-//     windowMs: 60_000,
-//   })
-//   if (!rl.success) {
-//     return rateLimitResponse(rl)
-//   }
+// All callers MUST await rateLimit(...).
 //
 // Known route keys in use today:
-//   - 'applications:create'   (POST /api/applications)
-//   - 'applications:accept'   (POST /api/applications/[id]/accept)
-//   - 'applications:decline'  (POST /api/applications/[id]/decline)
-//   - 'applications:complete' (POST /api/applications/[id]/complete)
-//   - 'applications:withdraw' (POST /api/applications/[id]/withdraw)
-//   - 'applications:review'   (POST /api/applications/[id]/review)
-//   - 'dogs:create'           (POST /api/dogs)
-//   - 'dogs:update'           (PATCH /api/dogs/[id])
-//   - 'dogs:delete'           (DELETE /api/dogs/[id])
-//   - 'dogs:status'           (PATCH /api/dogs/[id]/status)
-//   - 'messages:create'       (POST /api/messages)
-//   - 'ratings'               (POST /api/ratings)
-//   - 'reports'               (POST /api/reports)
-//   - 'feedback:post'         (POST /api/feedback)
+//   - 'applications:create'          (POST /api/applications)
+//   - 'applications:accept'          (POST /api/applications/[id]/accept)
+//   - 'applications:decline'         (POST /api/applications/[id]/decline)
+//   - 'applications:complete'        (POST /api/applications/[id]/complete)
+//   - 'applications:withdraw'        (POST /api/applications/[id]/withdraw)
+//   - 'applications:review'          (POST /api/applications/[id]/review)
+//   - 'dogs:create'                  (POST /api/dogs)
+//   - 'dogs:update'                  (PATCH /api/dogs/[id])
+//   - 'dogs:delete'                  (DELETE /api/dogs/[id])
+//   - 'dogs:status'                  (PATCH /api/dogs/[id]/status)
+//   - 'dogs:save' / 'dogs:unsave'    (POST/DELETE /api/dogs/[id]/save)
+//   - 'messages:create'              (POST /api/messages)
+//   - 'ratings:post'                 (POST /api/ratings)
+//   - 'shelter-ratings:post'         (POST /api/shelter-ratings)
+//   - 'reports:post'                 (POST /api/reports)
+//   - 'feedback:post'                (POST /api/feedback)
+//   - 'upload:photo'                 (POST /api/upload/photo)
+//   - 'onboarding:shelter'           (POST /api/onboarding/shelter)
+//   - 'onboarding:foster'            (POST /api/onboarding/foster)
+//   - 'account:delete'               (DELETE /api/account/delete)
+//   - 'notifications:read'           (POST /api/notifications/read)
+//   - 'shelter-foster-invites:*'     (POST/DELETE /api/shelter/foster-invites/*)
+//   - 'foster-notes:create'          (POST /api/shelter/foster-notes)
+//   - 'shelter-roster:delete'        (DELETE /api/foster/shelter-roster/[id])
+//   - 'foster-parents:update'        (PATCH /api/foster-parents/[id])
+//   - 'shelters:update'              (PATCH /api/shelters/[id])
 // Keep this list in sync when adding new mutation routes so future
 // auditors can grep for protected endpoints.
 
 import { NextResponse } from 'next/server'
+
+export interface RateLimitOptions {
+  /** Max allowed requests per window. */
+  limit: number
+  /** Window size in milliseconds. */
+  windowMs: number
+}
+
+export interface RateLimitResult {
+  success: boolean
+  remaining: number
+  resetAt: number
+  /** Seconds until the bucket refills (rounded up). */
+  retryAfter: number
+}
+
+// ---------------------------------------------------------------------------
+// In-memory fallback (local dev / no Redis configured)
+// ---------------------------------------------------------------------------
 
 interface Bucket {
   count: number
@@ -100,59 +80,101 @@ function maybeSweep(now: number): void {
   })
 }
 
-export interface RateLimitOptions {
-  /** Max allowed requests per window. */
-  limit: number
-  /** Window size in milliseconds. */
-  windowMs: number
-}
-
-export interface RateLimitResult {
-  success: boolean
-  remaining: number
-  resetAt: number
-  /** Seconds until the bucket refills (rounded up). */
-  retryAfter: number
-}
-
-/**
- * Consume one token from the bucket for `route` + `identifier`. The
- * caller decides what "identifier" means — user id for
- * authenticated routes, IP for public ones.
- */
-export function rateLimit(
+function inMemoryRateLimit(
   route: string,
   identifier: string,
   { limit, windowMs }: RateLimitOptions,
 ): RateLimitResult {
   const now = Date.now()
   maybeSweep(now)
-
   const key = `${route}|${identifier}`
   const existing = buckets.get(key)
-
   if (!existing || existing.resetAt <= now) {
     const resetAt = now + windowMs
     buckets.set(key, { count: 1, resetAt })
-    return {
-      success: true,
-      remaining: limit - 1,
-      resetAt,
-      retryAfter: 0,
-    }
+    return { success: true, remaining: limit - 1, resetAt, retryAfter: 0 }
   }
-
   existing.count += 1
   const remaining = Math.max(0, limit - existing.count)
   const success = existing.count <= limit
   const retryAfter = success ? 0 : Math.ceil((existing.resetAt - now) / 1000)
+  return { success, remaining, resetAt: existing.resetAt, retryAfter }
+}
 
-  return {
-    success,
-    remaining,
-    resetAt: existing.resetAt,
-    retryAfter,
+// ---------------------------------------------------------------------------
+// Upstash distributed path
+// ---------------------------------------------------------------------------
+
+type UpstashLimiterFn = (
+  route: string,
+  id: string,
+  opts: RateLimitOptions,
+) => Promise<RateLimitResult>
+
+// undefined = not yet initialised; null = no Upstash configured
+let _upstash: UpstashLimiterFn | null | undefined = undefined
+
+async function getUpstashLimiter(): Promise<UpstashLimiterFn | null> {
+  if (_upstash !== undefined) return _upstash
+
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+  if (!url || !token) {
+    _upstash = null
+    return null
   }
+
+  try {
+    const [{ Ratelimit }, { Redis }] = await Promise.all([
+      import('@upstash/ratelimit'),
+      import('@upstash/redis'),
+    ])
+    const redis = Redis.fromEnv()
+
+    _upstash = async (route, identifier, opts) => {
+      const rl = new Ratelimit({
+        redis,
+        limiter: Ratelimit.fixedWindow(opts.limit, `${Math.ceil(opts.windowMs / 1000)} s`),
+        prefix: `fostr:${route}`,
+      })
+      const { success, remaining, reset } = await rl.limit(identifier)
+      const now = Date.now()
+      return {
+        success,
+        remaining,
+        resetAt: reset,
+        retryAfter: success ? 0 : Math.ceil((reset - now) / 1000),
+      }
+    }
+  } catch (err) {
+    console.warn('[rate-limit] Upstash init failed, falling back to in-memory:', err)
+    _upstash = null
+  }
+
+  return _upstash
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Consume one token from the rate limit bucket for `route` + `identifier`.
+ * Must be awaited. Uses Upstash Redis when configured; falls back to in-memory.
+ *
+ * The caller decides what "identifier" means — user id for
+ * authenticated routes, IP for public ones.
+ */
+export async function rateLimit(
+  route: string,
+  identifier: string,
+  opts: RateLimitOptions,
+): Promise<RateLimitResult> {
+  const upstash = await getUpstashLimiter()
+  if (upstash) {
+    return upstash(route, identifier, opts)
+  }
+  return inMemoryRateLimit(route, identifier, opts)
 }
 
 /**

@@ -50,7 +50,7 @@ export async function POST(
   }
 
   // Rate limit: 20 accept/min per shelter user.
-  const rl = rateLimit('applications:accept', user.id, { limit: 20, windowMs: 60_000 })
+  const rl = await rateLimit('applications:accept', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application with shelter ownership + data needed for the

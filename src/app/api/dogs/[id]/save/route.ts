@@ -86,7 +86,7 @@ export async function POST(
 
   // Generous cap: heart-clicking is a fast UI; 60/min stays out of normal
   // foster behavior while still blocking scripted spam.
-  const rl = rateLimit('dogs:save', auth.userId, { limit: 60, windowMs: 60_000 })
+  const rl = await rateLimit('dogs:save', auth.userId, { limit: 60, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   const { error: existsError } = await auth.supabase
@@ -124,7 +124,7 @@ export async function DELETE(
   const auth = await authedFosterId()
   if (auth.kind === 'error') return auth.response
 
-  const rl = rateLimit('dogs:unsave', auth.userId, { limit: 60, windowMs: 60_000 })
+  const rl = await rateLimit('dogs:unsave', auth.userId, { limit: 60, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   const { error: deleteError } = await auth.supabase

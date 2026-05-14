@@ -44,7 +44,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('applications:complete', user.id, { limit: 10, windowMs: 60_000 })
+  const rl = await rateLimit('applications:complete', user.id, { limit: 10, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Fetch application + ownership + both parties' contact info in one hop

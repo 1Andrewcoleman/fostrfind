@@ -77,7 +77,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // Very tight limit — account deletion is a one-shot terminal action;
   // repeated attempts are always abuse, not legitimate user behaviour.
-  const rl = rateLimit('account:delete', user.id, { limit: 3, windowMs: 60_000 })
+  const rl = await rateLimit('account:delete', user.id, { limit: 3, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   const admin = createAdminClient(supabaseUrl, serviceRoleKey, {

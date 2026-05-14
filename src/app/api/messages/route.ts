@@ -64,7 +64,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('messages:create', user.id, { limit: 30, windowMs: 60_000 })
+  const rl = await rateLimit('messages:create', user.id, { limit: 30, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let raw: unknown

@@ -71,7 +71,7 @@ function callRoute(body: unknown = happyBody()): Promise<Response> {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(rateLimit).mockReturnValue({
+  vi.mocked(rateLimit).mockResolvedValue({
     success: true,
     remaining: 9,
     resetAt: Date.now() + 60_000,
@@ -101,7 +101,7 @@ describe('POST /api/applications', () => {
   it('returns 429 when rate limit is exhausted', async () => {
     const { client } = buildMockClient({ auth: buildAuth({ id: FOSTER_USER_ID }) })
     vi.mocked(createClient).mockResolvedValue(client)
-    vi.mocked(rateLimit).mockReturnValue({
+    vi.mocked(rateLimit).mockResolvedValue({
       success: false,
       remaining: 0,
       resetAt: Date.now() + 60_000,

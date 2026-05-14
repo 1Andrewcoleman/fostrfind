@@ -69,7 +69,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // 5/min is intentionally low — reporting is rare. Captures honest mistypes
   // and blocks scripted spam without ever annoying a real user.
-  const rl = rateLimit('reports:post', user.id, { limit: 5, windowMs: 60_000 })
+  const rl = await rateLimit('reports:post', user.id, { limit: 5, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let parsed: z.infer<typeof bodySchema>

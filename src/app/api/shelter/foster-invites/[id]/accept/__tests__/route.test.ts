@@ -46,7 +46,7 @@ function buildMockServiceClient(opts: { shouldFail?: boolean; shouldThrow?: bool
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(rateLimit).mockReturnValue({
+  vi.mocked(rateLimit).mockResolvedValue({
     success: true,
     remaining: 29,
     resetAt: Date.now() + 60_000,

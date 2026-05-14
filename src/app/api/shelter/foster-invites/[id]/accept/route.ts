@@ -50,7 +50,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('shelter-foster-invites:accept', user.id, {
+  const rl = await rateLimit('shelter-foster-invites:accept', user.id, {
     limit: 30,
     windowMs: 60_000,
   })

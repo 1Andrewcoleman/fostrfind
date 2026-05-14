@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('feedback:post', user.id, { limit: 8, windowMs: 900_000 })
+  const rl = await rateLimit('feedback:post', user.id, { limit: 8, windowMs: 900_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   const message = sanitizeMultiline(parsed.data.message)

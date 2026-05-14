@@ -49,7 +49,7 @@ export async function PATCH(
   }
 
   // 20 updates/min/user — same envelope as the foster profile update.
-  const rl = rateLimit('shelters:update', user.id, { limit: 20, windowMs: 60_000 })
+  const rl = await rateLimit('shelters:update', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // Defense-in-depth ownership check alongside the existing RLS policy.

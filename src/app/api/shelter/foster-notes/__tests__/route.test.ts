@@ -27,7 +27,7 @@ function callRoute(body: unknown): Promise<Response> {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(rateLimit).mockReturnValue({
+  vi.mocked(rateLimit).mockResolvedValue({
     success: true,
     remaining: 59,
     resetAt: Date.now() + 60_000,

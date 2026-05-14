@@ -68,7 +68,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // 5 onboardings/min/user. Users complete onboarding once; this is tight
   // enough to blunt scripted enumeration / spam without rejecting a user
   // who hits a transient 5xx and retries.
-  const rl = rateLimit('onboarding:shelter', user.id, { limit: 5, windowMs: 60_000 })
+  const rl = await rateLimit('onboarding:shelter', user.id, { limit: 5, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let raw: unknown

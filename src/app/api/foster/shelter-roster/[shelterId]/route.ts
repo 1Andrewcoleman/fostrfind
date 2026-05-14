@@ -45,7 +45,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('shelter-roster:delete', user.id, {
+  const rl = await rateLimit('shelter-roster:delete', user.id, {
     limit: 30,
     windowMs: 60_000,
   })

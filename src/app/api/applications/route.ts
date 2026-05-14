@@ -63,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // 10 submissions/min per foster — generous enough for re-tries on
   // validation errors, tight enough to blunt scripted spam.
-  const rl = rateLimit('applications:create', user.id, { limit: 10, windowMs: 60_000 })
+  const rl = await rateLimit('applications:create', user.id, { limit: 10, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // Resolve foster_parents row before parsing the body so users without

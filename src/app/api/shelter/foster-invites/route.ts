@@ -62,7 +62,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   // 30 invites/min/user keeps accidental runaway or minor abuse in check
   // while comfortably covering normal onboarding-day bulk invites.
-  const rl = rateLimit('shelter-foster-invites:create', user.id, {
+  const rl = await rateLimit('shelter-foster-invites:create', user.id, {
     limit: 30,
     windowMs: 60_000,
   })

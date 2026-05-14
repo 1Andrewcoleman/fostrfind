@@ -43,7 +43,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rl = rateLimit('ratings:post', user.id, { limit: 20, windowMs: 60_000 })
+  const rl = await rateLimit('ratings:post', user.id, { limit: 20, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   // 2. Parse and validate request body

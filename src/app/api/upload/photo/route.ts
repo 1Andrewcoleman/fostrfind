@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   // Uploads are expensive (bandwidth + storage writes). Cap at 30 per
   // minute per user — enough for realistic profile/dog onboarding flows
   // but well below what a script could exhaust our storage quota with.
-  const rl = rateLimit('upload:photo', user.id, { limit: 30, windowMs: 60_000 })
+  const rl = await rateLimit('upload:photo', user.id, { limit: 30, windowMs: 60_000 })
   if (!rl.success) return rateLimitResponse(rl)
 
   let formData: FormData

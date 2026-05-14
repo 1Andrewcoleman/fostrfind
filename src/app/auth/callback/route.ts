@@ -9,12 +9,12 @@ export async function GET(request: Request) {
 
   // Use the trusted env var as redirect base rather than the request-derived
   // origin, which can be spoofed via Host/X-Forwarded-Host headers on a
-  // misconfigured proxy. Fall back to request origin only in local dev where
-  // NEXT_PUBLIC_APP_URL is typically unset.
+  // misconfigured proxy. Fall back to a hardcoded localhost default for local
+  // dev — never derive the base from request.url, which reflects the Host header.
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
   const base = appUrl?.startsWith('http')
     ? new URL(appUrl).origin
-    : new URL(request.url).origin
+    : 'http://localhost:3000'
 
   if (!code) {
     return NextResponse.redirect(`${base}/login`)

@@ -14,13 +14,14 @@ import { DEV_MODE } from '@/lib/constants'
  *     that would cause every auth call to silently fail; we'd rather fail
  *     loud at boot.
  *   - In **production** (NODE_ENV === 'production'), additional server-only
- *     vars become required: SUPABASE_SERVICE_ROLE_KEY (account delete) and
- *     RESEND_API_KEY (notification emails). RESEND_FROM and
- *     NEXT_PUBLIC_APP_URL have safe code-level fallbacks
- *     (`src/lib/email.ts` uses `onboarding@resend.dev` sandbox + localhost),
- *     so we warn rather than throw when they're missing — surfacing a bad
- *     config without blocking `next build` in a dev environment where the
- *     address and URL haven't been decided yet.
+ *     vars become required: SUPABASE_SERVICE_ROLE_KEY (account delete),
+ *     RESEND_API_KEY (notification emails), and NEXT_PUBLIC_APP_URL (OAuth
+ *     callback redirect base — without a trusted value the fallback is
+ *     localhost, not a spoofable Host header). RESEND_FROM has a safe
+ *     code-level fallback (`src/lib/email.ts` uses `onboarding@resend.dev`
+ *     sandbox), so we warn rather than throw when it's missing — surfacing a
+ *     bad config without blocking `next build` in a dev environment where the
+ *     sender address hasn't been decided yet.
  *
  * Security: never log values, only key names. Throwing with a var name
  * is fine; throwing with a value would risk leaking secrets into logs.
@@ -39,6 +40,7 @@ const BACKEND_VARS = [
 const PROD_HARD_VARS = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'RESEND_API_KEY',
+  'NEXT_PUBLIC_APP_URL',
 ] as const
 
 /**
@@ -46,7 +48,6 @@ const PROD_HARD_VARS = [
  * but does not throw, because the affected features fall back to a
  * known-safe degraded mode:
  *   - `RESEND_FROM` falls back to Resend's sandbox sender (`src/lib/email.ts`).
- *   - `NEXT_PUBLIC_APP_URL` falls back to localhost (email deep links break).
  *   - `NEXT_PUBLIC_SENTRY_DSN` / `SENTRY_AUTH_TOKEN` (Phase 7 Step 47):
  *     missing DSN means no error events ship to Sentry; missing auth
  *     token means source maps don't upload (events still arrive, just
@@ -57,7 +58,6 @@ const PROD_HARD_VARS = [
  */
 const PROD_SOFT_VARS = [
   'RESEND_FROM',
-  'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SENTRY_DSN',
   'SENTRY_AUTH_TOKEN',
 ] as const

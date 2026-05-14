@@ -4,11 +4,20 @@ import { cookies } from 'next/headers'
 import { getPostAuthDestination } from '@/lib/auth-routing'
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const code = searchParams.get('code')
 
+  // Use the trusted env var as redirect base rather than the request-derived
+  // origin, which can be spoofed via Host/X-Forwarded-Host headers on a
+  // misconfigured proxy. Fall back to request origin only in local dev where
+  // NEXT_PUBLIC_APP_URL is typically unset.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  const base = appUrl?.startsWith('http')
+    ? new URL(appUrl).origin
+    : new URL(request.url).origin
+
   if (!code) {
-    return NextResponse.redirect(`${origin}/login`)
+    return NextResponse.redirect(`${base}/login`)
   }
 
   const cookieStore = await cookies()
@@ -31,14 +40,20 @@ export async function GET(request: Request) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code)
   if (error) {
-    return NextResponse.redirect(`${origin}/login`)
+    return NextResponse.redirect(`${base}/login`)
   }
 
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError) {
     console.error('[auth/callback] getUser failed:', authError.message)
-    return NextResponse.redirect(`${origin}/login?error=auth_service_unavailable`)
+    return NextResponse.redirect(`${base}/login?error=auth_service_unavailable`)
   }
-  const dest = user ? await getPostAuthDestination(supabase, user.id) : '/onboarding'
-  return NextResponse.redirect(`${origin}${dest}`)
+  const rawDest = user ? await getPostAuthDestination(supabase, user.id) : '/onboarding'
+  // Defensive: ensure dest is always a relative path — guards against
+  // any future change to getPostAuthDestination() returning an absolute URL.
+  const safeDest =
+    typeof rawDest === 'string' && rawDest.startsWith('/') && !rawDest.includes('://')
+      ? rawDest
+      : '/login'
+  return NextResponse.redirect(`${base}${safeDest}`)
 }

@@ -46,7 +46,7 @@ export async function POST(
   // maybeSingle() returns null and we surface 404 without leaking existence.
   const { data: invite, error: fetchErr } = await supabase
     .from('shelter_foster_invites')
-    .select('id, status, foster_id, shelter:shelters(name)')
+    .select('id, status, foster_id, shelter:shelters(name, user_id)')
     .eq('id', params.id)
     .maybeSingle()
 
@@ -62,13 +62,17 @@ export async function POST(
     id: string
     status: string
     foster_id: string | null
-    shelter: { name: string | null } | Array<{ name: string | null }> | null
+    shelter: { name: string | null; user_id: string } | Array<{ name: string | null; user_id: string }> | null
   }
   const inviteRow = {
     ...rawInvite,
     shelter: Array.isArray(rawInvite.shelter)
       ? rawInvite.shelter[0] ?? null
       : rawInvite.shelter,
+  }
+
+  if (!inviteRow.shelter || inviteRow.shelter.user_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
   if (inviteRow.status !== 'pending') {

@@ -120,11 +120,11 @@ export default function LandingPage() {
                 <Button
                   size="lg"
                   asChild
-                  className="h-12 flex-1 bg-peach text-foreground hover:bg-peach/85 shadow-sm"
+                  className="h-12 w-full sm:w-auto flex-1 bg-peach text-foreground hover:bg-peach/85 shadow-sm"
                 >
                   <Link href="/signup?role=shelter">I&apos;m a shelter</Link>
                 </Button>
-                <Button size="lg" asChild className="h-12 flex-1 shadow-sm">
+                <Button size="lg" asChild className="h-12 w-full sm:w-auto flex-1 shadow-sm">
                   <Link href="/signup?role=foster">I&apos;m a foster parent</Link>
                 </Button>
               </div>

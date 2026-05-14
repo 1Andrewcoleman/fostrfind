@@ -5,6 +5,7 @@ import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { shelterSettingsPatchSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
+import { isAllowedStorageUrl } from '@/lib/url-validation'
 
 /**
  * PATCH /api/shelters/[id] — update a shelter row.
@@ -96,6 +97,16 @@ export async function PATCH(
     raw && typeof raw === 'object' && 'logo_url' in raw
       ? (raw as { logo_url?: unknown }).logo_url
       : undefined
+  if (
+    typeof incomingLogoUrl === 'string' &&
+    incomingLogoUrl.length > 0 &&
+    !isAllowedStorageUrl(incomingLogoUrl)
+  ) {
+    return NextResponse.json(
+      { error: 'Validation failed', details: { logo_url: ['Must be a Supabase Storage URL'] } },
+      { status: 422 },
+    )
+  }
   const logoUrl =
     typeof incomingLogoUrl === 'string' && incomingLogoUrl.length > 0
       ? incomingLogoUrl

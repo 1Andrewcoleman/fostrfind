@@ -108,6 +108,27 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
+  // Cross-role guard: a user cannot be both a shelter and a foster.
+  const { data: existingFoster, error: fosterRoleErr } = await supabase
+    .from('foster_parents')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (fosterRoleErr) {
+    console.error('[onboarding/shelter] foster-role check failed:', fosterRoleErr.message)
+    return NextResponse.json({ error: 'Failed to check existing profile' }, { status: 500 })
+  }
+  if (existingFoster) {
+    return NextResponse.json(
+      {
+        error:
+          'This account already has a foster profile. A single account cannot be both a shelter and a foster.',
+      },
+      { status: 409 },
+    )
+  }
+
   // Sanitize once at the boundary. Email is taken from the verified auth
   // context (user.email), not the request body. Bio uses sanitizeMultiline
   // to preserve paragraph breaks; everything else collapses whitespace via

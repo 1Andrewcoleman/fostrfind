@@ -4,10 +4,11 @@ import { DEV_MODE } from '@/lib/constants'
  * Environment variable validation, run once at module scope during boot.
  *
  * Contract:
- *   - In **DEV_MODE** (NEXT_PUBLIC_SUPABASE_URL missing or not http-prefixed),
- *     the app is intentionally browsable without any real backend. We warn
- *     about missing vars so the developer sees something, but we never throw
- *     — that would break the zero-config dev UX.
+ *   - **DEV_MODE** is an explicit opt-in: set NEXT_PUBLIC_DEV_MODE=true in
+ *     .env.local to run without real Supabase credentials. The app will show
+ *     placeholder data and all auth checks are bypassed. NEVER set this in a
+ *     deployed environment — validateEnv() will throw if it detects DEV_MODE
+ *     alongside a real Supabase URL or NODE_ENV === 'production'.
  *   - Outside DEV_MODE, the two NEXT_PUBLIC_SUPABASE_* vars MUST be present.
  *     A missing anon key with a real URL is a deployment misconfiguration
  *     that would cause every auth call to silently fail; we'd rather fail
@@ -72,25 +73,22 @@ export function validateEnv(): void {
   const isProd = process.env.NODE_ENV === 'production'
 
   if (DEV_MODE) {
-    // DEV_MODE in production means the Supabase URL is missing or invalid.
-    // This would silently bypass auth guards in AuthGuard and RoleGuard.
-    // Fail loudly rather than boot a broken production deployment.
-    if (isProd) {
-      const missingBackend = missing(BACKEND_VARS)
-      const detail =
-        missingBackend.length > 0
-          ? ` Missing: ${missingBackend.join(', ')}.`
-          : ' NEXT_PUBLIC_SUPABASE_URL does not start with "http".'
+    // DEV_MODE must never run alongside a real Supabase URL or in production.
+    // Both conditions would silently bypass auth guards in AuthGuard and RoleGuard.
+    // Guard NODE_ENV === 'production' AND any deployment where NEXT_PUBLIC_SUPABASE_URL
+    // is a real URL — this catches preview/staging where NODE_ENV may not be 'production'.
+    const hasRealUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+    if (isProd || hasRealUrl) {
       throw new Error(
-        `[env] Refusing to boot production in DEV_MODE.${detail} ` +
-          'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in the hosting environment.',
+        '[env] Refusing to boot with NEXT_PUBLIC_DEV_MODE=true in a deployed environment. ' +
+          'NEXT_PUBLIC_DEV_MODE is for local development only — remove it from the hosting environment.',
       )
     }
 
     const missingBackend = missing(BACKEND_VARS)
     if (missingBackend.length > 0) {
       console.warn(
-        `[env] DEV_MODE active — backend env vars missing (${missingBackend.join(', ')}). The app will run with placeholder data; sign-in and data writes are disabled.`,
+        `[env] DEV_MODE active (NEXT_PUBLIC_DEV_MODE=true) — backend env vars missing (${missingBackend.join(', ')}). The app will run with placeholder data; sign-in and data writes are disabled.`,
       )
     }
     return

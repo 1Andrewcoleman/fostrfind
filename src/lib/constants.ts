@@ -81,7 +81,7 @@ export const DOG_STATUS_LABELS: Record<string, string> = {
   adopted: 'Adopted',
 }
 
-export const DEV_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('http')
+export const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
 /**
  * Real support inbox surfaced on error boundaries and the public footer.

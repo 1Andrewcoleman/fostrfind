@@ -48,6 +48,13 @@ export async function RoleGuard({ children, allowedRole }: RoleGuardProps) {
   const isShelter = !!shelter
   const isFoster = !!foster
 
+  // Dual-role is a data integrity error — DB trigger prevents it, but guard
+  // here as defense-in-depth for any pre-existing rows or direct DB access.
+  if (isShelter && isFoster) {
+    console.error('[role-guard] dual-role detected for user:', userId)
+    redirect('/')
+  }
+
   // Neither role set up yet
   if (!isShelter && !isFoster) {
     redirect('/onboarding')

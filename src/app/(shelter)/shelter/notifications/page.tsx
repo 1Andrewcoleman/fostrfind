@@ -26,6 +26,7 @@ export default async function ShelterNotificationsPage() {
 
   let notifications: Notification[] = []
   let fetchError = false
+  let userId: string | undefined
 
   try {
     const supabase = await createClient()
@@ -35,6 +36,8 @@ export default async function ShelterNotificationsPage() {
     } = await supabase.auth.getUser()
     if (authError) throw authError
     if (!user) redirect('/login')
+
+    userId = user.id
 
     const { data, error } = await supabase
       .from('notifications')
@@ -63,7 +66,7 @@ export default async function ShelterNotificationsPage() {
       {fetchError ? (
         <ServerErrorPanel />
       ) : (
-        <NotificationsList notifications={notifications} portal="shelter" />
+        <NotificationsList notifications={notifications} portal="shelter" userId={userId} />
       )}
     </div>
   )

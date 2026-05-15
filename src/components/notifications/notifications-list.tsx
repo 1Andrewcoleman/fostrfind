@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/empty-state'
+import { createClient } from '@/lib/supabase/client'
 import type { Notification } from '@/types/database'
 import {
   groupNotificationsByDate,
@@ -16,6 +17,7 @@ type Portal = 'foster' | 'shelter'
 interface NotificationsListProps {
   notifications: Notification[]
   portal: Portal
+  userId?: string
 }
 
 async function markNotificationsRead(body: { ids: string[] } | { all: true }): Promise<boolean> {
@@ -27,11 +29,26 @@ async function markNotificationsRead(body: { ids: string[] } | { all: true }): P
   return res.ok
 }
 
-export function NotificationsList({ notifications, portal }: NotificationsListProps) {
+export function NotificationsList({ notifications, portal, userId }: NotificationsListProps) {
   const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
   const [items, setItems] = useState(notifications)
   const unreadCount = items.filter((notification) => !notification.read).length
   const groups = useMemo(() => groupNotificationsByDate(items), [items])
+
+  useEffect(() => {
+    if (!userId) return
+    const channel = supabase
+      .channel(`notifications-list:${userId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const incoming = payload.new as Notification
+          setItems((prev) => [incoming, ...prev])
+        }
+      )
+      .subscribe()
+    return () => { void supabase.removeChannel(channel) }
+  }, [userId, supabase])
 
   async function handleSelect(notification: Notification) {
     if (!notification.read) {

@@ -3,6 +3,7 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
+import { RealtimeNotificationWatcher } from '@/components/notifications/realtime-notification-watcher'
 import { DEV_MODE } from '@/lib/constants'
 import type { PortalIdentity } from '@/types/portal'
 
@@ -17,6 +18,7 @@ interface FosterPortalShellProps {
    */
   pendingInvites?: number
   identity: PortalIdentity
+  userId?: string | null
   children: React.ReactNode
 }
 
@@ -41,6 +43,7 @@ export function FosterPortalShell({
   unreadNotifications = 0,
   pendingInvites = 0,
   identity,
+  userId,
   children,
 }: FosterPortalShellProps) {
   return (
@@ -98,6 +101,7 @@ export function FosterPortalShell({
           </div>
         </main>
       </div>
+      {userId && <RealtimeNotificationWatcher userId={userId} />}
     </PortalThemeProvider>
   )
 }

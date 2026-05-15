@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { InviteFosterForm } from '@/app/(shelter)/shelter/fosters/invite-form'
+import { CancelInviteButton } from '@/app/(shelter)/shelter/fosters/cancel-invite-button'
 import { getInitials } from '@/lib/helpers'
 
 export const metadata: Metadata = { title: 'Fosters' }
@@ -229,14 +230,7 @@ export default async function ShelterFostersPage({
                     Awaiting response
                   </div>
                 </div>
-                <form
-                  action={`/api/shelter/foster-invites/${invite.id}/cancel`}
-                  method="post"
-                >
-                  <Button type="submit" variant="ghost" size="sm">
-                    Cancel
-                  </Button>
-                </form>
+                <CancelInviteButton inviteId={invite.id} />
               </li>
             ))}
           </ul>

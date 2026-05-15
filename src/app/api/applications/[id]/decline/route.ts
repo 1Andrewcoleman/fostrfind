@@ -90,7 +90,7 @@ export async function POST(
       userId: application.foster.user_id,
       type: 'application_declined',
       title: `Your application for ${dogName || 'this dog'} was not accepted`,
-      link: `/foster/applications/${params.id}`,
+      link: `/foster/applications`,
       metadata: { applicationId: params.id },
     })
   }

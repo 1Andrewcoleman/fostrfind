@@ -1,7 +1,20 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/server'
+import { getPostAuthDestination } from '@/lib/auth-routing'
 
-export default function NotFound() {
+export default async function NotFound() {
+  let destination = '/'
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      destination = await getPostAuthDestination(supabase, user.id)
+    }
+  } catch {
+    // If auth check fails, fall back to home
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
       <p className="text-8xl font-bold text-muted-foreground/30">404</p>
@@ -10,7 +23,9 @@ export default function NotFound() {
         The page you&apos;re looking for doesn&apos;t exist or has been moved.
       </p>
       <Button asChild>
-        <Link href="/">Back to Home</Link>
+        <Link href={destination}>
+          {destination === '/' ? 'Back to Home' : 'Go to Dashboard'}
+        </Link>
       </Button>
     </div>
   )

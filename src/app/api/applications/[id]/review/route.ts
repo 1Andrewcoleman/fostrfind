@@ -85,7 +85,7 @@ export async function POST(
       userId: application.foster.user_id,
       type: 'application_reviewing',
       title: `Your application for ${dogName} is under review`,
-      link: `/foster/applications/${params.id}`,
+      link: `/foster/applications`,
       metadata: { applicationId: params.id },
     })
   }

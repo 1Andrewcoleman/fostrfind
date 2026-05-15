@@ -18,6 +18,26 @@
 import * as Sentry from '@sentry/nextjs'
 
 export async function register(): Promise<void> {
+  // F-03 / F-04: Second enforcement layer for env var assertions.
+  // next.config.mjs asserts at build time (catching the earliest possible
+  // moment); this catches pre-built artifacts deployed without re-running
+  // `next build` (Docker images, etc.). Both checks are skipped in
+  // development where DEV_MODE is legitimate and APP_URL is optional.
+  if (process.env.NODE_ENV !== 'development') {
+    if (process.env.NEXT_PUBLIC_DEV_MODE === 'true') {
+      throw new Error(
+        '[instrumentation] NEXT_PUBLIC_DEV_MODE=true detected outside local development. ' +
+        'This disables all authentication. Halting server startup.',
+      )
+    }
+    if (!process.env.NEXT_PUBLIC_APP_URL) {
+      throw new Error(
+        '[instrumentation] NEXT_PUBLIC_APP_URL is not set in a non-development environment. ' +
+        'CSRF origin validation is disabled across all mutation routes. Halting server startup.',
+      )
+    }
+  }
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config')
   }

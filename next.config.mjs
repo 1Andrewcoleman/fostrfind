@@ -1,5 +1,28 @@
 import { withSentryConfig } from '@sentry/nextjs'
 
+// F-03 / F-04: Assert security-critical env vars are correctly configured at
+// build time. Both NEXT_PUBLIC_* variables are baked into the client bundle
+// during `next build`, so catching misconfigurations here is earlier and more
+// reliable than a runtime check. The guard runs in every non-development
+// environment (CI, staging, production, preview deployments).
+if (process.env.NODE_ENV !== 'development') {
+  if (process.env.NEXT_PUBLIC_DEV_MODE === 'true') {
+    throw new Error(
+      '[next.config] NEXT_PUBLIC_DEV_MODE=true must never be set outside local ' +
+      'development. It disables all authentication guards. Remove it from your ' +
+      'deployment environment immediately.',
+    )
+  }
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error(
+      '[next.config] NEXT_PUBLIC_APP_URL is required in non-development builds. ' +
+      'Without it, CSRF origin validation is silently disabled on every API route. ' +
+      'Set it to the canonical origin (e.g. https://fostrfind.com) in your ' +
+      'deployment environment.',
+    )
+  }
+}
+
 /**
  * Security headers applied to every response.
  *

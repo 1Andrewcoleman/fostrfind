@@ -7,6 +7,7 @@ import { NavLinks, MobileNav } from '@/components/portal-nav'
 import { PortalSidebar } from '@/components/portal-sidebar'
 import { PortalSidebarUser } from '@/components/portal-sidebar-user'
 import { PortalThemeProvider } from '@/components/portal-theme-provider'
+import { RealtimeNotificationWatcher } from '@/components/notifications/realtime-notification-watcher'
 import { createClient } from '@/lib/supabase/server'
 import { getPortalLayoutData } from '@/lib/portal-layout-data'
 import { DEV_MODE } from '@/lib/constants'
@@ -43,7 +44,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
     if (!userId) redirect('/login')
   }
 
-  const { unreadMessages, unreadNotifications, identity } = await getPortalLayoutData('shelter')
+  const { unreadMessages, unreadNotifications, identity, userId } = await getPortalLayoutData('shelter')
 
   return (
     <AuthGuard>
@@ -94,6 +95,7 @@ export default async function ShelterLayout({ children }: { children: React.Reac
             </div>
           </main>
         </div>
+        {userId && <RealtimeNotificationWatcher userId={userId} />}
         </PortalThemeProvider>
       </RoleGuard>
     </AuthGuard>

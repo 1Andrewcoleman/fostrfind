@@ -38,7 +38,7 @@ export default async function FosterLayout({ children }: { children: React.React
     if (!userId) redirect('/login')
   }
 
-  const { unreadMessages, unreadNotifications, pendingInvites, identity } =
+  const { unreadMessages, unreadNotifications, pendingInvites, identity, userId } =
     await getPortalLayoutData('foster')
 
   return (
@@ -49,6 +49,7 @@ export default async function FosterLayout({ children }: { children: React.React
           unreadNotifications={unreadNotifications}
           pendingInvites={pendingInvites}
           identity={identity}
+          userId={userId ?? undefined}
         >
           {children}
         </FosterPortalShell>

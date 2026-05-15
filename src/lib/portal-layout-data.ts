@@ -159,6 +159,7 @@ export interface PortalLayoutData {
   /** Only populated for the foster portal; always 0 on the shelter side. */
   pendingInvites: number
   identity: PortalIdentity
+  userId: string | null
 }
 
 export async function getPortalLayoutData(
@@ -170,6 +171,7 @@ export async function getPortalLayoutData(
       unreadNotifications: 0,
       pendingInvites: 0,
       identity: DEV_IDENTITY[portal],
+      userId: null,
     }
   }
 
@@ -197,7 +199,7 @@ export async function getPortalLayoutData(
       getUnreadNotificationCount(supabase, user),
     ])
 
-    return { unreadMessages, unreadNotifications, pendingInvites, identity }
+    return { unreadMessages, unreadNotifications, pendingInvites, identity, userId: user.id }
   } catch (e) {
     // Re-throw Next control-flow errors (redirect / notFound / dynamic
     // server usage during build-time static analysis) so Next can do its
@@ -215,5 +217,6 @@ function fallbackLayoutData(portal: 'shelter' | 'foster'): PortalLayoutData {
     unreadNotifications: 0,
     pendingInvites: 0,
     identity: { displayName: 'Account', avatarUrl: null, roleLabel },
+    userId: null,
   }
 }

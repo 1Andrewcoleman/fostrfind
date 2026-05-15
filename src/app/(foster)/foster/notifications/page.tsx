@@ -26,6 +26,7 @@ export default async function FosterNotificationsPage() {
 
   let notifications: Notification[] = []
   let fetchError = false
+  let userId: string | undefined
 
   try {
     const supabase = await createClient()
@@ -35,6 +36,8 @@ export default async function FosterNotificationsPage() {
     } = await supabase.auth.getUser()
     if (authError) throw authError
     if (!user) redirect('/login')
+
+    userId = user.id
 
     const { data, error } = await supabase
       .from('notifications')
@@ -63,7 +66,7 @@ export default async function FosterNotificationsPage() {
       {fetchError ? (
         <ServerErrorPanel />
       ) : (
-        <NotificationsList notifications={notifications} portal="foster" />
+        <NotificationsList notifications={notifications} portal="foster" userId={userId} />
       )}
     </div>
   )

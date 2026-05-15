@@ -64,16 +64,22 @@ export async function sendEmail({
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const { error } = await resend.emails.send({
-    from: FROM_ADDRESS,
-    to,
-    subject,
-    react,
-  })
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_ADDRESS,
+      to,
+      subject,
+      react,
+    })
 
-  if (error) {
-    console.error('[email] send failed:', error.message)
-    return { success: false, error: error.message }
+    if (error) {
+      console.error('[email] send failed:', error.message)
+      return { success: false, error: error.message }
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error('[email] send threw:', msg)
+    return { success: false, error: msg }
   }
 
   return { success: true, mocked: false }

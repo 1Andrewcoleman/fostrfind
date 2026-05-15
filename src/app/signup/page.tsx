@@ -217,7 +217,6 @@ function SignUpForm() {
             variant="outline"
             className="w-full"
             onClick={handleGoogleSignUp}
-            disabled={!acceptTerms}
           >
             Continue with Google
           </Button>

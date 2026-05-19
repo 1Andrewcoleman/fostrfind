@@ -25,7 +25,7 @@ const STEPS: Step[] = [
     n: '02',
     who: 'Fosters',
     title: 'Browse and apply',
-    body: 'Search by size, age, needs, and location. Apply with a personal note explaining why you're the right match.',
+    body: "Search by size, age, needs, and location. Apply with a personal note explaining why you're the right match.",
     icon: Search,
     accent: 'primary',
   },

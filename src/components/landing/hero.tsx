@@ -2,8 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 
-// Hero — cinematic dark field, content anchored to bottom-left.
+const HERO_DOG_URL =
+  'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=1400&q=90'
+
+// Hero — cinematic dark field with golden retriever anchored to the right.
+// Text content lives in the left ~40% of the canvas; the dog image fills the
+// right ~60% and is veiled by two gradient overlays so the dark palette reads
+// as a unified field rather than a photo pasted on top.
 // On mount the content block fades + slides up (700ms). Pure CSS transition,
 // so prefers-reduced-motion is respected by the browser without extra guards.
 export function Hero() {
@@ -16,12 +23,46 @@ export function Hero() {
 
   return (
     <section
-      className="flex flex-col justify-end px-6 md:px-20 pb-16 md:pb-24"
+      className="relative flex flex-col justify-end px-6 md:px-20 pb-16 md:pb-24 overflow-hidden"
       style={{ minHeight: '85vh' }}
       aria-labelledby="hero-heading"
     >
+      {/* Dog image — right side, blended into the dark background */}
       <div
-        className="mx-auto w-full"
+        className="pointer-events-none absolute inset-y-0 right-0 w-full md:w-[62%]"
+        aria-hidden="true"
+      >
+        <Image
+          src={HERO_DOG_URL}
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 62vw"
+          className="object-cover"
+          style={{ objectPosition: 'center 25%' }}
+        />
+        {/* Left-to-right veil: heavy opaque on the left edge fading to near-transparent
+            on the right so the text column is always readable */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to right, #1c1a16 0%, #1c1a16 18%, rgba(28,26,22,0.88) 38%, rgba(28,26,22,0.35) 62%, rgba(28,26,22,0.12) 100%)',
+          }}
+        />
+        {/* Top-to-bottom veil: blends with the sticky nav above and the next
+            section below so the image feels part of the dark field */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(to bottom, #1c1a16 0%, transparent 14%, transparent 72%, #1c1a16 100%)',
+          }}
+        />
+      </div>
+
+      <div
+        className="relative mx-auto w-full"
         style={{
           maxWidth: '1440px',
           opacity: loaded ? 1 : 0,

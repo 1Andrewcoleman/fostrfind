@@ -59,9 +59,9 @@ export function Hero() {
         <div
           className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide"
           style={{
-            backgroundColor: 'rgba(240,235,225,0.07)',
-            color: '#8a8478',
-            border: '1px solid rgba(240,235,225,0.1)',
+            backgroundColor: '#6f8a5e',
+            color: '#e8f0e5',
+            border: '1px solid rgba(138,163,118,0.6)',
           }}
         >
           We&apos;re new here — come help build it

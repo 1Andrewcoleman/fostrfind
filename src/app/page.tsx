@@ -1,230 +1,496 @@
-// Trust-signal stance: **no placeholder metrics, ever.** See
-// `.impeccable.md` — until real analytics land, the How-It-Works section
-// is the landing page's sole trust signal. Do NOT add a "2,400+ dogs
-// fostered" band, a 4.9-star rating card, or any invented social proof.
-// Specificity of the product flow reads as legitimacy; invented numbers
-// read as a pitch deck. When true analytics exist, add them back here
-// with the data source labeled in the copy.
+// Landing page — dark warm editorial redesign.
+// All color values sourced from the Claude Design mockup (Combined_2.html):
+//   bg #1c1a16 · surface #2a2620 · ink #f0ebe1 · pink #c97a7a · green #6f8a5e · amber #c9a55f
+// The page overrides the app's OKLCH design-system tokens with explicit hex because
+// this dark editorial theme is landing-page-only; the portals keep the light palette.
+// Trust-signal stance: no fake metrics. How-It-Works is the sole trust signal.
 
 import Link from 'next/link'
-import Image from 'next/image'
-import { PawPrint, Heart, Search, CheckCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { PublicFooter } from '@/components/public-footer'
-
-// Curated editorial dog portrait from Unsplash. Hostname is allowlisted in
-// next.config.mjs. This particular photo is also used in scripts/seed.ts
-// for a seeded dog, so it's proven stable.
-const HERO_IMAGE_SRC =
-  'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=1200&q=80'
-
-// How-It-Works step definitions. Accents follow the canonical product
-// semantics locked in .impeccable.md:
-//   peach   = shelter-side   (card 1: shelters list)
-//   primary = foster / brand (card 2: fosters apply)
-//   warm    = sage / success (card 3: placement happens)
-// The top strip uses the solid token; the icon tile uses the /15 wash,
-// so each card reads as one coordinated color without shouting.
-type StepAccent = 'peach' | 'primary' | 'warm'
-interface HowItWorksStep {
-  title: string
-  body: string
-  Icon: typeof Heart
-  accent: StepAccent
-}
-const HOW_IT_WORKS_STEPS: HowItWorksStep[] = [
-  {
-    title: 'Shelters list dogs',
-    body: 'Rescue organizations post dogs who need temporary foster homes with full profiles, photos, and medical details.',
-    Icon: Heart,
-    accent: 'peach',
-  },
-  {
-    title: 'Fosters browse & apply',
-    body: 'Foster parents search by location, size, age, and temperament — then apply with a personal note.',
-    Icon: Search,
-    accent: 'primary',
-  },
-  {
-    title: 'Dogs find homes',
-    body: 'Shelters review foster history and ratings, accept the best match, and coordinate every step via in-app messaging.',
-    Icon: CheckCircle,
-    accent: 'warm',
-  },
-]
-
-const ACCENT_CLASSES: Record<StepAccent, { strip: string; tile: string }> = {
-  peach:   { strip: 'bg-peach',   tile: 'bg-peach/20' },
-  primary: { strip: 'bg-primary', tile: 'bg-primary/20' },
-  warm:    { strip: 'bg-warm',    tile: 'bg-warm/20' },
-}
+import { PawPrint, Heart, Search, Home } from 'lucide-react'
+import { SUPPORT_EMAIL } from '@/lib/constants'
 
 export default function LandingPage() {
+  const year = new Date().getFullYear()
+
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* -------------------------------------------------------------- */}
-      {/* Top nav                                                         */}
-      {/* -------------------------------------------------------------- */}
-      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-sans font-bold text-lg tracking-tight">
-            <PawPrint className="h-6 w-6 text-primary" aria-hidden="true" />
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ backgroundColor: '#1c1a16', color: '#f0ebe1' }}
+    >
+      {/* ------------------------------------------------------------------ */}
+      {/* Nav                                                                 */}
+      {/* ------------------------------------------------------------------ */}
+      <header
+        className="sticky top-0 z-40 backdrop-blur-sm"
+        style={{
+          backgroundColor: 'rgba(28,26,22,0.92)',
+          borderBottom: '1px solid rgba(240,235,225,0.08)',
+        }}
+      >
+        <div
+          className="mx-auto px-6 md:px-20 h-16 flex items-center justify-between"
+          style={{ maxWidth: '1440px' }}
+        >
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-semibold tracking-tight"
+            style={{ color: '#f0ebe1' }}
+          >
+            <PawPrint className="h-[18px] w-[18px]" style={{ color: '#c97a7a' }} aria-hidden="true" />
             Fostr Find
           </Link>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/signup">Sign up</Link>
-            </Button>
-          </div>
+
+          <nav className="flex items-center gap-1" aria-label="Site navigation">
+            <Link
+              href="/login"
+              className="px-4 py-2 text-sm font-medium rounded-md transition-colors"
+              style={{ color: '#c8c2b4' }}
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
+              className="px-4 py-2 text-sm font-medium rounded-full transition-opacity hover:opacity-85"
+              style={{ backgroundColor: '#f0ebe1', color: '#1c1a16' }}
+            >
+              Sign up
+            </Link>
+          </nav>
         </div>
       </header>
 
-      {/* -------------------------------------------------------------- */}
-      {/* Hero                                                            */}
-      {/* -------------------------------------------------------------- */}
-      {/* Calmer than the pre-redesign hero (see Phase 5-b Commit 3).
-       * Grain overlay removed, italic serif accent dropped, decorative
-       * washes softened to one butter radial tied to the photo corner.
-       * The two CTAs now present as paired doors: peach for shelter,
-       * butter for foster, weighted equally. */}
-      <section className="relative overflow-hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -right-32 h-[32rem] w-[32rem] rounded-full bg-primary/15 blur-3xl"
-        />
+      {/* ------------------------------------------------------------------ */}
+      {/* Hero — cinematic dark field; content anchors to bottom-left        */}
+      {/* ------------------------------------------------------------------ */}
+      <section
+        className="flex flex-col justify-end px-6 md:px-20 pb-16 md:pb-24"
+        style={{ minHeight: '85vh' }}
+        aria-labelledby="hero-heading"
+      >
+        <div className="mx-auto w-full" style={{ maxWidth: '1440px' }}>
+          {/* Eyebrow chip */}
+          <div
+            className="inline-flex items-center gap-2 mb-8 px-4 py-1.5 rounded-full text-xs font-medium tracking-wide"
+            style={{
+              backgroundColor: 'rgba(240,235,225,0.07)',
+              color: '#8a8478',
+              border: '1px solid rgba(240,235,225,0.1)',
+            }}
+          >
+            We&apos;re new here — come help build it
+          </div>
 
-        <div className="container mx-auto px-4 py-20 md:py-28 lg:py-32 relative">
-          <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Text column */}
-            <div className="lg:col-span-7 max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-warm/40 bg-warm/15 px-3 py-1 text-xs font-medium tracking-wide text-foreground/80 animate-in fade-in slide-in-from-bottom-3 duration-500 [animation-fill-mode:both] motion-reduce:animate-none">
-                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-warm" />
-                Open for new fosters
-              </div>
+          {/* H1 — Instrument Serif, very large, tight tracking */}
+          <h1
+            id="hero-heading"
+            className="font-normal leading-[1.02] mb-6"
+            style={{
+              fontFamily: 'var(--font-instrument)',
+              fontSize: 'clamp(3.25rem, 7.5vw, 5.25rem)',
+              letterSpacing: '-0.03em',
+              color: '#f0ebe1',
+            }}
+          >
+            Find a foster.<br />Save a life.
+          </h1>
 
-              <h1 className="mt-6 font-display font-semibold tracking-[-0.02em] leading-[1.02] text-5xl md:text-6xl lg:text-[4.5rem] animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 [animation-fill-mode:both] motion-reduce:animate-none">
-                Find a foster.
-                <br />
-                Save a life.
-              </h1>
+          {/* Subtext */}
+          <p
+            className="text-[15px] md:text-base leading-relaxed mb-10"
+            style={{ color: 'rgba(240,235,225,0.6)', maxWidth: '22rem' }}
+          >
+            Fostr Find connects animal shelters with foster families — giving dogs a warm
+            place to land while they wait for their forever home.
+          </p>
 
-              <p className="mt-6 max-w-xl text-lg text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 [animation-fill-mode:both] motion-reduce:animate-none">
-                Fostr Find connects animal shelters with compassionate foster families — giving
-                dogs the temporary homes they need while they wait for their forever family.
-              </p>
-
-              <div className="mt-8 flex flex-col sm:flex-row gap-3 max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500 delay-300 [animation-fill-mode:both] motion-reduce:animate-none">
-                <Button
-                  size="lg"
-                  asChild
-                  className="h-14 sm:h-12 w-full sm:w-auto flex-1 bg-peach text-foreground hover:bg-peach/85 shadow-sm"
-                >
-                  <Link href="/signup?role=shelter">I&apos;m a shelter</Link>
-                </Button>
-                <Button size="lg" asChild className="h-14 sm:h-12 w-full sm:w-auto flex-1 shadow-sm">
-                  <Link href="/signup?role=foster">I&apos;m a foster parent</Link>
-                </Button>
-              </div>
-            </div>
-
-            {/* Image column */}
-            <div className="lg:col-span-5">
-              <div className="relative mx-auto w-full max-w-md lg:max-w-none animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200 [animation-fill-mode:both] motion-reduce:animate-none">
-                {/* Offset butter panel — editorial magazine motif, low alpha */}
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 translate-x-4 translate-y-4 sm:translate-x-5 sm:translate-y-5 rounded-[1.5rem] bg-primary/25"
-                />
-                <div className="relative rounded-[1.5rem] overflow-hidden shadow-xl ring-1 ring-foreground/[0.04] bg-muted">
-                  <Image
-                    src={HERO_IMAGE_SRC}
-                    alt="A foster parent resting at home with a rescued husky mix"
-                    width={800}
-                    height={1000}
-                    sizes="(max-width: 1024px) 90vw, 40vw"
-                    priority
-                    className="block h-auto w-full aspect-[4/5] object-cover"
-                  />
-                </div>
-              </div>
-            </div>
+          {/* CTAs — pill-shaped, pink for foster, dark-green for shelter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/signup?role=foster"
+              className="inline-flex items-center gap-1.5 self-start px-6 py-3 rounded-full text-sm font-medium transition-opacity hover:opacity-85"
+              style={{ backgroundColor: '#c97a7a', color: '#f5ede8' }}
+            >
+              I&apos;m a foster parent <span aria-hidden="true">→</span>
+            </Link>
+            <Link
+              href="/signup?role=shelter"
+              className="inline-flex items-center gap-1.5 self-start px-6 py-3 rounded-full text-sm font-medium transition-opacity hover:opacity-85"
+              style={{ backgroundColor: '#303829', color: '#8aa376' }}
+            >
+              I run a shelter <span aria-hidden="true">→</span>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* -------------------------------------------------------------- */}
-      {/* How it works                                                    */}
-      {/* -------------------------------------------------------------- */}
-      {/* The section heading is the page's one editorial serif accent
-       * besides the H1 (per .impeccable.md principle #3 — "typography
-       * leads"). Card titles are Switzer so the serif stays rare. */}
-      <section id="how-it-works" className="py-20 md:py-28 px-4 bg-background scroll-mt-20">
-        <div className="container mx-auto max-w-6xl">
-          <div className="max-w-2xl mx-auto text-center mb-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              The flow
-            </p>
-            <h2 className="mt-3 font-display text-4xl md:text-5xl font-semibold tracking-[-0.01em] leading-[1.05]">
+      {/* ------------------------------------------------------------------ */}
+      {/* How it works                                                        */}
+      {/* ------------------------------------------------------------------ */}
+      <section
+        id="how-it-works"
+        className="px-6 md:px-20 py-20 md:py-28 scroll-mt-16"
+        style={{ backgroundColor: '#25221c' }}
+        aria-labelledby="hiw-heading"
+      >
+        <div className="mx-auto" style={{ maxWidth: '1440px' }}>
+          {/* Section eyebrow — line + label */}
+          <div className="flex items-center gap-3 mb-10">
+            <span
+              className="block h-px w-6"
+              style={{ backgroundColor: '#8a8478' }}
+              aria-hidden="true"
+            />
+            <span
+              className="text-[11px] font-semibold uppercase tracking-[0.2em]"
+              style={{ color: '#8a8478' }}
+            >
               How it works
+            </span>
+          </div>
+
+          {/* Heading + paragraph — two columns on large screens */}
+          <div className="grid lg:grid-cols-2 gap-6 lg:gap-20 mb-14 items-start">
+            <h2
+              id="hiw-heading"
+              className="font-normal leading-[1.06]"
+              style={{
+                fontFamily: 'var(--font-instrument)',
+                fontSize: 'clamp(2rem, 4.5vw, 3.25rem)',
+                letterSpacing: '-0.02em',
+                color: '#f0ebe1',
+              }}
+            >
+              From shelter{' '}
+              <em style={{ color: '#c97a7a', fontStyle: 'italic' }}>to sofa</em>
+              <br />in three steps.
             </h2>
-            <p className="mt-4 text-muted-foreground leading-relaxed">
-              Three steps from listing to placement — with fewer handoffs and more warmth at every
-              stage.
+            <p
+              className="lg:pt-2 text-sm md:text-[15px] leading-relaxed"
+              style={{ color: '#c8c2b4', maxWidth: '26rem' }}
+            >
+              No spreadsheets, group chats, or crossed wires. Fostr Find brings the whole
+              journey into one calm, friendly place — so the dog gets home faster.
             </p>
           </div>
 
-          <ol className="grid md:grid-cols-3 gap-6">
-            {HOW_IT_WORKS_STEPS.map((step, index) => {
-              const accent = ACCENT_CLASSES[step.accent]
-              const Icon = step.Icon
-              return (
-                <li
-                  key={step.title}
-                  className="relative overflow-hidden rounded-[1.25rem] border border-border/70 bg-card shadow-sm transition-transform transition-shadow duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500 [animation-fill-mode:both] motion-reduce:animate-none"
-                  style={{ animationDelay: `${index * 120}ms` }}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`absolute inset-x-0 top-0 block h-1.5 ${accent.strip}`}
-                  />
+          {/* Step cards */}
+          <ol className="grid md:grid-cols-3 gap-4">
+            {/* Step 1 — shelters */}
+            <li
+              className="relative rounded-[18px] p-6 overflow-hidden"
+              style={{
+                backgroundColor: '#2a2620',
+                border: '1px solid rgba(240,235,225,0.06)',
+              }}
+            >
+              <div
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full mb-5"
+                style={{ backgroundColor: 'rgba(201,122,122,0.15)' }}
+              >
+                <Heart className="h-3.5 w-3.5" style={{ color: '#c97a7a' }} aria-hidden="true" />
+              </div>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-3"
+                style={{ color: '#c97a7a' }}
+              >
+                For shelters
+              </p>
+              <h3 className="text-xl font-medium mb-3 tracking-tight" style={{ color: '#f0ebe1' }}>
+                Shelters list dogs
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#8a8478' }}>
+                Rescue organizations post the dogs in their care — photos, temperament notes,
+                medical needs, everything a future foster should know.
+              </p>
+            </li>
 
-                  <span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute -top-4 right-5 font-display font-semibold text-[7rem] leading-none text-foreground/[0.04] select-none"
-                  >
-                    {index + 1}
-                  </span>
+            {/* Step 2 — fosters; watermark "2" in background */}
+            <li
+              className="relative rounded-[18px] p-6 overflow-hidden"
+              style={{
+                backgroundColor: '#2a2620',
+                border: '1px solid rgba(240,235,225,0.06)',
+              }}
+            >
+              <span
+                className="pointer-events-none absolute bottom-3 right-4 font-semibold leading-none select-none"
+                style={{
+                  color: 'rgba(240,235,225,0.04)',
+                  fontFamily: 'var(--font-instrument)',
+                  fontSize: '7rem',
+                }}
+                aria-hidden="true"
+              >
+                2
+              </span>
+              <div
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full mb-5"
+                style={{ backgroundColor: 'rgba(201,165,95,0.15)' }}
+              >
+                <Search className="h-3.5 w-3.5" style={{ color: '#c9a55f' }} aria-hidden="true" />
+              </div>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-3"
+                style={{ color: '#c9a55f' }}
+              >
+                For foster families
+              </p>
+              <h3 className="text-xl font-medium mb-3 tracking-tight" style={{ color: '#f0ebe1' }}>
+                Fosters browse &amp; apply
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#8a8478' }}>
+                Foster families search by location, size, and energy level, then apply with
+                a short note about their home.
+              </p>
+            </li>
 
-                  <div className="relative p-7 pt-9">
-                    <div className="flex items-start justify-between gap-4">
-                      <div
-                        className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${accent.tile}`}
-                      >
-                        <Icon className="h-5 w-5 text-foreground" aria-hidden="true" />
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                        Step {index + 1}
-                      </span>
-                    </div>
-
-                    <h3 className="mt-6 font-sans font-semibold text-xl tracking-tight">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                      {step.body}
-                    </p>
-                  </div>
-                </li>
-              )
-            })}
+            {/* Step 3 — together */}
+            <li
+              className="relative rounded-[18px] p-6 overflow-hidden"
+              style={{
+                backgroundColor: '#2a2620',
+                border: '1px solid rgba(240,235,225,0.06)',
+              }}
+            >
+              <div
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full mb-5"
+                style={{ backgroundColor: 'rgba(111,138,94,0.18)' }}
+              >
+                <Home className="h-3.5 w-3.5" style={{ color: '#6f8a5e' }} aria-hidden="true" />
+              </div>
+              <p
+                className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-3"
+                style={{ color: '#6f8a5e' }}
+              >
+                Together
+              </p>
+              <h3 className="text-xl font-medium mb-3 tracking-tight" style={{ color: '#f0ebe1' }}>
+                A dog finds a home
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: '#8a8478' }}>
+                Shelters pick the right match and coordinate the handoff inside the app.
+                Then the wait for forever begins — somewhere warm.
+              </p>
+            </li>
           </ol>
         </div>
       </section>
 
-      <PublicFooter />
+      {/* ------------------------------------------------------------------ */}
+      {/* Pick your side                                                      */}
+      {/* ------------------------------------------------------------------ */}
+      <section
+        className="px-6 md:px-20 py-20 md:py-28"
+        style={{ backgroundColor: '#1c1a16' }}
+        aria-labelledby="pick-heading"
+      >
+        <div className="mx-auto" style={{ maxWidth: '1440px' }}>
+          {/* Centered heading */}
+          <div className="text-center mb-12">
+            <h2
+              id="pick-heading"
+              className="font-normal mb-4"
+              style={{
+                fontFamily: 'var(--font-instrument)',
+                fontSize: 'clamp(2.25rem, 5vw, 3.75rem)',
+                letterSpacing: '-0.02em',
+                color: '#f0ebe1',
+              }}
+            >
+              Pick your{' '}
+              <em style={{ color: '#c97a7a', fontStyle: 'italic' }}>side</em>
+              {' '}of the leash.
+            </h2>
+            <p className="text-sm leading-relaxed mx-auto" style={{ color: '#8a8478', maxWidth: '26rem' }}>
+              We&apos;re just opening doors. Walk through one — we&apos;ll meet you on the other side.
+            </p>
+          </div>
+
+          {/* Two tinted panels */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Foster — dark burgundy panel */}
+            <div
+              className="rounded-[18px] p-8 md:p-10 flex flex-col justify-between"
+              style={{ backgroundColor: '#4a2f2f', minHeight: '280px' }}
+            >
+              <div>
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-6"
+                  style={{ color: '#d99a9a' }}
+                >
+                  For foster families
+                </p>
+                <h3
+                  className="font-normal leading-tight mb-4"
+                  style={{
+                    fontFamily: 'var(--font-instrument)',
+                    fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
+                    color: '#f0ebe1',
+                  }}
+                >
+                  Open your home.
+                </h3>
+                <p
+                  className="text-sm leading-relaxed mb-8"
+                  style={{ color: 'rgba(240,235,225,0.5)', maxWidth: '18rem' }}
+                >
+                  A weekend, a month, until forever finds them. You decide the chapter.
+                </p>
+              </div>
+              <Link
+                href="/signup?role=foster"
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-opacity hover:opacity-85"
+                style={{ backgroundColor: '#c97a7a', color: '#f5ede8' }}
+              >
+                Become a foster <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+
+            {/* Shelter — dark green panel */}
+            <div
+              className="rounded-[18px] p-8 md:p-10 flex flex-col justify-between"
+              style={{ backgroundColor: '#303829', minHeight: '280px' }}
+            >
+              <div>
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-6"
+                  style={{ color: '#8aa376' }}
+                >
+                  For shelters
+                </p>
+                <h3
+                  className="font-normal leading-tight mb-4"
+                  style={{
+                    fontFamily: 'var(--font-instrument)',
+                    fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
+                    color: '#f0ebe1',
+                  }}
+                >
+                  Find them a soft landing.
+                </h3>
+                <p
+                  className="text-sm leading-relaxed mb-8"
+                  style={{ color: 'rgba(240,235,225,0.5)', maxWidth: '18rem' }}
+                >
+                  Move dogs out of kennels and into living rooms while they wait.
+                </p>
+              </div>
+              <Link
+                href="/signup?role=shelter"
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-opacity hover:opacity-85"
+                style={{ backgroundColor: '#6f8a5e', color: '#e8f0e5' }}
+              >
+                List your dogs <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Footer                                                              */}
+      {/* ------------------------------------------------------------------ */}
+      <footer
+        className="px-6 md:px-20 pt-14 pb-8"
+        style={{
+          backgroundColor: '#1c1a16',
+          borderTop: '1px solid rgba(240,235,225,0.08)',
+        }}
+      >
+        <div className="mx-auto" style={{ maxWidth: '1440px' }}>
+          <div className="grid gap-10 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+            {/* Brand */}
+            <div>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm font-semibold mb-4"
+                style={{ color: '#f0ebe1' }}
+              >
+                <PawPrint className="h-[18px] w-[18px]" style={{ color: '#c97a7a' }} aria-hidden="true" />
+                Fostr Find
+              </Link>
+              <p className="text-sm leading-relaxed" style={{ color: '#8a8478', maxWidth: '18rem' }}>
+                Connecting shelters with foster families so every dog has a warm place to land
+                while they wait for their forever home.
+              </p>
+            </div>
+
+            {/* Platform */}
+            <FooterColumn title="Platform">
+              <FooterLink href="/foster/browse">Browse dogs</FooterLink>
+              <FooterLink href="/signup?role=shelter">For shelters</FooterLink>
+              <FooterLink href="/signup?role=foster">For fosters</FooterLink>
+            </FooterColumn>
+
+            {/* Company */}
+            <FooterColumn title="Company">
+              <FooterLink href="/#how-it-works">How it works</FooterLink>
+              <FooterLink href={`mailto:${SUPPORT_EMAIL}`}>Contact</FooterLink>
+              <FooterLink href="/#how-it-works">Mission</FooterLink>
+            </FooterColumn>
+
+            {/* Legal */}
+            <FooterColumn title="Legal">
+              <FooterLink href="/terms">Terms</FooterLink>
+              <FooterLink href="/privacy">Privacy</FooterLink>
+              <FooterLink href="/privacy">Cookies</FooterLink>
+            </FooterColumn>
+          </div>
+
+          {/* Bottom bar */}
+          <div
+            className="mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
+            style={{
+              borderTop: '1px solid rgba(240,235,225,0.06)',
+              color: '#8a8478',
+            }}
+          >
+            <span>© {year} Fostr Find. A new project, just getting started.</span>
+            <span className="flex items-center gap-1.5">
+              Built with{' '}
+              <PawPrint className="h-3.5 w-3.5" style={{ color: '#c97a7a' }} aria-hidden="true" />
+              {' '}for dogs.
+            </span>
+          </div>
+        </div>
+      </footer>
     </div>
+  )
+}
+
+function FooterColumn({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3
+        className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-4"
+        style={{ color: '#8a8478' }}
+      >
+        {title}
+      </h3>
+      <ul className="space-y-2 text-sm">{children}</ul>
+    </div>
+  )
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const cls = 'transition-colors hover:text-[#f0ebe1] inline-block'
+  const style = { color: '#c8c2b4' }
+
+  if (href.startsWith('mailto:') || href.startsWith('http')) {
+    return (
+      <li>
+        <a href={href} className={cls} style={style}>
+          {children}
+        </a>
+      </li>
+    )
+  }
+
+  return (
+    <li>
+      <Link href={href} className={cls} style={style}>
+        {children}
+      </Link>
+    </li>
   )
 }

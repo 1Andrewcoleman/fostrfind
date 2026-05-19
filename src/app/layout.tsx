@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Source_Serif_4 } from 'next/font/google'
+import { Source_Serif_4, Instrument_Serif, Caveat } from 'next/font/google'
 import localFont from 'next/font/local'
 import { Toaster } from '@/components/ui/sonner'
 import { PublicThemeLock } from '@/components/public-theme-lock'
@@ -35,6 +35,26 @@ const sourceSerif = Source_Serif_4({
   subsets: ['latin'],
   weight: ['400', '600'],
   variable: '--font-display',
+  display: 'swap',
+})
+
+// Instrument Serif — used on the landing page hero and section headings.
+// Pairs with Switzer (body) to give the public marketing surface a warm,
+// editorial quality distinct from the portal's Source Serif 4 moments.
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  variable: '--font-instrument',
+  display: 'swap',
+})
+
+// Caveat — handwritten accent, used sparingly on the landing page only.
+// One weight (400) keeps the bundle trim.
+const caveat = Caveat({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-caveat',
   display: 'swap',
 })
 
@@ -81,7 +101,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${switzer.variable} ${sourceSerif.variable}`}
+      className={`${switzer.variable} ${sourceSerif.variable} ${instrumentSerif.variable} ${caveat.variable}`}
       // `next-themes` writes `class="light"` / `"dark"` to <html> at mount
       // for the authenticated portals (see `PortalThemeProvider`). That
       // conflicts with SSR's empty class attribute and triggers React's

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 const HERO_DOG_URL =
-  'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=1400&q=90'
+  'https://images.unsplash.com/photo-1569428012232-f53bb3e5b646?auto=format&fit=crop&w=1600&q=90'
 
 // Hero — cinematic dark field with golden retriever anchored to the right.
 // Text content lives in the left ~40% of the canvas; the dog image fills the

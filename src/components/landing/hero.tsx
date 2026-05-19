@@ -44,7 +44,7 @@ export function Hero() {
           style={{
             objectPosition: 'right center',
             opacity: 0.55,
-            filter: 'blur(1.5px)',
+            filter: 'blur(0.75px)',
           }}
         />
       </div>

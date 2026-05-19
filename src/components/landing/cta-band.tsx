@@ -104,6 +104,20 @@ export function CtaBand() {
             style={{ backgroundColor: '#4a2f2f', minHeight: '280px' }}
           >
             <PawDecoration color="rgba(217,154,154,0.25)" />
+            {/* Caveat-script watermark in the lower-right negative space */}
+            <span
+              className="pointer-events-none absolute bottom-2 right-6 leading-none select-none"
+              style={{
+                fontFamily: 'var(--font-caveat)',
+                fontSize: 'clamp(5rem, 10vw, 8rem)',
+                color: 'rgba(217,154,154,0.12)',
+                transform: 'rotate(-4deg)',
+                transformOrigin: 'bottom right',
+              }}
+              aria-hidden="true"
+            >
+              home
+            </span>
             <div>
               <p
                 className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-6"
@@ -143,6 +157,20 @@ export function CtaBand() {
             style={{ backgroundColor: '#303829', minHeight: '280px' }}
           >
             <PawDecoration color="rgba(138,163,118,0.25)" />
+            {/* Caveat-script watermark in the lower-right negative space */}
+            <span
+              className="pointer-events-none absolute bottom-2 right-6 leading-none select-none whitespace-nowrap"
+              style={{
+                fontFamily: 'var(--font-caveat)',
+                fontSize: 'clamp(4rem, 8vw, 6.5rem)',
+                color: 'rgba(138,163,118,0.12)',
+                transform: 'rotate(-4deg)',
+                transformOrigin: 'bottom right',
+              }}
+              aria-hidden="true"
+            >
+              soft landing
+            </span>
             <div>
               <p
                 className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-6"

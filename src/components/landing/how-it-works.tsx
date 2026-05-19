@@ -86,7 +86,7 @@ export function HowItWorks() {
 
         {/* Step cards */}
         <ol className="grid md:grid-cols-3 gap-4">
-          {/* Step 1 — shelters */}
+          {/* Step 1 — shelters; watermark "1" in background */}
           <li
             className="relative rounded-[18px] p-6 overflow-hidden transition-transform duration-200 hover:-translate-y-1"
             style={{
@@ -94,6 +94,17 @@ export function HowItWorks() {
               border: '1px solid rgba(240,235,225,0.06)',
             }}
           >
+            <span
+              className="pointer-events-none absolute bottom-3 right-4 font-semibold leading-none select-none"
+              style={{
+                color: 'rgba(240,235,225,0.04)',
+                fontFamily: 'var(--font-instrument)',
+                fontSize: '7rem',
+              }}
+              aria-hidden="true"
+            >
+              1
+            </span>
             <div
               className="inline-flex h-8 w-8 items-center justify-center rounded-full mb-5"
               style={{ backgroundColor: 'rgba(201,122,122,0.15)' }}
@@ -155,7 +166,7 @@ export function HowItWorks() {
             </p>
           </li>
 
-          {/* Step 3 — together */}
+          {/* Step 3 — together; watermark "3" in background */}
           <li
             className="relative rounded-[18px] p-6 overflow-hidden transition-transform duration-200 hover:-translate-y-1"
             style={{
@@ -163,6 +174,17 @@ export function HowItWorks() {
               border: '1px solid rgba(240,235,225,0.06)',
             }}
           >
+            <span
+              className="pointer-events-none absolute bottom-3 right-4 font-semibold leading-none select-none"
+              style={{
+                color: 'rgba(240,235,225,0.04)',
+                fontFamily: 'var(--font-instrument)',
+                fontSize: '7rem',
+              }}
+              aria-hidden="true"
+            >
+              3
+            </span>
             <div
               className="inline-flex h-8 w-8 items-center justify-center rounded-full mb-5"
               style={{ backgroundColor: 'rgba(111,138,94,0.18)' }}

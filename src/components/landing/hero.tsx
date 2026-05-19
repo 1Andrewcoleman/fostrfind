@@ -27,36 +27,21 @@ export function Hero() {
       style={{ minHeight: '85vh' }}
       aria-labelledby="hero-heading"
     >
-      {/* Dog image — right side, blended into the dark background */}
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-full md:w-[62%]"
-        aria-hidden="true"
-      >
+      {/* Dog image — covers the full hero behind the text. Slight opacity
+          and blur push it back so the foreground copy reads clearly without
+          needing an overlay gradient. */}
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         <Image
           src={HERO_DOG_URL}
           alt=""
           fill
           priority
-          sizes="(max-width: 768px) 100vw, 62vw"
+          sizes="100vw"
           className="object-cover"
-          style={{ objectPosition: 'center 25%' }}
-        />
-        {/* Left-to-right veil: heavy opaque on the left edge fading to near-transparent
-            on the right so the text column is always readable */}
-        <div
-          className="absolute inset-0"
           style={{
-            background:
-              'linear-gradient(to right, #1c1a16 0%, #1c1a16 18%, rgba(28,26,22,0.88) 38%, rgba(28,26,22,0.35) 62%, rgba(28,26,22,0.12) 100%)',
-          }}
-        />
-        {/* Top-to-bottom veil: blends with the sticky nav above and the next
-            section below so the image feels part of the dark field */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(to bottom, #1c1a16 0%, transparent 14%, transparent 72%, #1c1a16 100%)',
+            objectPosition: 'right center',
+            opacity: 0.55,
+            filter: 'blur(1.5px)',
           }}
         />
       </div>

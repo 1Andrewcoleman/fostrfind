@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
+// Upstream source is requested at 2880px / q=85 so next/image has enough
+// pixels to generate sharp 2x / Retina variants for the responsive srcset.
+// next/image still serves a sized-down version per device.
 const HERO_DOG_URL =
-  'https://images.unsplash.com/photo-1569428012232-f53bb3e5b646?auto=format&fit=crop&w=1600&q=90'
+  'https://images.unsplash.com/photo-1569428012232-f53bb3e5b646?auto=format&fit=crop&w=2880&q=85'
 
 // Hero — cinematic dark field with golden retriever anchored to the right.
 // Text content lives in the left ~40% of the canvas; the dog image fills the

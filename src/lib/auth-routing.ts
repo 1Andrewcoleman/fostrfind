@@ -9,8 +9,8 @@ export async function getPostAuthDestination(
   userId: string,
 ): Promise<string> {
   const [{ data: shelter }, { data: foster }] = await Promise.all([
-    supabase.from('shelters').select('id').eq('user_id', userId).single(),
-    supabase.from('foster_parents').select('id').eq('user_id', userId).single(),
+    supabase.from('shelters').select('id').eq('user_id', userId).maybeSingle(),
+    supabase.from('foster_parents').select('id').eq('user_id', userId).maybeSingle(),
   ])
 
   if (shelter) return '/shelter/dashboard'

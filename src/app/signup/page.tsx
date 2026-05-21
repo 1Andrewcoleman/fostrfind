@@ -52,6 +52,11 @@ function SignUpForm() {
     }
 
     const supabase = createClient()
+    // Clear any lingering session before creating a new account. Without
+    // this, a browser with a stale confirmed session would cause the
+    // verify-email page to immediately forward the user as if already
+    // confirmed rather than waiting for the new confirmation email.
+    await supabase.auth.signOut()
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,

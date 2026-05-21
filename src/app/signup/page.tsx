@@ -56,6 +56,7 @@ function SignUpForm() {
       email: values.email,
       password: values.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: { intended_role: role },
       },
     })

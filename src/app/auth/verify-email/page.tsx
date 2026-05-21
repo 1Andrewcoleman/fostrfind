@@ -56,10 +56,15 @@ function VerifyEmailContent() {
     supabase.auth.getUser().then(({ data: { user }, error: authError }) => {
       if (unmounted) return
       if (authError) {
-        console.error('[verify-email] initial getUser failed:', authError.message)
-        toast.error('Could not check your sign-in status. Please sign in again.')
-        window.location.href = '/login'
-        return
+        // AuthSessionMissingError is the expected state right after email/password
+        // signup — no session exists until the user clicks the confirmation link.
+        // Treat it the same as !user rather than bouncing to /login.
+        if (authError.name !== 'AuthSessionMissingError') {
+          console.error('[verify-email] initial getUser failed:', authError.message)
+          toast.error('Could not check your sign-in status. Please sign in again.')
+          window.location.href = '/login'
+          return
+        }
       }
       if (!user) {
         // No session — expected right after email/password signup (confirmation required).
@@ -89,7 +94,8 @@ function VerifyEmailContent() {
       } = await supabase.auth.getUser()
       if (unmounted) return
       if (authError) {
-        if (!pollErrorLogged) {
+        // AuthSessionMissingError is normal while the user hasn't confirmed yet.
+        if (authError.name !== 'AuthSessionMissingError' && !pollErrorLogged) {
           console.error('[verify-email] poll getUser failed:', authError.message)
           pollErrorLogged = true
         }

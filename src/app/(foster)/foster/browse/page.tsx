@@ -106,11 +106,6 @@ export default function BrowsePage() {
   const [hasMore, setHasMore] = useState(!DEV_MODE)
   const [filters, setFilters] = useState<FilterState>(initialFilters)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
-  // Foster's coordinates — used to compute per-dog distance on the client.
-  // Null when either the foster profile hasn't geocoded yet or the user is
-  // signed out; in both cases we silently skip the distance filter so the
-  // page still works, just without mileage. Held in a ref (and mirrored in
-  // state for re-renders) so `fetchDogsPage` can stay referentially stable.
   const [fosterCoords, setFosterCoords] = useState<{
     latitude: number | null
     longitude: number | null
@@ -122,12 +117,8 @@ export default function BrowsePage() {
   useEffect(() => {
     fosterCoordsRef.current = fosterCoords
   }, [fosterCoords])
-  // Track whether the user (or the prefs seed) has ever pushed filters to the
-  // URL. Once true, we never re-seed from preferences — an explicit "Clear all"
-  // must be honored.
   const hasInitializedRef = useRef(initialHadParams)
 
-  // Keep URL in sync whenever filters change
   const handleFilterChange = useCallback(
     (next: FilterState) => {
       hasInitializedRef.current = true
@@ -140,26 +131,49 @@ export default function BrowsePage() {
     [router],
   )
 
-  // Cursor-based pagination: fetch PAGE_SIZE dogs at a time and append.
-  // Client-side filtering still runs across all loaded dogs, so filters
-  // may only surface results once "Load More" pulls in the matching rows.
-  // Tracked as a known trade-off until server-side filtering lands.
-  const fetchDogsPage = useCallback(async (from: number) => {
+  // Fetches one PAGE_SIZE slice of dogs with server-side filters applied.
+  // Stable callback — filters are passed as a parameter so this never needs
+  // to be recreated when filter state changes.
+  const fetchDogsPage = useCallback(async (from: number, currentFilters: FilterState) => {
     const supabase = createClient()
     const to = from + PAGE_SIZE - 1
-    const { data } = await supabase
+
+    // Shelter slug filter: PostgREST can't filter on embedded resource
+    // columns, so we resolve the slug to an id first.
+    let resolvedShelterId: string | null = null
+    if (currentFilters.shelter) {
+      const { data: shelterRow } = await supabase
+        .from('shelters')
+        .select('id')
+        .eq('slug', currentFilters.shelter)
+        .maybeSingle()
+      resolvedShelterId = shelterRow?.id ?? null
+      // Unknown slug — no possible results.
+      if (!resolvedShelterId) return { rows: [] as DogWithShelter[], reachedEnd: true }
+    }
+
+    let query = supabase
       .from('dogs')
       .select('*, shelter:shelters(name, logo_url, slug, latitude, longitude)')
       .eq('status', 'available')
       .order('created_at', { ascending: false })
       .range(from, to)
 
+    if (currentFilters.sizes.length > 0) query = query.in('size', currentFilters.sizes)
+    if (currentFilters.ages.length > 0) query = query.in('age', currentFilters.ages)
+    if (currentFilters.gender) query = query.eq('gender', currentFilters.gender)
+    // medicalOk=false → exclude dogs that have any special_needs value
+    if (!currentFilters.medicalOk) query = query.is('special_needs', null)
+    if (currentFilters.search.trim()) {
+      const q = currentFilters.search.trim()
+      query = query.or(`name.ilike.%${q}%,breed.ilike.%${q}%`)
+    }
+    if (resolvedShelterId) query = query.eq('shelter_id', resolvedShelterId)
+
+    const { data } = await query
     const rows = data ?? []
 
-    // Collect unique shelter IDs, then fetch their ratings in a single query
-    // and compute per-shelter averages. Page-scoped (max 24 shelters), so
-    // this is cheap and keeps the browse-card surface in sync with the
-    // public profile without a join on every row.
+    // Batch-load ratings for all shelters on this page.
     const shelterIds = Array.from(
       new Set(
         rows
@@ -186,10 +200,6 @@ export default function BrowsePage() {
       }
     }
 
-    // Read the foster's coords at fetch time so the distance column
-    // reflects whatever we know about the user right now. If the user
-    // hasn't geocoded yet, every dog ends up with distance_miles=undefined
-    // and the distance filter silently becomes a no-op.
     const fc = fosterCoordsRef.current
     const mapped: DogWithShelter[] = rows.map((row: Record<string, unknown>) => {
       const shelter = row.shelter as {
@@ -199,8 +209,8 @@ export default function BrowsePage() {
         latitude: number | null
         longitude: number | null
       } | null
-      const shelterId = row.shelter_id as string | undefined
-      const rating = shelterId ? ratingsMap.get(shelterId) : undefined
+      const rowShelterId = row.shelter_id as string | undefined
+      const rating = rowShelterId ? ratingsMap.get(rowShelterId) : undefined
       const distance =
         fc && shelter
           ? haversineMiles(fc, {
@@ -223,41 +233,59 @@ export default function BrowsePage() {
     return { rows: mapped, reachedEnd: rows.length < PAGE_SIZE }
   }, [])
 
+  // Stable key over the server-side filter fields only. maxDistance is
+  // intentionally excluded — it's applied client-side so that dragging the
+  // distance slider never fires a server request.
+  const serverFilterKey = useMemo(
+    () =>
+      JSON.stringify([
+        [...filters.sizes].sort(),
+        [...filters.ages].sort(),
+        filters.gender,
+        filters.medicalOk,
+        filters.search.trim(),
+        filters.shelter,
+      ]),
+    [filters.sizes, filters.ages, filters.gender, filters.medicalOk, filters.search, filters.shelter],
+  )
+
+  // Re-fetch from page 0 whenever the server-side filter key changes.
+  // `filters` is referenced inside but intentionally not listed as a dep —
+  // it's always current when serverFilterKey changes (same render), and we
+  // don't want maxDistance changes to re-trigger this effect.
   useEffect(() => {
     if (DEV_MODE) return
     let cancelled = false
-    async function loadFirstPage() {
-      const { rows, reachedEnd } = await fetchDogsPage(0)
+    setLoadingDogs(true)
+    setDogs([])
+
+    async function load() {
+      const { rows, reachedEnd } = await fetchDogsPage(0, filters)
       if (cancelled) return
       setDogs(rows)
       setHasMore(!reachedEnd)
       setLoadingDogs(false)
     }
-    loadFirstPage()
+    load()
     return () => {
       cancelled = true
     }
-  }, [fetchDogsPage])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverFilterKey, fetchDogsPage])
 
   const loadMore = useCallback(async () => {
     if (DEV_MODE) return
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
-    const { rows, reachedEnd } = await fetchDogsPage(dogs.length)
+    const { rows, reachedEnd } = await fetchDogsPage(dogs.length, filters)
     setDogs((prev) => [...prev, ...rows])
     setHasMore(!reachedEnd)
     setLoadingMore(false)
-  }, [dogs.length, loadingMore, hasMore, fetchDogsPage])
+  }, [dogs.length, loadingMore, hasMore, fetchDogsPage, filters])
 
-  // Load the foster's saved preferences + coordinates. This does two things:
-  //
-  //   1. Stores the coordinates in state so we can compute distances (both
-  //      for the filter and for the mileage label on each card).
-  //   2. Seeds the filter state from saved preferences on first visit —
-  //      but only when the URL had no filter params and we haven't already
-  //      seeded this session. The user's `max_distance` is included in the
-  //      seed so a foster who saved "within 50 miles" doesn't get a browse
-  //      page full of dogs three states away.
+  // Load the foster's saved preferences + coordinates. Stores coords for
+  // distance computation, and seeds filter state from saved prefs on first
+  // visit when the URL has no filter params.
   useEffect(() => {
     if (DEV_MODE) return
     let cancelled = false
@@ -318,8 +346,7 @@ export default function BrowsePage() {
   }, [handleFilterChange])
 
   // When the foster's coords finish loading, backfill distance_miles on any
-  // dogs that were fetched before coords arrived. This keeps the mileage
-  // label in sync even in the (expected) race where dogs land first.
+  // dogs that were fetched before coords arrived.
   useEffect(() => {
     if (!fosterCoords) return
     setDogs((prev) =>
@@ -336,32 +363,17 @@ export default function BrowsePage() {
     )
   }, [fosterCoords])
 
+  // Distance is the only remaining client-side filter. All other filters
+  // are applied in the Supabase query inside fetchDogsPage.
   const filteredDogs = useMemo(() => {
-    const q = filters.search.trim().toLowerCase()
+    if (filters.maxDistance === null) return dogs
     return dogs.filter((dog) => {
-      if (filters.sizes.length > 0 && dog.size && !filters.sizes.includes(dog.size)) return false
-      if (filters.ages.length > 0 && dog.age && !filters.ages.includes(dog.age)) return false
-      if (filters.gender && dog.gender !== filters.gender) return false
-      if (!filters.medicalOk && dog.special_needs) return false
-      if (q) {
-        const name = dog.name?.toLowerCase() ?? ''
-        const breed = dog.breed?.toLowerCase() ?? ''
-        if (!name.includes(q) && !breed.includes(q)) return false
-      }
-      // Distance filter: only applies when the foster has coords AND the
-      // dog has a known shelter distance. Dogs with undefined distance
-      // pass the filter — we don't want geocoding gaps to silently hide
-      // matches from someone dragging a 25-mile slider.
-      if (filters.maxDistance !== null && dog.distance_miles !== undefined) {
-        if (dog.distance_miles > filters.maxDistance) return false
-      }
-      // Shelter deep-link filter: only included dogs whose shelter slug
-      // matches. Applied client-side against the same `shelter` nested
-      // join the page already pulls through, so no extra query.
-      if (filters.shelter && dog.shelter_slug !== filters.shelter) return false
-      return true
+      // Dogs with unknown distance pass through — geocoding gaps shouldn't
+      // silently hide results.
+      if (dog.distance_miles === undefined) return true
+      return dog.distance_miles <= filters.maxDistance!
     })
-  }, [dogs, filters])
+  }, [dogs, filters.maxDistance])
 
   const hasActiveFilters = isFilterActive(filters)
 
@@ -405,9 +417,9 @@ export default function BrowsePage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-sm text-muted-foreground mr-1">
                 {filteredDogs.length} dog{filteredDogs.length !== 1 ? 's' : ''} found
-                {hasMore && !hasActiveFilters && (
+                {hasMore && (
                   <span className="ml-1 text-xs">
-                    (of loaded dogs &mdash; load more to see all)
+                    (load more to see all)
                   </span>
                 )}
               </span>

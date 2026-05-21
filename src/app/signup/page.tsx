@@ -56,6 +56,7 @@ function SignUpForm() {
       email: values.email,
       password: values.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: { intended_role: role },
       },
     })
@@ -73,7 +74,7 @@ function SignUpForm() {
     // the user to the interstitial so they can't poke at /onboarding until
     // their email is verified. (OAuth path stays direct — providers return
     // pre-confirmed emails.)
-    window.location.href = '/auth/verify-email'
+    window.location.href = `/auth/verify-email?email=${encodeURIComponent(values.email)}`
   }
 
   async function handleGoogleSignUp() {

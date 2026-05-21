@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MailQuestion, Loader2, PawPrint } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,14 +16,20 @@ type Status = 'checking' | 'unconfirmed' | 'dev-mode'
 const RESEND_COOLDOWN_SECONDS = 60
 const POLL_INTERVAL_MS = 3000
 
-export default function VerifyEmailPage() {
-  const [status, setStatus] = useState<Status>(DEV_MODE ? 'dev-mode' : 'checking')
-  const [email, setEmail] = useState<string>('')
+function VerifyEmailContent() {
+  const searchParams = useSearchParams()
+  const queryEmail = searchParams.get('email') ?? ''
+
+  // If the user just signed up (email in query string), there is no session yet —
+  // Supabase requires email confirmation before issuing one. Skip the "checking"
+  // phase and show the inbox prompt immediately.
+  const [status, setStatus] = useState<Status>(
+    DEV_MODE ? 'dev-mode' : queryEmail ? 'unconfirmed' : 'checking'
+  )
+  const [email, setEmail] = useState<string>(queryEmail)
   const [resending, setResending] = useState(false)
   const [cooldown, setCooldown] = useState(0)
 
-  // Keep the latest handler in a ref so the polling effect doesn't need to
-  // re-subscribe every time `email` changes.
   const confirmedHandlerRef = useRef<() => Promise<void>>(async () => {})
 
   useEffect(() => {
@@ -42,12 +49,10 @@ export default function VerifyEmailPage() {
         return
       }
       const dest = user ? await getPostAuthDestination(supabase, user.id) : '/login'
-      // Hard nav so the session cookie is propagated to the next request.
       window.location.href = dest
     }
     confirmedHandlerRef.current = handleConfirmed
 
-    // Initial check
     supabase.auth.getUser().then(({ data: { user }, error: authError }) => {
       if (unmounted) return
       if (authError) {
@@ -57,7 +62,12 @@ export default function VerifyEmailPage() {
         return
       }
       if (!user) {
-        window.location.href = '/signup'
+        // No session — expected right after email/password signup (confirmation required).
+        // If we have an email from the query string, stay on the page and show the prompt.
+        // Otherwise the user navigated here directly with no context; send them to signup.
+        if (!queryEmail) {
+          window.location.href = '/signup'
+        }
         return
       }
       if (user.email_confirmed_at) {
@@ -68,9 +78,9 @@ export default function VerifyEmailPage() {
       setStatus('unconfirmed')
     })
 
-    // Poll — catches confirmation completed in another tab. Poll errors
-    // are logged once and otherwise swallowed (the user sees the stale
-    // unconfirmed page; the next tick or a manual reload recovers).
+    // Poll every 3 s. Once the user clicks the confirmation link (in any tab),
+    // /auth/callback exchanges the code and creates a session. The next poll
+    // tick will detect the confirmed user and redirect automatically.
     let pollErrorLogged = false
     const pollId = window.setInterval(async () => {
       const {
@@ -96,9 +106,8 @@ export default function VerifyEmailPage() {
       unmounted = true
       window.clearInterval(pollId)
     }
-  }, [])
+  }, [queryEmail])
 
-  // Countdown tick for the resend button.
   useEffect(() => {
     if (cooldown <= 0) return
     const t = window.setTimeout(() => setCooldown((c) => c - 1), 1000)
@@ -142,7 +151,7 @@ export default function VerifyEmailPage() {
             )}
           </div>
           <CardTitle>
-            {status === 'dev-mode' ? 'Email verification' : 'Verify your email'}
+            {status === 'dev-mode' ? 'Email verification' : 'Check your inbox'}
           </CardTitle>
           <CardDescription>
             {status === 'checking' && 'Looking up your account…'}
@@ -151,8 +160,8 @@ export default function VerifyEmailPage() {
             {status === 'unconfirmed' && (
               <>
                 We sent a verification link to{' '}
-                <span className="font-medium text-foreground">{email || 'your email'}</span>. Click
-                the link in that email to continue to Fostr Find. This page will refresh
+                <span className="font-medium text-foreground">{email || 'your email address'}</span>
+                . Open that email and click the link to continue. This page will advance
                 automatically once you&apos;re verified.
               </>
             )}
@@ -208,5 +217,13 @@ export default function VerifyEmailPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailContent />
+    </Suspense>
   )
 }

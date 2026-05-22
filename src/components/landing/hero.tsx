@@ -40,9 +40,8 @@ export function Hero() {
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          className="object-cover object-center md:object-right"
           style={{
-            objectPosition: 'right center',
             opacity: 0.55,
             filter: 'blur(0.75px)',
           }}

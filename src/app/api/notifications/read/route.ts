@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
 
@@ -14,26 +13,16 @@ export async function PATCH(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[notifications/read] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // Rate limit: 60/min is generous for normal notification management (click
   // "mark all read" a handful of times) while blocking scripted hammering,
   // especially the { all: true } path which triggers a full-table UPDATE.
-  const rl = rateLimit('notifications:read', user.id, { limit: 60, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('notifications/read', {
+    key: 'notifications:read',
+    limit: 60,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   let raw: unknown
   try {

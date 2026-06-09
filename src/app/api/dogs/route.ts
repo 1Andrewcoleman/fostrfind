@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { dogCreateSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -33,26 +32,16 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[dogs/create] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 30 creates/min/user comfortably covers a shelter onboarding a batch of
   // dogs while blunting scripted spam. Matches the foster-invite limit so
   // operators don't have to keep two different mental models.
-  const rl = rateLimit('dogs:create', user.id, { limit: 30, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('dogs/create', {
+    key: 'dogs:create',
+    limit: 30,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Resolve the caller's shelter BEFORE parsing the body so users without a
   // shelter row get a clear 403 instead of a generic validation error.

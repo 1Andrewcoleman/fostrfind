@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { PlacementCompletedEmail } from '@/emails/placement-completed'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -28,24 +27,14 @@ export async function POST(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  // 1. Authenticate the caller
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[applications/complete] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('applications:complete', user.id, { limit: 10, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // 1. Authenticate the caller (rate limit: 10 completes/min per user)
+  const auth = await requireApiUser('applications/complete', {
+    key: 'applications:complete',
+    limit: 10,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // 2. Fetch application + ownership + both parties' contact info in one hop
   const { data: application, error: fetchError } = await supabase

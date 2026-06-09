@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { dogUpdateSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -28,23 +27,14 @@ export async function DELETE(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  // 1. Authenticate the caller
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('[dogs/delete] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('dogs:delete', user.id, { limit: 10, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // 1. Authenticate the caller (rate limit: 10 deletes/min per user)
+  const auth = await requireApiUser('dogs/delete', {
+    key: 'dogs:delete',
+    limit: 10,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // 2. Fetch the dog and verify shelter ownership in one query
   const { data: dog, error: fetchError } = await supabase
@@ -122,24 +112,15 @@ export async function PATCH(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('[dogs/update] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Matches `dogs:create` so a shelter operator updating their listings sees
-  // the same envelope they'd see when adding new ones.
-  const rl = rateLimit('dogs:update', user.id, { limit: 30, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // Limit matches `dogs:create` so a shelter operator updating their listings
+  // sees the same envelope they'd see when adding new ones.
+  const auth = await requireApiUser('dogs/update', {
+    key: 'dogs:update',
+    limit: 30,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Verify ownership BEFORE parsing the body so a 404/403 surfaces ahead of
   // a noisy 422 for a dog the caller can't see anyway.

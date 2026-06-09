@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { fosterProfilePatchSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -34,25 +33,15 @@ export async function PATCH(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[foster-parents/update] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 20 updates/min/user — generous for a form the user typically saves
   // a handful of times per session, tight enough to blunt scripted abuse.
-  const rl = rateLimit('foster-parents:update', user.id, { limit: 20, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('foster-parents/update', {
+    key: 'foster-parents:update',
+    limit: 20,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Defense-in-depth ownership check alongside the existing RLS policy.
   // We resolve the row by id first so a wrong-owner request gets a clean

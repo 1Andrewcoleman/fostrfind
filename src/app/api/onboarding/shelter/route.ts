@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApiUser } from '@/lib/api-auth'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { shelterOnboardingServerSchema } from '@/lib/schemas'
@@ -38,20 +38,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[onboarding/shelter] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // No rate limit inside the auth preamble: the email checks below must
+  // return 400/403 before any 429, so this route applies rateLimit() itself
+  // after them.
+  const auth = await requireApiUser('onboarding/shelter')
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Email must be present and confirmed. We store user.email (not the
   // request body) as shelters.email so a user cannot impersonate another.

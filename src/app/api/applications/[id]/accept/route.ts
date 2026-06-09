@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ApplicationAcceptedEmail } from '@/emails/application-accepted'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -33,25 +32,14 @@ export async function POST(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  // 1. Authenticate the caller
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[applications/accept] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // Rate limit: 20 accept/min per shelter user.
-  const rl = rateLimit('applications:accept', user.id, { limit: 20, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // 1. Authenticate the caller. Rate limit: 20 accept/min per shelter user.
+  const auth = await requireApiUser('applications/accept', {
+    key: 'applications:accept',
+    limit: 20,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // 2. Fetch application with shelter ownership + data needed for the
   //    foster notification email, all in one round-trip.

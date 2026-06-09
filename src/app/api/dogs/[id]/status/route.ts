@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
 
@@ -36,23 +35,14 @@ export async function PATCH(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  // 1. Authenticate
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('[dogs/status] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('dogs:status', user.id, { limit: 20, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // 1. Authenticate (rate limit: 20 status changes/min per user)
+  const auth = await requireApiUser('dogs/status', {
+    key: 'dogs:status',
+    limit: 20,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // 2. Fetch dog + verify shelter ownership
   const { data: dog, error: fetchError } = await supabase

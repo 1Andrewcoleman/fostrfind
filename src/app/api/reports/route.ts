@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import { REPORT_CATEGORIES, SUPPORT_EMAIL } from '@/lib/constants'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -52,25 +51,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[reports/post] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 5/min is intentionally low — reporting is rare. Captures honest mistypes
   // and blocks scripted spam without ever annoying a real user.
-  const rl = rateLimit('reports:post', user.id, { limit: 5, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('reports/post', {
+    key: 'reports:post',
+    limit: 5,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   let parsed: z.infer<typeof bodySchema>
   try {

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -20,24 +19,14 @@ export async function POST(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  // 1. Authenticate the caller
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[applications/review] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('applications:review', user.id, { limit: 30, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // 1. Authenticate the caller (rate limit: 30 reviews/min per user)
+  const auth = await requireApiUser('applications/review', {
+    key: 'applications:review',
+    limit: 30,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // 2. Fetch application and verify shelter ownership
   const { data: application, error: fetchError } = await supabase

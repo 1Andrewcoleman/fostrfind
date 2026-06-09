@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApiUser } from '@/lib/api-auth'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 import { sendEmail } from '@/lib/email'
 import { profileFeedbackSchema } from '@/lib/schemas'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import { UserFeedbackEmail } from '@/emails/user-feedback'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -32,22 +31,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: first ?? 'Invalid request body' }, { status: 400 })
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[feedback] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('feedback:post', user.id, { limit: 8, windowMs: 900_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // Rate limit: 8 feedback posts per 15 minutes per user.
+  const auth = await requireApiUser('feedback', {
+    key: 'feedback:post',
+    limit: 8,
+    windowMs: 900_000,
+  })
+  if (auth.response) return auth.response
+  // This route never queries the DB — feedback goes straight to Resend —
+  // so only `user` is needed from the auth result.
+  const { user } = auth
 
   const message = sanitizeMultiline(parsed.data.message)
   if (message.length < 10) {

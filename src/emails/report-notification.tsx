@@ -52,7 +52,7 @@ export function ReportNotificationEmail({
       <hr style={emailStyles.divider} />
 
       <p style={{ ...emailStyles.paragraph, marginBottom: 0, fontWeight: 600 }}>
-        Reporter's statement
+        Reporter&apos;s statement
       </p>
       <pre
         style={{

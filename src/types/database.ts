@@ -241,8 +241,3 @@ export interface ApplicationWithDetails extends Application {
   shelter: Shelter
 }
 
-export interface MessageWithSender extends Message {
-  sender: {
-    email: string
-  }
-}

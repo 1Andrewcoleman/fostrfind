@@ -6,7 +6,7 @@ type QueryResult = { data: unknown; error: unknown }
 
 /**
  * Minimal stand-in for a Supabase query builder. `getPostAuthDestination`
- * chains `.from(...).select(...).eq(...).single()` and awaits the final
+ * chains `.from(...).select(...).eq(...).maybeSingle()` and awaits the final
  * call, so we only need to model that final terminal resolving to
  * `{ data, error }`. We distinguish tables by the `.from()` arg so the
  * shelter vs foster query can resolve independently.
@@ -21,7 +21,7 @@ function buildMockClient(results: {
       return {
         select: () => ({
           eq: () => ({
-            single: async () => result,
+            maybeSingle: async () => result,
           }),
         }),
       }

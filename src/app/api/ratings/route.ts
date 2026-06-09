@@ -1,120 +1,13 @@
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
-import { sanitizeText } from '@/lib/sanitize'
-import { validateMutationRequest } from '@/lib/api-security'
-import { privateJson } from '@/lib/api-response'
-
-const bodySchema = z.object({
-  applicationId: z.string().uuid(),
-  score: z.number().int().min(1).max(5),
-  comment: z.string().max(500).optional(),
-})
+import { createRatingHandler } from '@/lib/rating-route'
 
 /**
- * POST /api/ratings
- *
- * Submits a shelter rating for a completed foster placement.
- *
- * Guards (in order):
- * 1. Authentication — caller must be logged in
- * 2. Application exists and is completed — only completed placements can be rated
- * 3. Shelter ownership — caller must own the shelter on the application
- * 4. Idempotency — one rating per application; returns 409 if one already exists
+ * POST /api/ratings — shelter rates a foster after a completed placement.
+ * Guard chain and insert logic live in `src/lib/rating-route.ts`, shared
+ * with the mirror endpoint `/api/shelter-ratings`.
  */
-export async function POST(request: Request): Promise<NextResponse> {
-  const guardErr = validateMutationRequest(request)
-  if (guardErr) return guardErr
-
-  // 1. Authenticate before parsing the body so unauthenticated requests don't
-  //    incur JSON parsing cost.
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-  if (authError) {
-    console.error('[ratings/post] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('ratings:post', user.id, { limit: 20, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
-
-  // 2. Parse and validate request body
-  let body: z.infer<typeof bodySchema>
-  try {
-    body = bodySchema.parse(await request.json())
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-  }
-
-  // 3. Fetch the application and verify it is completed + shelter ownership
-  const { data: application, error: fetchError } = await supabase
-    .from('applications')
-    .select('id, status, foster_id, dog_id, shelter_id, shelter:shelters!inner(user_id)')
-    .eq('id', body.applicationId)
-    .single()
-
-  if (fetchError || !application) {
-    return NextResponse.json({ error: 'Application not found' }, { status: 404 })
-  }
-
-  const shelter = application.shelter as unknown as { user_id: string }
-  if (shelter.user_id !== user.id) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-
-  if (application.status !== 'completed') {
-    return NextResponse.json(
-      { error: 'Only completed placements can be rated' },
-      { status: 409 },
-    )
-  }
-
-  // 4. Idempotency — reject if a rating already exists for this application
-  const { data: existing } = await supabase
-    .from('ratings')
-    .select('id')
-    .eq('application_id', body.applicationId)
-    .maybeSingle()
-
-  if (existing) {
-    return NextResponse.json(
-      { error: 'A rating for this placement already exists' },
-      { status: 409 },
-    )
-  }
-
-  // 5. Insert the rating. Comments are free-text, so strip any HTML-ish
-  //    tags before persisting — keeps exports / emails / future plaintext
-  //    views safe. Empty sanitized strings collapse to null.
-  const cleanComment = body.comment ? sanitizeText(body.comment) : ''
-  const { error: insertError } = await supabase.from('ratings').insert({
-    application_id: body.applicationId,
-    shelter_id: application.shelter_id,
-    foster_id: application.foster_id,
-    dog_id: application.dog_id,
-    score: body.score,
-    comment: cleanComment || null,
-  })
-
-  if (insertError) {
-    // Map Postgres unique_violation to 409 — covers race between duplicate-check
-    // and insert (two concurrent requests for the same placement).
-    if ((insertError as { code?: string }).code === '23505') {
-      return NextResponse.json(
-        { error: 'A rating for this placement already exists' },
-        { status: 409 },
-      )
-    }
-    return NextResponse.json({ error: 'Failed to save rating' }, { status: 500 })
-  }
-
-  return privateJson({ success: true })
-}
+export const POST = createRatingHandler({
+  table: 'ratings',
+  rater: 'shelter',
+  rateLimitKey: 'ratings:post',
+  logTag: 'ratings/post',
+})

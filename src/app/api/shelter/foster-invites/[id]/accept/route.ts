@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
-import { normalizeInviteEmail } from '@/lib/shelter-roster'
+import { fosterDisplayName, resolveFosterInviteResponse } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -56,68 +56,15 @@ export async function POST(
   })
   if (!rl.success) return rateLimitResponse(rl)
 
-  // Resolve the caller's foster row.
-  const { data: fosterRow } = await supabase
-    .from('foster_parents')
-    .select('id, email, first_name, last_name')
-    .eq('user_id', user.id)
-    .maybeSingle()
-  if (!fosterRow) {
-    return NextResponse.json({ error: 'Caller is not a foster' }, { status: 403 })
-  }
-  const foster = fosterRow as {
-    id: string
-    email: string
-    first_name: string | null
-    last_name: string | null
-  }
-  const fosterId = foster.id
-  const fosterEmail = normalizeInviteEmail(
-    foster.email,
+  const resolved = await resolveFosterInviteResponse(
+    supabase,
+    user.id,
+    params.id,
+    'foster-invites/accept',
   )
-
-  // Fetch the invite with RLS already applied; if the caller can't see it
-  // (doesn't match by foster_id OR email), maybeSingle returns null and we
-  // surface a 404 without leaking existence.
-  const { data: invite, error: fetchErr } = await supabase
-    .from('shelter_foster_invites')
-    .select('id, shelter_id, email, foster_id, status')
-    .eq('id', params.id)
-    .maybeSingle()
-
-  if (fetchErr) {
-    console.error('[foster-invites/accept] fetch failed:', fetchErr.message)
-    return NextResponse.json({ error: 'Failed to load invite' }, { status: 500 })
-  }
-  if (!invite) {
-    return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
-  }
-
-  const inviteRow = invite as {
-    id: string
-    shelter_id: string
-    email: string
-    foster_id: string | null
-    status: string
-  }
-
-  // Idempotency + correctness guard. Only pending invites can transition.
-  if (inviteRow.status !== 'pending') {
-    return NextResponse.json(
-      { error: `Invite is no longer pending (status: ${inviteRow.status})` },
-      { status: 409 },
-    )
-  }
-
-  // Belt-and-braces: RLS already filters by foster_id OR email match, but
-  // we re-check here so the logic is reviewable in one place without
-  // trusting RLS alone.
-  const matchesByFosterId = inviteRow.foster_id === fosterId
-  const matchesByEmail =
-    normalizeInviteEmail(inviteRow.email) === fosterEmail && fosterEmail.length > 0
-  if (!matchesByFosterId && !matchesByEmail) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  if (resolved.response) return resolved.response
+  const { foster, invite: inviteRow } = resolved
+  const fosterId = foster.id
 
   const { data: shelterRow, error: shelterErr } = await supabase
     .from('shelters')
@@ -187,8 +134,7 @@ export async function POST(
 
   const shelter = shelterRow as { user_id: string; name: string | null } | null
   if (shelter?.user_id) {
-    const fosterName =
-      [foster.first_name, foster.last_name].filter(Boolean).join(' ').trim() || 'A foster'
+    const fosterName = fosterDisplayName(foster)
     void createNotification({
       userId: shelter.user_id,
       type: 'invite_accepted',

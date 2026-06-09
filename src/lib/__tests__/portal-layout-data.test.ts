@@ -30,6 +30,7 @@ describe('getPortalLayoutData', () => {
     vi.mocked(createClient).mockResolvedValue(client)
 
     await expect(getPortalLayoutData('shelter')).resolves.toEqual({
+      userId: USER_ID,
       unreadMessages: 2,
       pendingInvites: 0,
       unreadNotifications: 5,

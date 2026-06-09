@@ -13,7 +13,7 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { isNextControlFlowError } from '@/lib/server-errors'
-import type { Dog } from '@/types/database'
+import type { Dog, DogSaveCount } from '@/types/database'
 
 interface CompletedAppRow {
   dog_id: string
@@ -108,7 +108,7 @@ export default async function ShelterDogsPage() {
               saveCountsError.message,
             )
           } else if (saveCounts) {
-            const rows = saveCounts as Array<{ dog_id: string; save_count: number }>
+            const rows = saveCounts as DogSaveCount[]
             saveCountByDog = Object.fromEntries(
               rows.map((r) => [r.dog_id, Number(r.save_count) || 0]),
             )

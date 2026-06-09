@@ -52,10 +52,6 @@ export function calculateAverageRating(ratings: Pick<Rating, 'score'>[]): number
   return Math.round((sum / ratings.length) * 10) / 10
 }
 
-export function pluralize(count: number, singular: string, plural?: string): string {
-  return count === 1 ? `${count} ${singular}` : `${count} ${plural ?? singular + 's'}`
-}
-
 export const MORNING_GREETINGS = [
   'Good morning',
   'Morning',

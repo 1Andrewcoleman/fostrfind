@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildDogSearchOrFilter,
   DEFAULT_FILTERS,
   filtersToParams,
   isFilterActive,
@@ -130,5 +131,43 @@ describe('isFilterActive', () => {
 
   it('ignores whitespace-only search', () => {
     expect(isFilterActive({ ...DEFAULT_FILTERS, search: '   ' })).toBe(false)
+  })
+})
+
+describe('buildDogSearchOrFilter', () => {
+  it('builds a quoted two-column ilike filter for a plain term', () => {
+    expect(buildDogSearchOrFilter('foo')).toBe('name.ilike."%foo%",breed.ilike."%foo%"')
+  })
+
+  it('returns null for empty and whitespace-only terms', () => {
+    expect(buildDogSearchOrFilter('')).toBeNull()
+    expect(buildDogSearchOrFilter('   ')).toBeNull()
+  })
+
+  it('keeps PostgREST structural characters inside the quoted value', () => {
+    // A comma would otherwise split into a new OR condition and `)` could
+    // close the group — both must stay inside the double quotes.
+    expect(buildDogSearchOrFilter('a,b)')).toBe('name.ilike."%a,b)%",breed.ilike."%a,b)%"')
+  })
+
+  it('escapes SQL LIKE wildcards so they match literally', () => {
+    // `%`/`_` are LIKE-escaped to `\%`/`\_`, then each backslash is doubled
+    // for the PostgREST quoted token, so the wire value carries `\\%` / `\\_`.
+    expect(buildDogSearchOrFilter('50%_x')).toBe(
+      'name.ilike."%50\\\\%\\\\_x%",breed.ilike."%50\\\\%\\\\_x%"',
+    )
+  })
+
+  it('escapes embedded backslashes and double quotes for the quoted value', () => {
+    // Backslash is LIKE-escaped to `\\`, then each `\` is doubled again for
+    // the PostgREST quoted token → a lone input `\` becomes `\\\\`.
+    expect(buildDogSearchOrFilter('a\\b')).toBe('name.ilike."%a\\\\\\\\b%",breed.ilike."%a\\\\\\\\b%"')
+    expect(buildDogSearchOrFilter('a"b')).toBe('name.ilike."%a\\"b%",breed.ilike."%a\\"b%"')
+  })
+
+  it('caps the term length before building the filter', () => {
+    const long = 'x'.repeat(150)
+    const filter = buildDogSearchOrFilter(long)
+    expect(filter).toBe(`name.ilike."%${'x'.repeat(100)}%",breed.ilike."%${'x'.repeat(100)}%"`)
   })
 })

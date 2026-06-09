@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { shelterSettingsPatchSchema } from '@/lib/schemas'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -34,24 +33,14 @@ export async function PATCH(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[shelters/update] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 20 updates/min/user — same envelope as the foster profile update.
-  const rl = rateLimit('shelters:update', user.id, { limit: 20, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('shelters/update', {
+    key: 'shelters:update',
+    limit: 20,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Defense-in-depth ownership check alongside the existing RLS policy.
   // Resolving the row first means a wrong-owner request gets a clean 403

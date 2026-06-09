@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireApiUser } from '@/lib/api-auth'
 import { createServiceClient } from '@/lib/supabase/service'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { fosterDisplayName, resolveFosterInviteResponse } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -36,25 +35,14 @@ export async function POST(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[foster-invites/accept] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('shelter-foster-invites:accept', user.id, {
+  // Rate limit: 30 invite responses/min per user.
+  const auth = await requireApiUser('foster-invites/accept', {
+    key: 'shelter-foster-invites:accept',
     limit: 30,
     windowMs: 60_000,
   })
-  if (!rl.success) return rateLimitResponse(rl)
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   const resolved = await resolveFosterInviteResponse(
     supabase,

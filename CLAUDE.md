@@ -111,6 +111,7 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 |------|---------|
 | `src/types/database.ts` | TS interfaces for all 6 DB tables + composite types |
 | `src/lib/constants.ts` | Enums/labels for statuses, sizes, ages, etc. |
+| `src/lib/api-auth.ts` | `requireApiUser()` — shared auth preamble for API routes (getUser → 503/401 → optional per-user rate limit → 429); returns `{ response }` or `{ supabase, user }` |
 | `src/lib/helpers.ts` | `formatDate`, `formatDateShort`, `formatRelativeTime`, `getInitials`, `slugify`, `calculateAverageRating` |
 | `src/lib/portal-layout-data.ts` | `getPortalLayoutData()`, `getPortalIdentityForUser()` — single-auth fetch for shelter/foster layouts |
 | `src/types/portal.ts` | `PortalIdentity` for sidebar / mobile nav |

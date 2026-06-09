@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -22,25 +21,14 @@ export async function POST(
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[foster-invites/cancel] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('shelter-foster-invites:cancel', user.id, {
+  // Rate limit: 30 invite cancellations/min per user.
+  const auth = await requireApiUser('foster-invites/cancel', {
+    key: 'shelter-foster-invites:cancel',
     limit: 30,
     windowMs: 60_000,
   })
-  if (!rl.success) return rateLimitResponse(rl)
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Fetch with RLS active. If the caller doesn't own the invite's shelter,
   // maybeSingle() returns null and we surface 404 without leaking existence.

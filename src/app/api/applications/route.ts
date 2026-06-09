@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText, sanitizeMultiline } from '@/lib/sanitize'
 import { applicationCreateSchema } from '@/lib/schemas'
 import { createNotification } from '@/lib/notifications'
@@ -46,25 +45,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[applications/create] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 10 submissions/min per foster — generous enough for re-tries on
   // validation errors, tight enough to blunt scripted spam.
-  const rl = rateLimit('applications:create', user.id, { limit: 10, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  const auth = await requireApiUser('applications/create', {
+    key: 'applications:create',
+    limit: 10,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   // Resolve foster_parents row before parsing the body so users without
   // a profile get a clear 404 instead of a generic validation error.

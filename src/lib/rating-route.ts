@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeText } from '@/lib/sanitize'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -49,26 +48,14 @@ export function createRatingHandler(
     if (guardErr) return guardErr
 
     // Authenticate before parsing the body so unauthenticated requests don't
-    // incur JSON parsing cost.
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError) {
-      console.error(`[${config.logTag}] getUser failed:`, authError.message)
-      return NextResponse.json(
-        { error: 'Authentication service unavailable' },
-        { status: 503 },
-      )
-    }
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = rateLimit(config.rateLimitKey, user.id, { limit: 20, windowMs: 60_000 })
-    if (!rl.success) return rateLimitResponse(rl)
+    // incur JSON parsing cost. Rate limit: 20 ratings/min per user.
+    const auth = await requireApiUser(config.logTag, {
+      key: config.rateLimitKey,
+      limit: 20,
+      windowMs: 60_000,
+    })
+    if (auth.response) return auth.response
+    const { supabase, user } = auth
 
     let body: z.infer<typeof bodySchema>
     try {

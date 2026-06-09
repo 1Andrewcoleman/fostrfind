@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { requireApiUser } from '@/lib/api-auth'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import { createNotification } from '@/lib/notifications'
 import { validateMutationRequest } from '@/lib/api-security'
@@ -49,23 +48,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[messages/create] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const rl = rateLimit('messages:create', user.id, { limit: 30, windowMs: 60_000 })
-  if (!rl.success) return rateLimitResponse(rl)
+  // Rate limit: 30 messages/min per user.
+  const auth = await requireApiUser('messages/create', {
+    key: 'messages:create',
+    limit: 30,
+    windowMs: 60_000,
+  })
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   let raw: unknown
   try {

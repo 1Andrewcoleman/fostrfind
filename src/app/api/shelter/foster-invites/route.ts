@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { requireApiUser } from '@/lib/api-auth'
 import { getAppUrl, sendEmail } from '@/lib/email'
 import { ShelterFosterInviteEmail } from '@/emails/shelter-foster-invite'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { normalizeInviteEmail } from '@/lib/shelter-roster'
 import { createNotification } from '@/lib/notifications'
 import { sanitizeMultiline } from '@/lib/sanitize'
@@ -45,28 +44,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError) {
-    console.error('[foster-invites/create] getUser failed:', authError.message)
-    return NextResponse.json({ error: 'Authentication service unavailable' }, { status: 503 })
-  }
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   // 30 invites/min/user keeps accidental runaway or minor abuse in check
   // while comfortably covering normal onboarding-day bulk invites.
-  const rl = rateLimit('shelter-foster-invites:create', user.id, {
+  const auth = await requireApiUser('foster-invites/create', {
+    key: 'shelter-foster-invites:create',
     limit: 30,
     windowMs: 60_000,
   })
-  if (!rl.success) return rateLimitResponse(rl)
+  if (auth.response) return auth.response
+  const { supabase, user } = auth
 
   let body: z.infer<typeof bodySchema>
   try {

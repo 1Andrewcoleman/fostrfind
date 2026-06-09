@@ -1,79 +1,18 @@
-// In-memory rate limiter for API routes.
+// In-memory, fixed-window rate limiter for API routes.
 //
-// ┌─────────────────────────────────────────────────────────────────────────┐
-// │  PRODUCTION HARDENING NOTE (hardening-audit finding 8.1)               │
-// │                                                                         │
-// │  This implementation is process-local and does NOT coordinate across   │
-// │  serverless / multi-instance deployments. Attackers can bypass limits  │
-// │  by spreading requests across multiple Vercel function instances.       │
-// │                                                                         │
-// │  Migration path to distributed limiting with Upstash Redis:            │
-// │                                                                         │
-// │    1. Create a free Upstash Redis database at console.upstash.com      │
-// │    2. Add env vars: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN   │
-// │       (also to .env.example and to Vercel's env settings)              │
-// │    3. Install: npm install @upstash/redis @upstash/ratelimit           │
-// │    4. Replace this module with:                                         │
-// │                                                                         │
-// │       import { Ratelimit } from '@upstash/ratelimit'                   │
-// │       import { Redis } from '@upstash/redis'                           │
-// │                                                                         │
-// │       const redis = Redis.fromEnv()                                    │
-// │                                                                         │
-// │       export async function rateLimit(                                  │
-// │         route: string, identifier: string, opts: RateLimitOptions      │
-// │       ): Promise<RateLimitResult> {                                     │
-// │         const rl = new Ratelimit({                                      │
-// │           redis,                                                        │
-// │           limiter: Ratelimit.fixedWindow(                              │
-// │             opts.limit,                                                 │
-// │             `${Math.ceil(opts.windowMs / 1000)} s`,                    │
-// │           ),                                                            │
-// │           prefix: `fostr:${route}`,                                    │
-// │         })                                                              │
-// │         const { success, remaining, reset } = await rl.limit(id)      │
-// │         return { success, remaining, resetAt: reset,                   │
-// │           retryAfter: success ? 0 : Math.ceil((reset-Date.now())/1e3) }│
-// │       }                                                                 │
-// │                                                                         │
-// │    5. Update every caller: const rl = await rateLimit(...)             │
-// └─────────────────────────────────────────────────────────────────────────┘
+// PRODUCTION HARDENING NOTE (hardening-audit finding 8.1): this is
+// process-local and does NOT coordinate across serverless instances, so
+// limits can be spread across Vercel function instances. The migration path
+// is Upstash Redis (`@upstash/ratelimit` fixed-window with `fostr:${route}`
+// as the prefix) — `rateLimit()` becomes async and every caller awaits it.
 //
-// Semantics:
-//   - Each (key, identifier) pair gets `limit` tokens per `windowMs`.
-//   - `check()` decrements a counter; when it exceeds the limit, the
-//     caller is told to back off with a `retryAfter` hint (seconds).
-//   - Windows are fixed (not sliding) — cheap, good enough for abuse
-//     prevention, and predictable for clients.
+// Usage from a route handler (identifier is the authenticated user id):
 //
-// Usage from a route handler:
-//
-//   const identifier = await getRateLimitIdentifier(request)
-//   const rl = rateLimit('applications:accept', identifier, {
+//   const rl = rateLimit('applications:accept', user.id, {
 //     limit: 20,
 //     windowMs: 60_000,
 //   })
-//   if (!rl.success) {
-//     return rateLimitResponse(rl)
-//   }
-//
-// Known route keys in use today:
-//   - 'applications:create'   (POST /api/applications)
-//   - 'applications:accept'   (POST /api/applications/[id]/accept)
-//   - 'applications:decline'  (POST /api/applications/[id]/decline)
-//   - 'applications:complete' (POST /api/applications/[id]/complete)
-//   - 'applications:withdraw' (POST /api/applications/[id]/withdraw)
-//   - 'applications:review'   (POST /api/applications/[id]/review)
-//   - 'dogs:create'           (POST /api/dogs)
-//   - 'dogs:update'           (PATCH /api/dogs/[id])
-//   - 'dogs:delete'           (DELETE /api/dogs/[id])
-//   - 'dogs:status'           (PATCH /api/dogs/[id]/status)
-//   - 'messages:create'       (POST /api/messages)
-//   - 'ratings'               (POST /api/ratings)
-//   - 'reports'               (POST /api/reports)
-//   - 'feedback:post'         (POST /api/feedback)
-// Keep this list in sync when adding new mutation routes so future
-// auditors can grep for protected endpoints.
+//   if (!rl.success) return rateLimitResponse(rl)
 
 import { NextResponse } from 'next/server'
 
@@ -92,7 +31,6 @@ function maybeSweep(now: number): void {
   if (now - lastSweep < 1000) return
   lastSweep = now
   let scanned = 0
-  // forEach avoids the Map iterator protocol (tsconfig target is ES5).
   buckets.forEach((bucket, key) => {
     if (scanned >= 200) return
     if (bucket.resetAt <= now) buckets.delete(key)
@@ -153,23 +91,6 @@ export function rateLimit(
     resetAt: existing.resetAt,
     retryAfter,
   }
-}
-
-/**
- * Derive a stable identifier for a request. Prefer the authenticated
- * user id when available; fall back to the best-effort IP. Works
- * behind proxies thanks to `x-forwarded-for`.
- */
-export function getClientIp(request: Request): string {
-  const xff = request.headers.get('x-forwarded-for')
-  if (xff) {
-    // First entry is the original client; rest are proxies.
-    const first = xff.split(',')[0]?.trim()
-    if (first) return first
-  }
-  const real = request.headers.get('x-real-ip')
-  if (real) return real
-  return 'unknown'
 }
 
 /** Standard 429 response with Retry-After + structured body. */

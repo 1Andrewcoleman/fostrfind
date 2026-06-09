@@ -48,7 +48,7 @@ The app uses a **warm rescue-oriented** palette (not the default shadcn slate-na
 
 Notable surfaces: [`src/components/portal-nav.tsx`](src/components/portal-nav.tsx) (warm active nav pill + left border, unread badge), [`src/components/portal-sidebar-user.tsx`](src/components/portal-sidebar-user.tsx) (avatar, role pill, sign-out; also in mobile sheet via `MobileNav`), [`src/components/foster/browse-dog-card.tsx`](src/components/foster/browse-dog-card.tsx) (shelter logo inline, special-needs overlay), [`src/components/foster/filter-sidebar.tsx`](src/components/foster/filter-sidebar.tsx) (`BrowseFilterForm` reused in desktop `Card` + mobile `Sheet`; sticky on `md+`), [`src/app/(foster)/foster/browse/page.tsx`](src/app/(foster)/foster/browse/page.tsx) (results count, removable filter chips, floating Filters FAB + bottom padding on small screens), [`src/components/status-badge.tsx`](src/components/status-badge.tsx), [`src/components/foster/application-stepper.tsx`](src/components/foster/application-stepper.tsx), shelter [`src/app/(shelter)/shelter/dashboard/page.tsx`](src/app/(shelter)/shelter/dashboard/page.tsx) (greeting + stat icon pills). Async buttons use **`Loader2`** from lucide where loading state is shown.
 
-**Portal layouts** ([`(foster)/layout.tsx`](src/app/(foster)/layout.tsx), [`(shelter)/layout.tsx`](src/app/(shelter)/layout.tsx)): [`src/lib/portal-layout-data.ts`](src/lib/portal-layout-data.ts) `getPortalLayoutData()` runs **`createClient()` + `getUser()` once**, then loads unread count + sidebar identity in parallel (avoids duplicate `getUser()`). [`src/lib/portal-identity.ts`](src/lib/portal-identity.ts) `getPortalIdentity()` is a thin wrapper for standalone callers.
+**Portal layouts** ([`(foster)/layout.tsx`](src/app/(foster)/layout.tsx), [`(shelter)/layout.tsx`](src/app/(shelter)/layout.tsx)): [`src/lib/portal-layout-data.ts`](src/lib/portal-layout-data.ts) `getPortalLayoutData()` runs **`createClient()` + `getUser()` once**, then loads unread count + sidebar identity in parallel (avoids duplicate `getUser()`).
 
 Further UI polish is tracked in [`docs/TODO.md`](docs/TODO.md) **§25** (landing hero redesign, filter pill selectors, incoming message avatars, etc.).
 
@@ -113,7 +113,6 @@ Remaining gaps are tracked in [`docs/TODO.md`](docs/TODO.md) (Realtime messaging
 | `src/lib/constants.ts` | Enums/labels for statuses, sizes, ages, etc. |
 | `src/lib/helpers.ts` | `formatDate`, `formatDateShort`, `formatRelativeTime`, `getInitials`, `slugify`, `calculateAverageRating` |
 | `src/lib/portal-layout-data.ts` | `getPortalLayoutData()`, `getPortalIdentityForUser()` — single-auth fetch for shelter/foster layouts |
-| `src/lib/portal-identity.ts` | `getPortalIdentity()` — standalone identity when layout helper is not used |
 | `src/types/portal.ts` | `PortalIdentity` for sidebar / mobile nav |
 | `src/lib/auth-routing.ts` | `getPostAuthDestination()` — role-based redirect after auth |
 | `src/components/auth-guard.tsx` | Server component: redirects if no session |
@@ -145,11 +144,11 @@ Under `src/app/api/`:
 - `applications/[id]/accept` — **implemented**: auth → ownership → idempotency → status + dog update
 - `applications/[id]/decline` — **implemented**: auth → ownership → idempotency → status update
 - `applications/[id]/complete` — **implemented**: auth → ownership → idempotency → status + dog update
-- `ratings` (`POST`) — **implemented**: shelter-only; completed application; idempotent (one rating per application)
+- `ratings` / `shelter-ratings` (`POST`) — **implemented**: both sides of the two-way trust loop share one guard chain in `src/lib/rating-route.ts` (auth → completed application → rater ownership → idempotency)
 - `dogs/[id]` (`DELETE`) — **implemented**: shelter ownership; 409 if dog has blocking applications
-- `notifications/send` — **stub** returning placeholder JSON
-- `upload/photo` — **stub** returning placeholder JSON
+- `notifications/send` — **retired** (410 Gone); transactional emails are sent from server-side domain routes only
+- `upload/photo` — **implemented**: role-checked bucket access, magic-byte MIME validation, server-generated path
 
 ### ESLint
 
-`argsIgnorePattern` and `varsIgnorePattern` are set to `^_` in `.eslintrc.json` so intentionally unused stub variables can be prefixed with `_` to suppress warnings.
+Flat config in `eslint.config.mjs` (`next lint` was removed in Next 16; run `node node_modules/eslint/bin/eslint.js src/`). `argsIgnorePattern` and `varsIgnorePattern` are set to `^_` so intentionally unused stub variables can be prefixed with `_`. The react-hooks v7 React Compiler rules (`immutability`, `set-state-in-effect`, `incompatible-library`) are downgraded to warnings because the hard-navigation (`window.location.href`) and hydration-safe setState patterns are intentional.

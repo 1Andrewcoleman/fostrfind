@@ -209,24 +209,3 @@ export async function uploadImage(
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return { url: data.publicUrl, path }
 }
-
-/**
- * Remove an image. Callers should pass the storage path (the part
- * returned as `path` from uploadImage), not the public URL.
- *
- * Returns boolean rather than throwing because most call-sites don't
- * care whether a stale file was actually removed — they just want
- * cleanup best-effort.
- */
-export async function deleteImage(
-  supabase: SupabaseClient,
-  bucket: StorageBucket,
-  path: string,
-): Promise<boolean> {
-  const { error } = await supabase.storage.from(bucket).remove([path])
-  if (error) {
-    console.error('[storage] delete failed:', error.message)
-    return false
-  }
-  return true
-}

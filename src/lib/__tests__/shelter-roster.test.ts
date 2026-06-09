@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   activeFosteringCount,
-  isInvitePending,
   normalizeInviteEmail,
 } from '@/lib/shelter-roster'
 
@@ -21,18 +20,6 @@ describe('normalizeInviteEmail', () => {
   it('returns "" for empty and whitespace-only strings', () => {
     expect(normalizeInviteEmail('')).toBe('')
     expect(normalizeInviteEmail('   ')).toBe('')
-  })
-})
-
-describe('isInvitePending', () => {
-  it('recognises the pending state', () => {
-    expect(isInvitePending({ status: 'pending' })).toBe(true)
-  })
-
-  it('rejects every other state', () => {
-    expect(isInvitePending({ status: 'accepted' })).toBe(false)
-    expect(isInvitePending({ status: 'declined' })).toBe(false)
-    expect(isInvitePending({ status: 'cancelled' })).toBe(false)
   })
 })
 

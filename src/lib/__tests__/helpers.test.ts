@@ -10,7 +10,6 @@ import {
   getGreeting,
   getInitials,
   haversineMiles,
-  pluralize,
   slugify,
 } from '@/lib/helpers'
 
@@ -156,21 +155,6 @@ describe('haversineMiles', () => {
     expect(dist).not.toBeNull()
     expect(dist).toBeGreaterThan(2400)
     expect(dist).toBeLessThan(2500)
-  })
-})
-
-describe('pluralize', () => {
-  it('returns singular for count === 1', () => {
-    expect(pluralize(1, 'dog')).toBe('1 dog')
-  })
-
-  it('returns plural for count !== 1', () => {
-    expect(pluralize(0, 'dog')).toBe('0 dogs')
-    expect(pluralize(2, 'dog')).toBe('2 dogs')
-  })
-
-  it('uses a custom plural form when provided', () => {
-    expect(pluralize(3, 'puppy', 'puppies')).toBe('3 puppies')
   })
 })
 

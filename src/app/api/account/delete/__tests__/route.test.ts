@@ -80,7 +80,7 @@ describe('POST /api/account/delete — validateMutationRequest guard (ZDF-001)',
       rpcResult: { error: null },
     })
     // Add signOut so the happy path does not throw.
-    ;(client.auth as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
+    ;(client.auth as unknown as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
     vi.mocked(createClient).mockResolvedValue(client)
 
     const res = await callRoute({ confirm: 'DELETE' }, { origin: 'https://app.example.com' })
@@ -92,7 +92,7 @@ describe('POST /api/account/delete — validateMutationRequest guard (ZDF-001)',
       auth: buildAuth({ id: USER_ID }),
       rpcResult: { error: null },
     })
-    ;(client.auth as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
+    ;(client.auth as unknown as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
     vi.mocked(createClient).mockResolvedValue(client)
 
     const res = await callRoute({ confirm: 'DELETE' })
@@ -167,7 +167,7 @@ describe('POST /api/account/delete — deletion steps', () => {
 
   it('returns 500 when auth.admin.deleteUser fails', async () => {
     const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
-    ;(client.auth as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
+    ;(client.auth as unknown as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
     vi.mocked(createClient).mockResolvedValue(client)
     mockRpc.mockResolvedValue({ error: null })
     mockDeleteUser.mockResolvedValue({ error: { message: 'delete user boom' } })
@@ -180,7 +180,7 @@ describe('POST /api/account/delete — deletion steps', () => {
       auth: buildAuth({ id: USER_ID }),
       rpcResult: { error: null },
     })
-    ;(client.auth as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
+    ;(client.auth as unknown as Record<string, unknown>).signOut = vi.fn().mockResolvedValue({})
     vi.mocked(createClient).mockResolvedValue(client)
 
     const res = await callRoute()

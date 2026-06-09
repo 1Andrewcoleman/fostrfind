@@ -17,7 +17,6 @@ import { NextResponse } from 'next/server'
  *   - Application accepted   → POST /api/applications/[id]/accept
  *   - Application declined   → POST /api/applications/[id]/decline
  *   - Placement completed    → POST /api/applications/[id]/complete
- *   - New message            → POST /api/messages
  *   - Foster invite          → POST /api/shelter/foster-invites
  *
  * If you need a new transactional email, add the send call inside the

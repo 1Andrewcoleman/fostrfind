@@ -26,7 +26,9 @@ function happyBody(overrides: Record<string, unknown> = {}) {
     medical_status: 'Vaccinated, neutered.',
     special_needs: 'Slow intro to cats.',
     description: 'A friendly pup looking for a foster home.',
-    photos: ['https://example.com/photos/buddy-1.jpg'],
+    photos: [
+      'https://demo.supabase.co/storage/v1/object/public/dog-photos/buddy-1.jpg',
+    ],
     ...overrides,
   }
 }

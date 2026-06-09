@@ -74,6 +74,30 @@ export function filtersToParams(filters: FilterState): string {
   return params.toString()
 }
 
+/**
+ * Build a safe PostgREST `.or()` filter for the browse name/breed search.
+ *
+ * The browse query searches two columns with OR, which means the value is
+ * embedded in a `.or()` filter *string* where `,` `.` `(` `)` `:` are
+ * structural and `%` `_` are SQL LIKE wildcards. Interpolating a raw term
+ * lets a search like `a,b)` or `name.ilike.x` alter the query, so we:
+ *   - escape LIKE wildcards (`\` `%` `_`) so they match literally, then
+ *   - wrap each value in PostgREST double quotes (escaping `\` and `"`) so
+ *     structural characters are treated as literal value content.
+ *
+ * Returns `null` for an empty/whitespace term so callers skip the filter.
+ * (The sibling `/shelters` page only needs wildcard escaping because it uses
+ * single-column `.ilike()`, where structural chars are not significant.)
+ */
+export function buildDogSearchOrFilter(rawTerm: string): string | null {
+  const term = rawTerm.trim().slice(0, 100)
+  if (!term) return null
+  const likeEscaped = term.replace(/[\\%_]/g, (c) => `\\${c}`)
+  // PostgREST double-quoted value: escape backslash first, then the quote.
+  const quoted = `"%${likeEscaped.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}%"`
+  return `name.ilike.${quoted},breed.ilike.${quoted}`
+}
+
 export function isFilterActive(filters: FilterState): boolean {
   return (
     filters.sizes.length > 0 ||

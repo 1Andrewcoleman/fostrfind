@@ -8,6 +8,7 @@ import {
   BrowseFilterForm,
 } from '@/components/foster/filter-sidebar'
 import {
+  buildDogSearchOrFilter,
   DEFAULT_FILTERS,
   filtersToParams,
   isFilterActive,
@@ -164,10 +165,8 @@ export default function BrowsePage() {
     if (currentFilters.gender) query = query.eq('gender', currentFilters.gender)
     // medicalOk=false → exclude dogs that have any special_needs value
     if (!currentFilters.medicalOk) query = query.is('special_needs', null)
-    if (currentFilters.search.trim()) {
-      const q = currentFilters.search.trim()
-      query = query.or(`name.ilike.%${q}%,breed.ilike.%${q}%`)
-    }
+    const searchOrFilter = buildDogSearchOrFilter(currentFilters.search)
+    if (searchOrFilter) query = query.or(searchOrFilter)
     if (resolvedShelterId) query = query.eq('shelter_id', resolvedShelterId)
 
     const { data } = await query

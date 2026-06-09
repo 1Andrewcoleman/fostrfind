@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { requireApiUser } from '@/lib/api-auth'
+import { requireApiUser, type ServerSupabaseClient } from '@/lib/api-auth'
 import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
 import { validateMutationRequest } from '@/lib/api-security'
 import { privateJson } from '@/lib/api-response'
@@ -31,7 +30,7 @@ import { privateJson } from '@/lib/api-response'
  */
 
 async function authedFosterId(): Promise<
-  | { kind: 'ok'; supabase: SupabaseClient; userId: string; fosterId: string }
+  | { kind: 'ok'; supabase: ServerSupabaseClient; userId: string; fosterId: string }
   | { kind: 'error'; response: NextResponse }
 > {
   const auth = await requireApiUser('dogs/save')

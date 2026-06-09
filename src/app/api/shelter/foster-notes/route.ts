@@ -23,7 +23,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   const guardErr = validateMutationRequest(request)
   if (guardErr) return guardErr
 
-  // Rate limit: 60 note saves/min per user (autosave-friendly).
+  // Rate limit: 60 note saves/min per user.
   const auth = await requireApiUser('foster-notes/create', {
     key: 'foster-notes:create',
     limit: 60,

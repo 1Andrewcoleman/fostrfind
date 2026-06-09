@@ -1,24 +1,24 @@
 import { NextResponse } from 'next/server'
-import type { SupabaseClient, User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
-import { rateLimit, rateLimitResponse } from '@/lib/rate-limit'
+import { rateLimit, rateLimitResponse, type RateLimitOptions } from '@/lib/rate-limit'
+
+/** The user-scoped server client, typed via `createClient` so a future
+ *  `Database` generic on it propagates to every route automatically. */
+export type ServerSupabaseClient = Awaited<ReturnType<typeof createClient>>
 
 /**
  * Per-route rate limit applied as part of the auth preamble. `key` is the
  * route's bucket name (e.g. 'applications:accept'); the identifier is
  * always the authenticated user id.
  */
-export interface ApiRateLimit {
+export interface ApiRateLimit extends RateLimitOptions {
   key: string
-  /** Max allowed requests per window. */
-  limit: number
-  /** Window size in milliseconds. */
-  windowMs: number
 }
 
 export type ApiAuthResult =
   | { response: NextResponse; supabase?: never; user?: never }
-  | { response?: never; supabase: SupabaseClient; user: User }
+  | { response?: never; supabase: ServerSupabaseClient; user: User }
 
 /**
  * Shared auth preamble for authenticated API route handlers. Runs the exact
@@ -43,6 +43,13 @@ export type ApiAuthResult =
  * limiting (e.g. onboarding's email-verification checks, which must return
  * 400/403 before any 429) call this without `limit` and apply
  * `rateLimit()` themselves at the right point in their sequence.
+ *
+ * `logTag` and `limit.key` look redundant but are NOT derivable from each
+ * other — both are load-bearing legacy identifiers carried over from the
+ * inlined preambles (e.g. tag `feedback` pairs with key `feedback:post`,
+ * tag `foster-invites/create` with key `shelter-foster-invites:create`).
+ * Changing a tag breaks log grep-ability; changing a key silently resets
+ * that route's production rate-limit bucket.
  */
 export async function requireApiUser(
   logTag: string,

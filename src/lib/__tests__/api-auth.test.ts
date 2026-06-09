@@ -38,6 +38,7 @@ describe('requireApiUser', () => {
         error: 'Authentication service unavailable',
       })
       expect(errSpy).toHaveBeenCalledWith('[my-route/tag] getUser failed:', 'down')
+      expect(rateLimit).not.toHaveBeenCalled()
     } finally {
       errSpy.mockRestore()
     }
@@ -63,16 +64,24 @@ describe('requireApiUser', () => {
   it('returns 429 via rateLimitResponse when the bucket is exhausted', async () => {
     const { client } = buildMockClient({ auth: buildAuth({ id: USER_ID }) })
     vi.mocked(createClient).mockResolvedValue(client)
+    const resetAt = Date.now() + 60_000
     vi.mocked(rateLimit).mockReturnValue({
       success: false,
       remaining: 0,
-      resetAt: Date.now() + 60_000,
+      resetAt,
       retryAfter: 30,
     })
 
     const result = await requireApiUser('my-route/tag', LIMIT)
     expect(result.response!.status).toBe(429)
     expect(result.response!.headers.get('Retry-After')).toBe('30')
+    expect(result.response!.headers.get('X-RateLimit-Remaining')).toBe('0')
+    expect(result.response!.headers.get('X-RateLimit-Reset')).toBe(
+      String(Math.ceil(resetAt / 1000)),
+    )
+    expect(await result.response!.json()).toEqual({
+      error: 'Too many requests. Please wait a moment and try again.',
+    })
   })
 
   it('keys the rate limit on the route key and the authenticated user id', async () => {

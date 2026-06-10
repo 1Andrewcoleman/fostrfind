@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, MapPin, PawPrint, Star } from 'lucide-react'
+import { ChevronLeft, MapPin, Star } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,7 @@ import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 import { ShareButton } from '@/components/foster/share-button'
 import { SaveDogButton } from '@/components/foster/save-dog-button'
 import { ApplicationFormDialog } from '@/components/foster/application-form-dialog'
+import { DogPhotoPlaceholder } from '@/components/dog-photo-placeholder'
 
 // Slim projection of `Dog` — we only need the fields this view renders.
 // Keeping a local shape (rather than pulling the full DB type) means the
@@ -140,8 +141,8 @@ export function DogDetailFull({
           )}
         </div>
       ) : (
-        <div className="aspect-[4/3] w-full rounded-xl bg-muted flex items-center justify-center">
-          <PawPrint className="h-16 w-16 text-muted-foreground/40" />
+        <div className="aspect-[4/3] w-full rounded-xl overflow-hidden">
+          <DogPhotoPlaceholder size="detail" />
         </div>
       )}
 

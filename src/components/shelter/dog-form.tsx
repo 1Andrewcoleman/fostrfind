@@ -305,7 +305,7 @@ export function DogForm({ mode, dogId, initialData }: DogFormProps) {
           <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">{submitError}</p>
         )}
 
-        <FormEyebrow description={`Up to ${MAX_DOG_PHOTOS} photos. First photo is the hero on the dog card.`}>
+        <FormEyebrow description={`Up to ${MAX_DOG_PHOTOS} photos. First photo is the hero on the dog card. Photos help fosters connect with a dog.`}>
           Photos
         </FormEyebrow>
 

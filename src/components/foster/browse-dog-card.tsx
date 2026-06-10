@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Calendar, Ruler, PawPrint, Heart, ArrowRight, Star } from 'lucide-react'
+import { MapPin, Calendar, Ruler, Heart, ArrowRight, Star } from 'lucide-react'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DogPhotoPlaceholder } from '@/components/dog-photo-placeholder'
 import type { DogWithShelter } from '@/types/database'
 import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 
@@ -24,9 +25,7 @@ export function BrowseDogCard({ dog }: BrowseDogCardProps) {
             className="object-cover object-top"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-primary/15">
-            <PawPrint className="h-12 w-12 text-foreground/40" />
-          </div>
+          <DogPhotoPlaceholder />
         )}
         {dog.special_needs && (
           <span className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-peach/40 px-2 py-0.5 text-[11px] font-medium text-foreground">

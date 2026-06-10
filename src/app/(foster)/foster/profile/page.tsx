@@ -52,7 +52,7 @@ export default async function FosterProfilePage(): Promise<React.JSX.Element> {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">My Profile</h1>
       {fetchError ? (
         <ServerErrorPanel />

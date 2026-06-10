@@ -113,7 +113,7 @@ export default async function FosterInvitesPage(): Promise<React.JSX.Element> {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto w-full max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold">Invites</h1>
         <p className="mt-1 text-sm text-muted-foreground">

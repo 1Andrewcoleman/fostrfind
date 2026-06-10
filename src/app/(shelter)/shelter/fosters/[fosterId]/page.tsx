@@ -167,7 +167,7 @@ export default async function ShelterFosterDetailPage({
 
   if (fetchError) {
     return (
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6 mx-auto w-full max-w-3xl">
         <Back />
         <ServerErrorPanel />
       </div>
@@ -179,7 +179,7 @@ export default async function ShelterFosterDetailPage({
   const fullName = `${foster.first_name} ${foster.last_name}`.trim() || foster.email
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 mx-auto w-full max-w-3xl">
       <Back />
 
       {/* Header */}

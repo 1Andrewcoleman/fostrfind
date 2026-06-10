@@ -22,28 +22,6 @@ import { getInitials } from '@/lib/helpers'
 import { sanitizeMultiline } from '@/lib/sanitize'
 import type { Message } from '@/types/database'
 
-// ---------------------------------------------------------------------------
-// Typing indicator — three animated dots in an incoming-style bubble.
-// Rendered when `showTypingIndicator` is true (wired to Realtime later).
-// ---------------------------------------------------------------------------
-
-function TypingIndicator() {
-  return (
-    <div className="flex items-end gap-2 justify-start">
-      <div className="w-8 shrink-0" aria-hidden />
-      <div className="bg-card border border-border rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 motion-safe:animate-bounce"
-            style={{ animationDelay: `${i * 150}ms`, animationDuration: '0.8s' }}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 interface MessageThreadProps {
   applicationId: string
   /** auth.uid() of the logged-in user — used as sender_id on insert. */
@@ -56,8 +34,6 @@ interface MessageThreadProps {
   /** Logo / profile-photo URL for the other party. `null` falls back to
    * initials in the avatar. */
   otherPartyAvatarUrl?: string | null
-  /** Show animated typing indicator (wire to Realtime presence later). */
-  showTypingIndicator?: boolean
 }
 
 export function MessageThread({
@@ -68,7 +44,6 @@ export function MessageThread({
   dogName,
   otherPartyName,
   otherPartyAvatarUrl = null,
-  showTypingIndicator = false,
 }: MessageThreadProps) {
   // Single browser Supabase client per mount — creating it inside render would
   // re-instantiate the websocket on every state change.
@@ -205,7 +180,7 @@ export function MessageThread({
   }
 
   return (
-    <div className="max-w-2xl flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)]">
+    <div className="mx-auto w-full max-w-2xl flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)]">
       {/* Thread header */}
       <div className="pb-4 border-b mb-4 shrink-0">
         <h1 className="text-xl font-bold">
@@ -283,8 +258,6 @@ export function MessageThread({
             </div>
           )
         })}
-
-        {showTypingIndicator && <TypingIndicator />}
       </div>
 
       {/* Send form */}

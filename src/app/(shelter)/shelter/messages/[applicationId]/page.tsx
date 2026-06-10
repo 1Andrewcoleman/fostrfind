@@ -21,7 +21,7 @@ export default async function ShelterMessageThreadPage({
   const params = await paramsPromise
   if (DEV_MODE) {
     return (
-      <div className="max-w-2xl space-y-4">
+      <div className="mx-auto w-full max-w-2xl space-y-4">
         <Link
           href="/shelter/messages"
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -121,7 +121,7 @@ export default async function ShelterMessageThreadPage({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-2xl space-y-4">
       <Link
         href="/shelter/messages"
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

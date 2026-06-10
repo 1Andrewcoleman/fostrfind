@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: 'Add New Dog' }
 
 export default function NewDogPage() {
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
         <Link href="/shelter/dogs" className="hover:text-foreground">Dogs</Link>

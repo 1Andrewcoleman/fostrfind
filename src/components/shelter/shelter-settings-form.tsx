@@ -4,11 +4,9 @@ import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { FormEyebrow } from '@/components/ui/form-eyebrow'
@@ -161,192 +159,164 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
     !errors[field] && !!value && value.trim().length > 0
 
   return (
-    <Tabs defaultValue="shelter">
-      <TabsList>
-        <TabsTrigger value="shelter">Shelter Info</TabsTrigger>
-        <TabsTrigger value="account">Account</TabsTrigger>
-      </TabsList>
+    <Card>
+      <CardHeader>
+        <CardTitle>Shelter Profile</CardTitle>
+        <CardDescription>This information is visible to foster parents</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSave} className="space-y-6">
+          <FormEyebrow description="Upload a square logo used on listings and the public shelter page.">
+            Branding
+          </FormEyebrow>
 
-      <TabsContent value="shelter" className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Shelter Profile</CardTitle>
-            <CardDescription>This information is visible to foster parents</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSave} className="space-y-6">
-              <FormEyebrow description="Upload a square logo used on listings and the public shelter page.">
-                Branding
-              </FormEyebrow>
+          <AvatarLogoField
+            ref={logoFieldRef}
+            initialUrl={initialData.logo_url ?? null}
+            bucket={STORAGE_BUCKETS.SHELTER_LOGOS}
+            shape="square"
+            label="Logo"
+            helperText="JPEG, PNG, or WebP up to 10 MB. Shown on your dog listings and the public shelter profile."
+          />
 
-              <AvatarLogoField
-                ref={logoFieldRef}
-                initialUrl={initialData.logo_url ?? null}
-                bucket={STORAGE_BUCKETS.SHELTER_LOGOS}
-                shape="square"
-                label="Logo"
-                helperText="JPEG, PNG, or WebP up to 10 MB. Shown on your dog listings and the public shelter profile."
+          <Separator />
+
+          <FormEyebrow description="What fosters will see first on your public profile.">
+            Identity
+          </FormEyebrow>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Shelter Name</Label>
+                <ValidIndicator show={v('name', shelter.name)} />
+              </div>
+              <Input
+                value={shelter.name}
+                onChange={(e) => setShelter({ ...shelter, name: e.target.value })}
+                aria-invalid={errors.name ? 'true' : undefined}
               />
-
-              <Separator />
-
-              <FormEyebrow description="What fosters will see first on your public profile.">
-                Identity
-              </FormEyebrow>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Shelter Name</Label>
-                    <ValidIndicator show={v('name', shelter.name)} />
-                  </div>
-                  <Input
-                    value={shelter.name}
-                    onChange={(e) => setShelter({ ...shelter, name: e.target.value })}
-                    aria-invalid={errors.name ? 'true' : undefined}
-                  />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>URL Slug</Label>
-                    <ValidIndicator show={v('slug', shelter.slug)} />
-                  </div>
-                  <Input
-                    value={shelter.slug}
-                    onChange={(e) => setShelter({ ...shelter, slug: e.target.value })}
-                    placeholder="happy-paws-rescue"
-                    aria-invalid={errors.slug ? 'true' : undefined}
-                  />
-                  {errors.slug && <p className="text-xs text-destructive">{errors.slug}</p>}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Location</Label>
-                    <ValidIndicator show={v('location', shelter.location)} />
-                  </div>
-                  <Input
-                    value={shelter.location}
-                    onChange={(e) => setShelter({ ...shelter, location: e.target.value })}
-                    aria-invalid={errors.location ? 'true' : undefined}
-                  />
-                  {errors.location && (
-                    <p className="text-xs text-destructive">{errors.location}</p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              <FormEyebrow description="How shelters and fosters reach you about placements.">
-                Contact
-              </FormEyebrow>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Email</Label>
-                    <ValidIndicator show={v('email', shelter.email)} />
-                  </div>
-                  <Input
-                    type="email"
-                    value={shelter.email}
-                    onChange={(e) => setShelter({ ...shelter, email: e.target.value })}
-                    aria-invalid={errors.email ? 'true' : undefined}
-                  />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Phone</Label>
-                    <ValidIndicator show={v('phone', shelter.phone)} />
-                  </div>
-                  <Input
-                    value={shelter.phone}
-                    onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
-                    aria-invalid={errors.phone ? 'true' : undefined}
-                  />
-                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Website</Label>
-                    <ValidIndicator show={v('website', shelter.website)} />
-                  </div>
-                  <Input
-                    value={shelter.website}
-                    onChange={(e) => setShelter({ ...shelter, website: e.target.value })}
-                    aria-invalid={errors.website ? 'true' : undefined}
-                  />
-                  {errors.website && (
-                    <p className="text-xs text-destructive">{errors.website}</p>
-                  )}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label>Instagram</Label>
-                    <ValidIndicator show={v('instagram', shelter.instagram)} />
-                  </div>
-                  <Input
-                    value={shelter.instagram}
-                    onChange={(e) => setShelter({ ...shelter, instagram: e.target.value })}
-                    placeholder="@handle"
-                    aria-invalid={errors.instagram ? 'true' : undefined}
-                  />
-                  {errors.instagram && (
-                    <p className="text-xs text-destructive">{errors.instagram}</p>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              <FormEyebrow description="Optional. A short mission statement helps fosters understand your work.">
-                About
-              </FormEyebrow>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5">
-                  <Label>Bio</Label>
-                  <ValidIndicator show={v('bio', shelter.bio)} />
-                </div>
-                <Textarea
-                  rows={4}
-                  value={shelter.bio}
-                  onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
-                  aria-invalid={errors.bio ? 'true' : undefined}
-                />
-                {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
-              </div>
-
-              <StickySaveBar
-                loading={loading}
-                dirty={isDirty}
-                onDiscard={handleDiscard}
-              />
-            </form>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="account" className="mt-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>Manage your login credentials</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label>Email</Label>
-              <Input type="email" value={initialData.email} disabled />
-              <p className="text-xs text-muted-foreground">
-                Contact support to change your email address.
-              </p>
+              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
             </div>
-            <Button variant="outline">Change Password</Button>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>URL Slug</Label>
+                <ValidIndicator show={v('slug', shelter.slug)} />
+              </div>
+              <Input
+                value={shelter.slug}
+                onChange={(e) => setShelter({ ...shelter, slug: e.target.value })}
+                placeholder="happy-paws-rescue"
+                aria-invalid={errors.slug ? 'true' : undefined}
+              />
+              {errors.slug && <p className="text-xs text-destructive">{errors.slug}</p>}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Location</Label>
+                <ValidIndicator show={v('location', shelter.location)} />
+              </div>
+              <Input
+                value={shelter.location}
+                onChange={(e) => setShelter({ ...shelter, location: e.target.value })}
+                aria-invalid={errors.location ? 'true' : undefined}
+              />
+              {errors.location && (
+                <p className="text-xs text-destructive">{errors.location}</p>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          <FormEyebrow description="How shelters and fosters reach you about placements.">
+            Contact
+          </FormEyebrow>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Email</Label>
+                <ValidIndicator show={v('email', shelter.email)} />
+              </div>
+              <Input
+                type="email"
+                value={shelter.email}
+                onChange={(e) => setShelter({ ...shelter, email: e.target.value })}
+                aria-invalid={errors.email ? 'true' : undefined}
+              />
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Phone</Label>
+                <ValidIndicator show={v('phone', shelter.phone)} />
+              </div>
+              <Input
+                value={shelter.phone}
+                onChange={(e) => setShelter({ ...shelter, phone: e.target.value })}
+                aria-invalid={errors.phone ? 'true' : undefined}
+              />
+              {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Website</Label>
+                <ValidIndicator show={v('website', shelter.website)} />
+              </div>
+              <Input
+                value={shelter.website}
+                onChange={(e) => setShelter({ ...shelter, website: e.target.value })}
+                aria-invalid={errors.website ? 'true' : undefined}
+              />
+              {errors.website && (
+                <p className="text-xs text-destructive">{errors.website}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <Label>Instagram</Label>
+                <ValidIndicator show={v('instagram', shelter.instagram)} />
+              </div>
+              <Input
+                value={shelter.instagram}
+                onChange={(e) => setShelter({ ...shelter, instagram: e.target.value })}
+                placeholder="@handle"
+                aria-invalid={errors.instagram ? 'true' : undefined}
+              />
+              {errors.instagram && (
+                <p className="text-xs text-destructive">{errors.instagram}</p>
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          <FormEyebrow description="Optional. A short mission statement helps fosters understand your work.">
+            About
+          </FormEyebrow>
+
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5">
+              <Label>Bio</Label>
+              <ValidIndicator show={v('bio', shelter.bio)} />
+            </div>
+            <Textarea
+              rows={4}
+              value={shelter.bio}
+              onChange={(e) => setShelter({ ...shelter, bio: e.target.value })}
+              aria-invalid={errors.bio ? 'true' : undefined}
+            />
+            {errors.bio && <p className="text-xs text-destructive">{errors.bio}</p>}
+          </div>
+
+          <StickySaveBar
+            loading={loading}
+            dirty={isDirty}
+            onDiscard={handleDiscard}
+          />
+        </form>
+      </CardContent>
+    </Card>
   )
 }

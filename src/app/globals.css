@@ -122,6 +122,18 @@
   }
 }
 
+@layer components {
+  /*
+   * Inline text links. Cherry-blossom text on the dust-grey ground fails WCAG AA for
+   * normal-size text, so links use foreground ink with a cherry-blossom
+   * underline — accessible without color perception, still on-brand.
+   * Logged in .impeccable.md (link treatment).
+   */
+  .text-link {
+    @apply font-medium text-foreground underline underline-offset-4 decoration-primary decoration-2 transition-colors hover:decoration-foreground/60;
+  }
+}
+
 /*
  * Print styles — keep printed pages readable and save ink. We force a light
  * palette regardless of active theme, strip sticky chrome, hide portal nav

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,14 +26,20 @@ import {
   applicationCreateSchema,
   type ApplicationCreateInput,
 } from '@/lib/schemas'
+import {
+  applicationDraftKey,
+  parseDraft,
+  serializeDraft,
+} from '@/lib/application-draft'
+
+/** Debounce window for persisting the in-progress draft. */
+const DRAFT_SAVE_DELAY_MS = 500
 
 interface ApplicationFormDialogProps {
   dogId: string
   dogName: string
   shelterId: string
-  /** Currently unused inside the dialog body but kept on the prop
-   * surface so future copy ("Apply to {shelter} for {dog}") can read
-   * it without re-plumbing the parent. */
+  /** Shown in the messaging-disclosure line under the dialog header. */
   shelterName: string
   /** True when the foster already has a row on this dog. Disables the
    * trigger and swaps its label to "Application Submitted". */
@@ -78,7 +84,7 @@ export function ApplicationFormDialog({
   dogId,
   dogName,
   shelterId,
-  shelterName: _shelterName,
+  shelterName,
   alreadyApplied,
   onAppliedSuccess,
 }: ApplicationFormDialogProps) {
@@ -93,6 +99,8 @@ export function ApplicationFormDialog({
     control,
     watch,
     setError,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ApplicationCreateInput>({
     resolver: zodResolver(applicationCreateSchema),
@@ -118,12 +126,106 @@ export function ApplicationFormDialog({
   // useful instead of showing every past date as valid.
   const untilMin = availableFromValue || todayLocal
 
+  // --- Draft persistence (sessionStorage, keyed by dog) ----------------
+  // A mis-click or Esc used to destroy everything typed into the form.
+  // While the dialog is open, field values are debounced into
+  // sessionStorage; reopening restores them. The draft is cleared only
+  // on a successful submit. All storage access is wrapped in try/catch
+  // (private mode / quota) and happens in handlers/effects only.
+  const draftKey = applicationDraftKey(dogId)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Set by clearDraft() after a successful submit; the watch subscriber
+  // checks it so the reset() that follows (which notifies watch) cannot
+  // schedule a save that would re-write an empty draft mid-navigation.
+  const draftCleared = useRef(false)
+
+  function clearDraft() {
+    draftCleared.current = true
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    try {
+      window.sessionStorage.removeItem(draftKey)
+    } catch {
+      // Storage unavailable — nothing to clear.
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const subscription = watch((values) => {
+      if (draftCleared.current) return
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        if (draftCleared.current) return
+        try {
+          window.sessionStorage.setItem(draftKey, serializeDraft(values))
+        } catch {
+          // Storage unavailable (private mode / quota) — drafts degrade
+          // gracefully to the previous lose-on-close behavior.
+        }
+      }, DRAFT_SAVE_DELAY_MS)
+    })
+    return () => subscription.unsubscribe()
+  }, [open, watch, draftKey])
+
+  // Clear any pending debounce on unmount so it can't fire after nav.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+    }
+  }, [])
+
   function handleOpenChange(next: boolean) {
     if (submitting) return
     setOpen(next)
-    if (!next) {
-      reset()
+    if (next) {
+      draftCleared.current = false
+      // Restore any saved draft. reset() replaces values atomically, so
+      // there is no race with the form's defaultValues; ids and the
+      // consent checkbox always come from props/defaults, never storage.
+      let draft = null
+      try {
+        draft = parseDraft(window.sessionStorage.getItem(draftKey))
+      } catch {
+        // Storage unavailable — open with a clean form.
+      }
+      if (draft) {
+        reset({
+          dog_id: dogId,
+          shelter_id: shelterId,
+          available_from: '',
+          available_until: '',
+          why_this_dog: '',
+          emergency_contact_name: '',
+          emergency_contact_phone: '',
+          responsibilities_acknowledged: false,
+          note: '',
+          ...draft,
+        })
+      } else {
+        // No restorable draft (none saved, or storage unavailable). Form
+        // state survives close in memory, which is the degraded-mode
+        // draft — but consent must be re-given on every open regardless.
+        setValue('responsibilities_acknowledged', false)
+      }
+    } else {
+      // Closing: flush any pending debounced save immediately so a quick
+      // Esc-then-reopen within the debounce window can't restore a draft
+      // staler than what the user just typed.
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
+        try {
+          window.sessionStorage.setItem(draftKey, serializeDraft(getValues()))
+        } catch {
+          // Storage unavailable — in-memory form state still has it.
+        }
+      }
     }
+    // Intentionally no reset() on close — the draft (form state +
+    // sessionStorage) survives accidental dismissal.
   }
 
   async function onSubmit(values: ApplicationCreateInput) {
@@ -131,13 +233,12 @@ export function ApplicationFormDialog({
 
     if (DEV_MODE) {
       // In DEV_MODE there is no real Supabase, so short-circuit the
-      // submit and behave as though the API returned 201. This mirrors
-      // the existing DogDetailFull DEV_MODE branch.
-      toast.success('Application submitted!')
-      setOpen(false)
+      // submit and behave as though the API returned 201. The
+      // confirmation page renders placeholder names without an id.
+      clearDraft()
       reset()
       onAppliedSuccess?.()
-      setSubmitting(false)
+      router.push('/foster/applications/submitted')
       return
     }
 
@@ -159,12 +260,24 @@ export function ApplicationFormDialog({
     }
 
     if (response.ok) {
-      toast.success('Application submitted!')
-      setOpen(false)
+      let newId: string | null = null
+      try {
+        newId = ((await response.json()) as { id?: string }).id ?? null
+      } catch {
+        // Body unreadable — fall back to the applications list below.
+      }
+      clearDraft()
       reset()
       onAppliedSuccess?.()
-      router.refresh()
-      setSubmitting(false)
+      // Navigate to the confirmation page instead of toasting in place.
+      // Intentionally no setOpen(false)/setSubmitting(false): the dialog
+      // stays open with the button disabled until the new route renders,
+      // which blocks double-submits and idle flashes.
+      router.push(
+        newId
+          ? `/foster/applications/submitted?id=${newId}`
+          : '/foster/applications',
+      )
       return
     }
 
@@ -241,6 +354,11 @@ export function ApplicationFormDialog({
             you&apos;d be a great match.
           </DialogDescription>
         </DialogHeader>
+
+        <p className="text-xs text-muted-foreground">
+          Messaging with {shelterName} opens once your application is
+          accepted.
+        </p>
 
         <form
           onSubmit={handleSubmit(onSubmit)}

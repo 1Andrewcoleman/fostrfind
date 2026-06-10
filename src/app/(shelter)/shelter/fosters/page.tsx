@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { InviteFosterForm } from '@/app/(shelter)/shelter/fosters/invite-form'
 import { CancelInviteButton } from '@/app/(shelter)/shelter/fosters/cancel-invite-button'
 import { getInitials } from '@/lib/helpers'
+import { RelativeTime } from '@/components/relative-time'
 
 export const metadata: Metadata = { title: 'Fosters' }
 
@@ -32,7 +33,7 @@ interface RosterFosterRow {
     location: string
     bio: string | null
   } | null
-  /** Live count of accepted applications for this foster across all shelters. */
+  /** Live count of this foster's accepted applications with this shelter. */
   activeFosteringCount: number
 }
 
@@ -146,14 +147,15 @@ export default async function ShelterFostersPage({
         .map((r) => r.foster?.id)
         .filter((v): v is string => typeof v === 'string')
 
-      // One grouped COUNT(*) across all rostered fosters' accepted apps.
-      // A single query is cheaper than N per-row counts.
+      // One grouped COUNT(*) of accepted apps with THIS shelter across all
+      // rostered fosters. A single query is cheaper than N per-row counts.
       let countByFosterId = new Map<string, number>()
       if (fosterIds.length > 0) {
         const { data: apps, error: countErr } = await supabase
           .from('applications')
           .select('foster_id')
           .in('foster_id', fosterIds)
+          .eq('shelter_id', shelterId)
           .eq('status', 'accepted')
         if (countErr) {
           console.warn(
@@ -200,7 +202,7 @@ export default async function ShelterFostersPage({
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 mx-auto w-full max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold">Your fosters</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -227,7 +229,8 @@ export default async function ShelterFostersPage({
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{invite.email}</div>
                   <div className="text-xs text-muted-foreground">
-                    Awaiting response
+                    Awaiting response · Sent{' '}
+                    <RelativeTime dateString={invite.created_at} />
                   </div>
                 </div>
                 <CancelInviteButton inviteId={invite.id} />

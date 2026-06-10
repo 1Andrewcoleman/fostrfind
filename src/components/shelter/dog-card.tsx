@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { FileText, Heart } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/status-badge'
+import { DogPhotoPlaceholder } from '@/components/dog-photo-placeholder'
 import type { Dog } from '@/types/database'
 
 interface DogCardProps {
@@ -39,9 +40,7 @@ export function DogCard({
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
-              No photo
-            </div>
+            <DogPhotoPlaceholder />
           )}
           <div className="absolute top-2 right-2">
             <StatusBadge status={dog.status} />

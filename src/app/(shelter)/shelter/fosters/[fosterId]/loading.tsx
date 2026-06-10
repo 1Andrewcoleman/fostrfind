@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ShelterFosterDetailLoading() {
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 mx-auto w-full max-w-3xl">
       <Skeleton className="h-5 w-32" />
       <div className="flex items-start gap-4">
         <Skeleton className="h-16 w-16 rounded-full" />

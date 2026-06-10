@@ -142,7 +142,6 @@ function SignUpForm() {
                 id="password"
                 type="password"
                 autoComplete="new-password"
-                placeholder="••••••••"
                 aria-invalid={errors.password ? 'true' : undefined}
                 {...register('password')}
               />
@@ -156,7 +155,6 @@ function SignUpForm() {
                 id="confirm"
                 type="password"
                 autoComplete="new-password"
-                placeholder="••••••••"
                 aria-invalid={errors.confirmPassword ? 'true' : undefined}
                 {...register('confirmPassword')}
               />
@@ -187,7 +185,7 @@ function SignUpForm() {
                 <Link
                   href="/terms"
                   target="_blank"
-                  className="text-primary hover:underline font-medium"
+                  className="text-link"
                 >
                   Terms of Service
                 </Link>{' '}
@@ -195,7 +193,7 @@ function SignUpForm() {
                 <Link
                   href="/privacy"
                   target="_blank"
-                  className="text-primary hover:underline font-medium"
+                  className="text-link"
                 >
                   Privacy Policy
                 </Link>
@@ -229,7 +227,7 @@ function SignUpForm() {
 
           <p className="text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href="/login" className="text-link">
               Sign in
             </Link>
           </p>

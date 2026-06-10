@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { PublicFooter } from '@/components/public-footer'
 import { ForceLightTheme } from '@/components/force-light-theme'
 import { ShareButton } from '@/components/foster/share-button'
+import { DogPhotoPlaceholder } from '@/components/dog-photo-placeholder'
 import { DOG_AGE_LABELS, DOG_SIZE_LABELS } from '@/lib/constants'
 
 type DogStatus = 'available' | 'pending' | 'placed' | 'adopted'
@@ -113,9 +114,8 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
       <main className="flex-1">
         <div className="container mx-auto max-w-3xl px-4 py-10 md:py-14 space-y-8">
           <Card className="overflow-hidden">
-            <div className="h-56 md:h-72 bg-muted flex items-center justify-center text-muted-foreground">
-              <PawPrint className="h-14 w-14 opacity-40" />
-              <span className="sr-only">No photo available</span>
+            <div className="h-56 md:h-72">
+              <DogPhotoPlaceholder size="detail" />
             </div>
 
             <div className="p-6 md:p-8 space-y-6">

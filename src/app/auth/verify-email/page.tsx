@@ -216,7 +216,7 @@ function VerifyEmailContent() {
           )}
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href="/login" className="text-link">
               Back to sign in
             </Link>
           </p>

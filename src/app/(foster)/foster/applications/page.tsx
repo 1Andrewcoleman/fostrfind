@@ -54,7 +54,7 @@ export default async function FosterApplicationsPage(): Promise<React.JSX.Elemen
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto w-full max-w-2xl">
       <h1 className="text-2xl font-bold">My Applications</h1>
       {fetchError ? (
         <ServerErrorPanel />

@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
+import { clearAllApplicationDrafts } from '@/lib/application-draft'
 import { getInitials } from '@/lib/helpers'
 import type { PortalIdentity } from '@/types/portal'
 
@@ -21,6 +22,9 @@ export function PortalSidebarUser({ identity }: PortalSidebarUserProps) {
   async function handleSignOut() {
     setSigningOut(true)
     try {
+      // Drafts hold third-party PII (emergency contacts); wipe them so
+      // they can't restore into the next account in this tab.
+      clearAllApplicationDrafts()
       const supabase = createClient()
       await supabase.auth.signOut()
       window.location.href = '/login'

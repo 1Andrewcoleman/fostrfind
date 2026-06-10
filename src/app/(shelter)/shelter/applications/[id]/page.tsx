@@ -53,7 +53,7 @@ export default async function ApplicationDetailPage({
   const params = await paramsPromise
   if (DEV_MODE) {
     return (
-      <div className="max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <p className="text-sm text-muted-foreground">
           Application detail requires a live Supabase connection. Enable it by setting
           NEXT_PUBLIC_SUPABASE_URL in your environment.
@@ -106,7 +106,7 @@ export default async function ApplicationDetailPage({
 
   if (fetchError || !app) {
     return (
-      <div className="max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <Link
           href="/shelter/applications"
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -127,7 +127,7 @@ export default async function ApplicationDetailPage({
   const hasExistingRating = ratings.some((r) => r.application_id === appId)
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <Link
         href="/shelter/applications"
         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

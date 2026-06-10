@@ -36,24 +36,24 @@ const PAGE_SIZE = 24
 
 const PLACEHOLDER_DOGS: DogWithShelter[] = [
   {
-    id: '1', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    shelter_id: 's1', name: 'Buddy', breed: 'Labrador Mix', age: 'adult', size: 'large',
+    id: '00000000-0000-4000-8000-000000000001', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    shelter_id: '00000000-0000-4000-8000-0000000000a1', name: 'Buddy', breed: 'Labrador Mix', age: 'adult', size: 'large',
     gender: 'male', temperament: 'Friendly and playful', medical_status: 'Vaccinated',
     special_needs: null, description: 'A sweet boy who loves walks.',
     photos: [], status: 'available', shelter_name: 'Happy Paws Rescue',
     shelter_logo_url: null, shelter_slug: 'happy-paws-rescue', distance_miles: 5,
   },
   {
-    id: '2', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    shelter_id: 's2', name: 'Luna', breed: 'Beagle', age: 'puppy', size: 'small',
+    id: '00000000-0000-4000-8000-000000000002', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    shelter_id: '00000000-0000-4000-8000-0000000000a2', name: 'Luna', breed: 'Beagle', age: 'puppy', size: 'small',
     gender: 'female', temperament: 'Energetic and curious', medical_status: 'Vaccinated, spayed',
     special_needs: null, description: 'Luna loves to play and explore.',
     photos: [], status: 'available', shelter_name: 'Austin Animal Rescue',
     shelter_logo_url: null, shelter_slug: 'austin-animal-rescue', distance_miles: 12,
   },
   {
-    id: '3', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    shelter_id: 's1', name: 'Max', breed: 'German Shepherd Mix', age: 'senior', size: 'large',
+    id: '00000000-0000-4000-8000-000000000003', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    shelter_id: '00000000-0000-4000-8000-0000000000a1', name: 'Max', breed: 'German Shepherd Mix', age: 'senior', size: 'large',
     gender: 'male', temperament: 'Calm and gentle', medical_status: 'On daily medication',
     special_needs: 'Needs medication twice daily', description: 'Max is a calm senior dog.',
     photos: [], status: 'available', shelter_name: 'Happy Paws Rescue',

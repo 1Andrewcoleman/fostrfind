@@ -229,6 +229,10 @@ export function DogDetailFull({
           <MapPin className="h-3 w-3" />
           <span>{shelter.location}</span>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Messaging with {shelter.name} opens once your application is
+          accepted.
+        </p>
       </div>
     </div>
   )

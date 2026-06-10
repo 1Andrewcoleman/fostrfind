@@ -18,8 +18,9 @@ interface DogDetailPageProps {
 }
 
 const PLACEHOLDER_DOG: DogDetailDog = {
-  id: '0',
-  shelter_id: 's1',
+  // UUID-shaped so the apply dialog's client-side uuid checks pass in DEV_MODE.
+  id: '00000000-0000-4000-8000-000000000001',
+  shelter_id: '00000000-0000-4000-8000-0000000000a1',
   name: 'Buddy',
   breed: 'Labrador Mix',
   age: 'adult',
@@ -34,7 +35,7 @@ const PLACEHOLDER_DOG: DogDetailDog = {
 }
 
 const PLACEHOLDER_SHELTER: DogDetailShelter = {
-  id: 's1',
+  id: '00000000-0000-4000-8000-0000000000a1',
   name: 'Happy Paws Rescue',
   location: 'Austin, TX',
   email: null,

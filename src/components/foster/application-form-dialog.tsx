@@ -31,9 +31,7 @@ interface ApplicationFormDialogProps {
   dogId: string
   dogName: string
   shelterId: string
-  /** Currently unused inside the dialog body but kept on the prop
-   * surface so future copy ("Apply to {shelter} for {dog}") can read
-   * it without re-plumbing the parent. */
+  /** Shown in the messaging-disclosure line under the dialog header. */
   shelterName: string
   /** True when the foster already has a row on this dog. Disables the
    * trigger and swaps its label to "Application Submitted". */
@@ -78,7 +76,7 @@ export function ApplicationFormDialog({
   dogId,
   dogName,
   shelterId,
-  shelterName: _shelterName,
+  shelterName,
   alreadyApplied,
   onAppliedSuccess,
 }: ApplicationFormDialogProps) {
@@ -131,13 +129,10 @@ export function ApplicationFormDialog({
 
     if (DEV_MODE) {
       // In DEV_MODE there is no real Supabase, so short-circuit the
-      // submit and behave as though the API returned 201. This mirrors
-      // the existing DogDetailFull DEV_MODE branch.
-      toast.success('Application submitted!')
-      setOpen(false)
-      reset()
+      // submit and behave as though the API returned 201. The
+      // confirmation page renders placeholder names without an id.
       onAppliedSuccess?.()
-      setSubmitting(false)
+      router.push('/foster/applications/submitted')
       return
     }
 
@@ -159,12 +154,22 @@ export function ApplicationFormDialog({
     }
 
     if (response.ok) {
-      toast.success('Application submitted!')
-      setOpen(false)
-      reset()
+      let newId: string | null = null
+      try {
+        newId = ((await response.json()) as { id?: string }).id ?? null
+      } catch {
+        // Body unreadable — fall back to the applications list below.
+      }
       onAppliedSuccess?.()
-      router.refresh()
-      setSubmitting(false)
+      // Navigate to the confirmation page instead of toasting in place.
+      // Intentionally no reset()/setOpen(false)/setSubmitting(false):
+      // the dialog stays open with the button disabled until the new
+      // route renders, which blocks double-submits and idle flashes.
+      router.push(
+        newId
+          ? `/foster/applications/submitted?id=${newId}`
+          : '/foster/applications',
+      )
       return
     }
 
@@ -241,6 +246,11 @@ export function ApplicationFormDialog({
             you&apos;d be a great match.
           </DialogDescription>
         </DialogHeader>
+
+        <p className="text-xs text-muted-foreground">
+          Messaging with {shelterName} opens once your application is
+          accepted.
+        </p>
 
         <form
           onSubmit={handleSubmit(onSubmit)}

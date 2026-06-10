@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -26,6 +26,14 @@ import {
   applicationCreateSchema,
   type ApplicationCreateInput,
 } from '@/lib/schemas'
+import {
+  applicationDraftKey,
+  parseDraft,
+  serializeDraft,
+} from '@/lib/application-draft'
+
+/** Debounce window for persisting the in-progress draft. */
+const DRAFT_SAVE_DELAY_MS = 500
 
 interface ApplicationFormDialogProps {
   dogId: string
@@ -116,12 +124,80 @@ export function ApplicationFormDialog({
   // useful instead of showing every past date as valid.
   const untilMin = availableFromValue || todayLocal
 
+  // --- Draft persistence (sessionStorage, keyed by dog) ----------------
+  // A mis-click or Esc used to destroy everything typed into the form.
+  // While the dialog is open, field values are debounced into
+  // sessionStorage; reopening restores them. The draft is cleared only
+  // on a successful submit. All storage access is wrapped in try/catch
+  // (private mode / quota) and happens in handlers/effects only.
+  const draftKey = applicationDraftKey(dogId)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function clearDraft() {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    try {
+      window.sessionStorage.removeItem(draftKey)
+    } catch {
+      // Storage unavailable — nothing to clear.
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return
+    const subscription = watch((values) => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        try {
+          window.sessionStorage.setItem(draftKey, serializeDraft(values))
+        } catch {
+          // Storage unavailable (private mode / quota) — drafts degrade
+          // gracefully to the previous lose-on-close behavior.
+        }
+      }, DRAFT_SAVE_DELAY_MS)
+    })
+    return () => subscription.unsubscribe()
+  }, [open, watch, draftKey])
+
+  // Clear any pending debounce on unmount so it can't fire after nav.
+  useEffect(() => {
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+    }
+  }, [])
+
   function handleOpenChange(next: boolean) {
     if (submitting) return
     setOpen(next)
-    if (!next) {
-      reset()
+    if (next) {
+      // Restore any saved draft. reset() replaces values atomically, so
+      // there is no race with the form's defaultValues; ids and the
+      // consent checkbox always come from props/defaults, never storage.
+      let draft = null
+      try {
+        draft = parseDraft(window.sessionStorage.getItem(draftKey))
+      } catch {
+        // Storage unavailable — open with a clean form.
+      }
+      if (draft) {
+        reset({
+          dog_id: dogId,
+          shelter_id: shelterId,
+          available_from: '',
+          available_until: '',
+          why_this_dog: '',
+          emergency_contact_name: '',
+          emergency_contact_phone: '',
+          responsibilities_acknowledged: false,
+          note: '',
+          ...draft,
+        })
+      }
     }
+    // Intentionally no reset() on close — the draft (form state +
+    // sessionStorage) survives accidental dismissal.
   }
 
   async function onSubmit(values: ApplicationCreateInput) {
@@ -131,6 +207,8 @@ export function ApplicationFormDialog({
       // In DEV_MODE there is no real Supabase, so short-circuit the
       // submit and behave as though the API returned 201. The
       // confirmation page renders placeholder names without an id.
+      clearDraft()
+      reset()
       onAppliedSuccess?.()
       router.push('/foster/applications/submitted')
       return
@@ -160,11 +238,13 @@ export function ApplicationFormDialog({
       } catch {
         // Body unreadable — fall back to the applications list below.
       }
+      clearDraft()
+      reset()
       onAppliedSuccess?.()
       // Navigate to the confirmation page instead of toasting in place.
-      // Intentionally no reset()/setOpen(false)/setSubmitting(false):
-      // the dialog stays open with the button disabled until the new
-      // route renders, which blocks double-submits and idle flashes.
+      // Intentionally no setOpen(false)/setSubmitting(false): the dialog
+      // stays open with the button disabled until the new route renders,
+      // which blocks double-submits and idle flashes.
       router.push(
         newId
           ? `/foster/applications/submitted?id=${newId}`

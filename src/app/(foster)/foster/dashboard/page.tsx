@@ -9,12 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/empty-state'
 import { StaggerItem } from '@/components/ui/stagger-item'
 import { ApplicationStatusCard } from '@/components/foster/application-status-card'
+import { ProfileCompleteness } from '@/components/foster/profile-completeness'
 import { ServerErrorPanel } from '@/components/server-error-panel'
 import { createClient } from '@/lib/supabase/server'
 import { DEV_MODE } from '@/lib/constants'
 import { DashboardGreeting } from '@/components/dashboard-greeting'
 import { isNextControlFlowError } from '@/lib/server-errors'
-import type { ApplicationWithDetails } from '@/types/database'
+import type { ApplicationWithDetails, FosterParent } from '@/types/database'
 
 interface DashboardStats {
   activeApplications: number
@@ -32,6 +33,10 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
   // DEV placeholder matches the shell's "Jane Foster" identity; in
   // production a missing name renders the greeting without a name suffix.
   let firstName: string | null = DEV_MODE ? 'Jane' : null
+  // Partial profile so the completeness nudge is visible in DEV_MODE.
+  let fosterProfile: Partial<FosterParent> | null = DEV_MODE
+    ? { first_name: 'Jane', last_name: 'Foster', location: 'Austin, TX' }
+    : null
   let fetchError = false
 
   if (!DEV_MODE) {
@@ -51,7 +56,11 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
       // keeps that path alive instead of raising an error here.
       const { data: fosterRow, error: fosterError } = await supabase
         .from('foster_parents')
-        .select('id, first_name')
+        // Includes every field ProfileCompleteness checks so the
+        // dashboard can show the completeness nudge.
+        .select(
+          'id, first_name, last_name, phone, location, housing_type, experience, bio, avatar_url',
+        )
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -62,6 +71,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
 
       const fosterId = fosterRow.id
       firstName = fosterRow.first_name || null
+      fosterProfile = fosterRow as Partial<FosterParent>
 
       const { data: myAppIdsRows, error: myAppIdsError } = await supabase
         .from('applications')
@@ -147,6 +157,11 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
           </Link>
         </Button>
       </div>
+
+      {/* Profile completeness nudge — self-hides at 100%. A stronger
+          profile is the best lever a new foster has on acceptance, so
+          it sits above the stats. */}
+      {fosterProfile && <ProfileCompleteness foster={fosterProfile} />}
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function ShelterFostersLoading() {
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 mx-auto w-full max-w-4xl">
       <div className="space-y-2">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-4 w-3/4" />

@@ -202,7 +202,7 @@ export default async function ShelterFostersPage({
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 mx-auto w-full max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold">Your fosters</h1>
         <p className="mt-1 text-sm text-muted-foreground">

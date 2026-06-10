@@ -73,7 +73,7 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
 
   if (fetchError) {
     return (
-      <div className="max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <h1 className="text-2xl font-bold">Settings</h1>
         <ServerErrorPanel />
       </div>
@@ -85,7 +85,7 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
       <Tabs defaultValue="shelter">
         <TabsList>

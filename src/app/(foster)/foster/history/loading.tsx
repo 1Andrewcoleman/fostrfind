@@ -2,7 +2,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export default function HistoryLoading() {
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto w-full max-w-2xl">
       <Skeleton className="h-8 w-40" />
 
       {/* Stats row */}

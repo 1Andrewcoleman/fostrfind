@@ -59,7 +59,7 @@ function toThreadSummary(app: RawApplicationRow): ThreadSummary {
 export default async function ShelterMessagesPage() {
   if (DEV_MODE) {
     return (
-      <div className="max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-2xl space-y-6">
         <h1 className="text-2xl font-bold">Messages</h1>
         <p className="text-sm text-muted-foreground">
           Messaging requires a live Supabase connection. Set{' '}
@@ -115,7 +115,7 @@ export default async function ShelterMessagesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto w-full max-w-2xl">
       <h1 className="text-2xl font-bold">Messages</h1>
 
       {fetchError ? (

@@ -90,7 +90,7 @@ export default async function FosterHistoryPage(): Promise<React.JSX.Element> {
   const totalPlacements = placements.length
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto w-full max-w-2xl">
       <h1 className="text-2xl font-bold">Foster History</h1>
 
       {fetchError && <ServerErrorPanel />}

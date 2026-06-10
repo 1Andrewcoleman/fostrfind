@@ -180,7 +180,7 @@ export function MessageThread({
   }
 
   return (
-    <div className="max-w-2xl flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)]">
+    <div className="mx-auto w-full max-w-2xl flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)]">
       {/* Thread header */}
       <div className="pb-4 border-b mb-4 shrink-0">
         <h1 className="text-xl font-bold">

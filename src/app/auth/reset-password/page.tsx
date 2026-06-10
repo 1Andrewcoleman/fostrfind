@@ -126,7 +126,6 @@ export default function ResetPasswordPage() {
                   id="new-password"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="••••••••"
                   aria-invalid={errors.newPassword ? 'true' : undefined}
                   autoFocus
                   {...register('newPassword')}
@@ -141,7 +140,6 @@ export default function ResetPasswordPage() {
                   id="confirm-password"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="••••••••"
                   aria-invalid={errors.confirmPassword ? 'true' : undefined}
                   {...register('confirmPassword')}
                 />
@@ -163,7 +161,7 @@ export default function ResetPasswordPage() {
           )}
 
           <p className="text-center text-sm text-muted-foreground">
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href="/login" className="text-link">
               Back to sign in
             </Link>
           </p>

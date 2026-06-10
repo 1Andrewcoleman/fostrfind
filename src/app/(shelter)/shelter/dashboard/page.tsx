@@ -239,7 +239,7 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
         ) : (
           <p className="text-sm text-muted-foreground">
             You have {stats.activeDogs} active listing{stats.activeDogs !== 1 ? 's' : ''}.{' '}
-            <Link href="/shelter/dogs" className="text-primary hover:underline">
+            <Link href="/shelter/dogs" className="text-link">
               Manage your dogs
             </Link>
           </p>

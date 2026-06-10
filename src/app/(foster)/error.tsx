@@ -65,7 +65,7 @@ export default function FosterErrorPage({ error, reset }: ErrorPageProps) {
           Still stuck?{' '}
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
-            className="font-medium text-primary underline-offset-4 hover:underline"
+            className="text-link"
           >
             Contact support
           </a>

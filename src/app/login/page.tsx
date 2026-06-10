@@ -113,7 +113,7 @@ export default function LoginPage() {
                 <Label htmlFor="password">Password</Label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-link"
                 >
                   Forgot password?
                 </Link>
@@ -122,7 +122,6 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="••••••••"
                 aria-invalid={errors.password ? 'true' : undefined}
                 {...register('password')}
               />
@@ -150,7 +149,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-primary hover:underline font-medium">
+            <Link href="/signup" className="text-link">
               Sign up
             </Link>
           </p>

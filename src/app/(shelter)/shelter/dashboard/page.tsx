@@ -25,7 +25,9 @@ interface DashboardStats {
 export default async function ShelterDashboard(): Promise<React.JSX.Element> {
   let stats: DashboardStats = { activeDogs: 0, pendingApplications: 0, unreadMessages: 0 }
   let recentApplications: ApplicationWithDetails[] = []
-  let shelterName = 'your shelter'
+  // DEV placeholder matches the shell's "Happy Paws Rescue" identity; in
+  // production a missing name renders the greeting without a name suffix.
+  let shelterName: string | null = DEV_MODE ? 'Happy Paws Rescue' : null
   let fetchError = false
 
   if (!DEV_MODE) {
@@ -51,7 +53,7 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
       if (!shelterRow) redirect('/onboarding')
 
       const shelterId = shelterRow.id
-      shelterName = shelterRow.name ?? 'your shelter'
+      shelterName = shelterRow.name || null
 
       // Unread messages need to be scoped to this shelter's application threads.
       // Without this filter, RLS would still scope reads, but then a shelter
@@ -123,7 +125,7 @@ export default async function ShelterDashboard(): Promise<React.JSX.Element> {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={shelterName} /></h1>
+          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={shelterName ?? undefined} /></h1>
           <p className="text-muted-foreground text-sm mt-1">Here&apos;s what&apos;s happening today.</p>
         </div>
         <Button asChild>

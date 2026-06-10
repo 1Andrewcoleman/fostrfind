@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { getGreeting } from '@/lib/helpers'
 
 interface DashboardGreetingProps {
-  name: string
+  /** Omit when unknown — the greeting renders without a name suffix. */
+  name?: string
   className?: string
 }
 
@@ -20,5 +21,10 @@ export function DashboardGreeting({ name, className }: DashboardGreetingProps) {
     setGreeting(getGreeting())
   }, [])
 
-  return <span className={className}>{greeting}, {name}</span>
+  return (
+    <span className={className}>
+      {greeting}
+      {name ? `, ${name}` : ''}
+    </span>
+  )
 }

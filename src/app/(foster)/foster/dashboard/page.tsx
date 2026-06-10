@@ -29,7 +29,9 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
     unreadMessages: 0,
   }
   let recentApplications: ApplicationWithDetails[] = []
-  let firstName = 'there'
+  // DEV placeholder matches the shell's "Jane Foster" identity; in
+  // production a missing name renders the greeting without a name suffix.
+  let firstName: string | null = DEV_MODE ? 'Jane' : null
   let fetchError = false
 
   if (!DEV_MODE) {
@@ -59,7 +61,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
       }
 
       const fosterId = fosterRow.id
-      firstName = fosterRow.first_name || 'there'
+      firstName = fosterRow.first_name || null
 
       const { data: myAppIdsRows, error: myAppIdsError } = await supabase
         .from('applications')
@@ -133,7 +135,7 @@ export default async function FosterDashboard(): Promise<React.JSX.Element> {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={firstName} /></h1>
+          <h1 className="text-2xl font-display font-bold"><DashboardGreeting name={firstName ?? undefined} /></h1>
           <p className="text-muted-foreground text-sm mt-1">
             Here&apos;s what&apos;s happening with your foster journey.
           </p>

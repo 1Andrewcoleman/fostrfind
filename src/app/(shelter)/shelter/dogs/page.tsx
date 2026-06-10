@@ -123,7 +123,7 @@ export default async function ShelterDogsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 mx-auto w-full max-w-5xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your Dogs</h1>
         <Button asChild>

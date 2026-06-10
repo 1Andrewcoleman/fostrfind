@@ -13,8 +13,29 @@ import type { ApplicationCreateInput } from '@/lib/schemas'
  * closes.
  */
 
+const DRAFT_KEY_PREFIX = 'fostrfind:application-draft:'
+
 export function applicationDraftKey(dogId: string): string {
-  return `fostrfind:application-draft:${dogId}`
+  return `${DRAFT_KEY_PREFIX}${dogId}`
+}
+
+/**
+ * Remove every stored application draft. Called on sign-out so a draft's
+ * third-party PII can't be restored into the next account that signs in
+ * within the same tab. Browser-only; safe no-op anywhere storage is
+ * unavailable.
+ */
+export function clearAllApplicationDrafts(): void {
+  try {
+    const doomed: string[] = []
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i)
+      if (key?.startsWith(DRAFT_KEY_PREFIX)) doomed.push(key)
+    }
+    for (const key of doomed) window.sessionStorage.removeItem(key)
+  } catch {
+    // SSR or storage unavailable — nothing to clear.
+  }
 }
 
 /**

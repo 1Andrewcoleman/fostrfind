@@ -316,7 +316,7 @@ export function ShelterSettingsForm({ initialData }: ShelterSettingsFormProps) {
             onDiscard={handleDiscard}
           />
         </form>
-  </CardContent>
+      </CardContent>
     </Card>
   )
 }

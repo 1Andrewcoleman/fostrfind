@@ -116,7 +116,6 @@ export function DogDetailTeaser({ dog, shelter, canonicalUrl }: DogDetailTeaserP
           <Card className="overflow-hidden">
             <div className="h-56 md:h-72">
               <DogPhotoPlaceholder size="detail" />
-              <span className="sr-only">No photo available</span>
             </div>
 
             <div className="p-6 md:p-8 space-y-6">

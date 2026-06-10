@@ -3,9 +3,9 @@
 /**
  * AccountSettingsForm — auth-level account management (email + password).
  *
- * Reused by both `/shelter/settings` and `/foster/profile`. Talks directly
- * to `supabase.auth.updateUser()` from the browser client; there is no
- * backing API route yet (Zod + rate-limiting will come with §28/§30).
+ * Reused by both `/shelter/settings` and `/foster/profile`. Email and
+ * password changes talk directly to `supabase.auth.updateUser()` from the
+ * browser client; account deletion posts to `/api/account/delete`.
  *
  * OAuth users (provider === 'google' etc.) can't change passwords locally
  * because Supabase manages the auth there, so the password card is hidden

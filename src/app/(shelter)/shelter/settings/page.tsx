@@ -92,10 +92,21 @@ export default async function ShelterSettingsPage(): Promise<React.JSX.Element> 
           <TabsTrigger value="shelter">Shelter Info</TabsTrigger>
           <TabsTrigger value="account">Account</TabsTrigger>
         </TabsList>
-        <TabsContent value="shelter" className="mt-6">
+        {/* forceMount keeps both panels mounted across tab switches so
+            dirty form state (shelter edits, staged logo, half-typed
+            email) survives a glance at the other tab. */}
+        <TabsContent
+          forceMount
+          value="shelter"
+          className="mt-6 data-[state=inactive]:hidden"
+        >
           <ShelterSettingsForm initialData={shelterData} />
         </TabsContent>
-        <TabsContent value="account" className="mt-6">
+        <TabsContent
+          forceMount
+          value="account"
+          className="mt-6 data-[state=inactive]:hidden"
+        >
           <AccountSettingsForm currentEmail={currentEmail} authProvider={authProvider} />
         </TabsContent>
       </Tabs>

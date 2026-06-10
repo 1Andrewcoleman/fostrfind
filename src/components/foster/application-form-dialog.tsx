@@ -99,6 +99,8 @@ export function ApplicationFormDialog({
     control,
     watch,
     setError,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ApplicationCreateInput>({
     resolver: zodResolver(applicationCreateSchema),
@@ -132,8 +134,13 @@ export function ApplicationFormDialog({
   // (private mode / quota) and happens in handlers/effects only.
   const draftKey = applicationDraftKey(dogId)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Set by clearDraft() after a successful submit; the watch subscriber
+  // checks it so the reset() that follows (which notifies watch) cannot
+  // schedule a save that would re-write an empty draft mid-navigation.
+  const draftCleared = useRef(false)
 
   function clearDraft() {
+    draftCleared.current = true
     if (saveTimer.current) {
       clearTimeout(saveTimer.current)
       saveTimer.current = null
@@ -148,8 +155,10 @@ export function ApplicationFormDialog({
   useEffect(() => {
     if (!open) return
     const subscription = watch((values) => {
+      if (draftCleared.current) return
       if (saveTimer.current) clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(() => {
+        if (draftCleared.current) return
         try {
           window.sessionStorage.setItem(draftKey, serializeDraft(values))
         } catch {
@@ -172,6 +181,7 @@ export function ApplicationFormDialog({
     if (submitting) return
     setOpen(next)
     if (next) {
+      draftCleared.current = false
       // Restore any saved draft. reset() replaces values atomically, so
       // there is no race with the form's defaultValues; ids and the
       // consent checkbox always come from props/defaults, never storage.
@@ -194,6 +204,24 @@ export function ApplicationFormDialog({
           note: '',
           ...draft,
         })
+      } else {
+        // No restorable draft (none saved, or storage unavailable). Form
+        // state survives close in memory, which is the degraded-mode
+        // draft — but consent must be re-given on every open regardless.
+        setValue('responsibilities_acknowledged', false)
+      }
+    } else {
+      // Closing: flush any pending debounced save immediately so a quick
+      // Esc-then-reopen within the debounce window can't restore a draft
+      // staler than what the user just typed.
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current)
+        saveTimer.current = null
+        try {
+          window.sessionStorage.setItem(draftKey, serializeDraft(getValues()))
+        } catch {
+          // Storage unavailable — in-memory form state still has it.
+        }
       }
     }
     // Intentionally no reset() on close — the draft (form state +

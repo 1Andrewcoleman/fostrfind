@@ -75,11 +75,15 @@ export default async function ApplicationSubmittedPage({
 
       if (error) throw error
       const row = application as SubmittedApplicationRow | null
-      if (!row?.dog || !row.shelter) {
+      if (!row) {
+        // No owned application with this id — nothing to confirm.
         lookupFailed = true
       } else {
-        dogName = row.dog.name
-        shelterName = row.shelter.name
+        // The application exists and is the user's own; a null join
+        // (e.g. anonymized shelter) degrades to generic copy rather
+        // than bouncing a user whose submit just succeeded.
+        dogName = row.dog?.name ?? 'your foster dog'
+        shelterName = row.shelter?.name ?? 'the shelter'
       }
     } catch (e) {
       if (isNextControlFlowError(e)) throw e
@@ -103,10 +107,13 @@ export default async function ApplicationSubmittedPage({
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-6">
       <div className="space-y-3 text-center">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-warm/30">
+        {/* Peach, not warm/sage — a submitted application is a pending
+            state in the palette semantics; sage is reserved for
+            completed placements. */}
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-peach/40">
           <Check aria-hidden className="h-7 w-7 text-foreground/80" />
         </span>
-        <h1 className="text-3xl font-display font-bold">Application submitted</h1>
+        <h1 className="text-3xl font-display font-semibold">Application submitted</h1>
         <p className="text-muted-foreground">
           Your application to foster {dogName} is on its way to {shelterName}.
         </p>

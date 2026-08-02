@@ -84,6 +84,18 @@ export const DOG_STATUS_LABELS: Record<string, string> = {
 export const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
 
 /**
+ * Temporary pre-launch waitlist swap ("Opening Late Fall 2026").
+ *
+ * When true, `/` renders the waitlist landing (see
+ * `src/components/landing/waitlist-landing.tsx`) instead of the signup
+ * landing. `/login`, `/signup`, `/onboarding`, and all existing landing
+ * components stay intact and reachable — this flag only changes what the
+ * root route renders. Flip it off (or unset it) to restore the current
+ * landing page unchanged.
+ */
+export const WAITLIST_MODE = process.env.NEXT_PUBLIC_WAITLIST_MODE === 'true'
+
+/**
  * Real support inbox surfaced on error boundaries and the public footer.
  * Used as a single catch-all for support, privacy, and general inquiries
  * during the pilot — see also the privacy/terms pages, which point at

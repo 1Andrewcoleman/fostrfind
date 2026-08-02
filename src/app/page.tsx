@@ -14,12 +14,19 @@
 
 import Link from 'next/link'
 import { PawPrint } from 'lucide-react'
-import { SUPPORT_EMAIL } from '@/lib/constants'
+import { SUPPORT_EMAIL, WAITLIST_MODE } from '@/lib/constants'
 import { Hero } from '@/components/landing/hero'
 import { HowItWorks } from '@/components/landing/how-it-works'
 import { CtaBand } from '@/components/landing/cta-band'
+import { WaitlistLanding } from '@/components/landing/waitlist-landing'
 
 export default function LandingPage() {
+  // Temporary pre-launch swap: with NEXT_PUBLIC_WAITLIST_MODE=true the
+  // root route renders the waitlist landing instead. Everything below is
+  // untouched — flip the flag off and the signup landing renders exactly
+  // as before.
+  if (WAITLIST_MODE) return <WaitlistLanding />
+
   const year = new Date().getFullYear()
 
   return (

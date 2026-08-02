@@ -8,6 +8,19 @@ import { PawPrint } from 'lucide-react'
 // Whole section fades + slides up on first scroll-in. Panels and buttons
 // lift on hover. Each panel has a decorative paw cluster in the top-right
 // to fill the empty space next to the short body copy.
+//
+// WAITLIST_MODE: passing the `waitlist` prop swaps copy + CTAs for the
+// pre-launch waitlist versions ("Doors open soon." / save-a-spot buttons
+// that preselect a role and scroll to the form). Layout, watermarks, and
+// panel styling are identical in both modes; omit the prop and the band
+// renders exactly as before.
+
+interface CtaBandProps {
+  waitlist?: {
+    onJoinFoster: () => void
+    onJoinShelter: () => void
+  }
+}
 
 interface PawDecorationProps {
   /** Tint color including alpha, e.g. 'rgba(217,154,154,0.25)' */
@@ -38,7 +51,7 @@ function PawDecoration({ color }: PawDecorationProps) {
   )
 }
 
-export function CtaBand() {
+export function CtaBand({ waitlist }: CtaBandProps = {}) {
   const [visible, setVisible] = useState(false)
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -87,12 +100,23 @@ export function CtaBand() {
               color: '#f0ebe1',
             }}
           >
-            Pick your{' '}
-            <em style={{ color: '#c97a7a', fontStyle: 'italic' }}>side</em>
-            {' '}of the leash.
+            {waitlist ? (
+              <>
+                Doors open{' '}
+                <em style={{ color: '#c97a7a', fontStyle: 'italic' }}>soon</em>.
+              </>
+            ) : (
+              <>
+                Pick your{' '}
+                <em style={{ color: '#c97a7a', fontStyle: 'italic' }}>side</em>
+                {' '}of the leash.
+              </>
+            )}
           </h2>
           <p className="text-sm leading-relaxed mx-auto" style={{ color: '#8a8478', maxWidth: '26rem' }}>
-            We&apos;re just opening doors. Walk through one — we&apos;ll meet you on the other side.
+            {waitlist
+              ? 'Same two sides of the leash — the waitlist holds your place on either one.'
+              : "We're just opening doors. Walk through one — we'll meet you on the other side."}
           </p>
         </div>
 
@@ -139,16 +163,29 @@ export function CtaBand() {
                 className="text-sm leading-relaxed mb-8"
                 style={{ color: 'rgba(240,235,225,0.5)', maxWidth: '18rem' }}
               >
-                A weekend, a month, until forever finds them. You decide the chapter.
+                {waitlist
+                  ? "A weekend, a month, until forever finds them. Add your name and we'll save you a spot."
+                  : 'A weekend, a month, until forever finds them. You decide the chapter.'}
               </p>
             </div>
-            <Link
-              href="/signup?role=foster"
-              className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
-              style={{ backgroundColor: '#c97a7a', color: '#f5ede8' }}
-            >
-              Become a foster <span aria-hidden="true">→</span>
-            </Link>
+            {waitlist ? (
+              <button
+                type="button"
+                onClick={waitlist.onJoinFoster}
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
+                style={{ backgroundColor: '#c97a7a', color: '#f5ede8' }}
+              >
+                Save me a spot <span aria-hidden="true">→</span>
+              </button>
+            ) : (
+              <Link
+                href="/signup?role=foster"
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
+                style={{ backgroundColor: '#c97a7a', color: '#f5ede8' }}
+              >
+                Become a foster <span aria-hidden="true">→</span>
+              </Link>
+            )}
           </div>
 
           {/* Shelter — dark green panel */}
@@ -186,22 +223,35 @@ export function CtaBand() {
                   color: '#f0ebe1',
                 }}
               >
-                Find them a soft landing.
+                {waitlist ? 'Bring your dogs.' : 'Find them a soft landing.'}
               </h3>
               <p
                 className="text-sm leading-relaxed mb-8"
                 style={{ color: 'rgba(240,235,225,0.5)', maxWidth: '18rem' }}
               >
-                Move dogs out of kennels and into living rooms while they wait.
+                {waitlist
+                  ? "We're building the first rooms now. Shelters on the waitlist get in first."
+                  : 'Move dogs out of kennels and into living rooms while they wait.'}
               </p>
             </div>
-            <Link
-              href="/signup?role=shelter"
-              className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
-              style={{ backgroundColor: '#6f8a5e', color: '#e8f0e5' }}
-            >
-              List your dogs <span aria-hidden="true">→</span>
-            </Link>
+            {waitlist ? (
+              <button
+                type="button"
+                onClick={waitlist.onJoinShelter}
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
+                style={{ backgroundColor: '#6f8a5e', color: '#e8f0e5' }}
+              >
+                Save us a spot <span aria-hidden="true">→</span>
+              </button>
+            ) : (
+              <Link
+                href="/signup?role=shelter"
+                className="inline-flex items-center gap-1.5 self-start px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
+                style={{ backgroundColor: '#6f8a5e', color: '#e8f0e5' }}
+              >
+                List your dogs <span aria-hidden="true">→</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -339,6 +339,42 @@ export type FosterOnboardingServerInput = z.infer<typeof fosterOnboardingServerS
 export const shelterOnboardingServerSchema = shelterOnboardingSchema.omit({ email: true })
 export type ShelterOnboardingServerInput = z.infer<typeof shelterOnboardingServerSchema>
 
+// ---------- Waitlist signup (pre-launch) ----------
+
+// Collected by the temporary waitlist landing (WAITLIST_MODE). Free-text
+// caps mirror the profile fields above; the optional note reuses the
+// application-note cap. `shelter_name` is only meaningful for the shelter
+// role — the superRefine below requires it there and the API route nulls
+// it for fosters.
+export const WAITLIST_NOTE_MAX = 1000
+
+export const waitlistSignupSchema = z
+  .object({
+    role: z.enum(['foster', 'shelter']),
+    name: z.string().trim().min(1, 'Name is required').max(NAME_MAX),
+    email: emailSchema,
+    shelter_name: optionalTrimmedString(NAME_MAX, `Keep the name under ${NAME_MAX} characters`),
+    city_state: z
+      .string()
+      .trim()
+      .min(1, 'City & state is required')
+      .max(LOCATION_MAX, `Keep this under ${LOCATION_MAX} characters`),
+    note: optionalTrimmedString(
+      WAITLIST_NOTE_MAX,
+      `Keep this under ${WAITLIST_NOTE_MAX} characters`,
+    ),
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === 'shelter' && !data.shelter_name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Shelter or rescue name is required',
+        path: ['shelter_name'],
+      })
+    }
+  })
+export type WaitlistSignupInput = z.infer<typeof waitlistSignupSchema>
+
 // ---------- Dog create / update ----------
 
 // The DOG_NAME upper bound is generous enough for "Sir Wiggleworth the Third"

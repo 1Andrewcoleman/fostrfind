@@ -218,6 +218,25 @@ export interface Report {
   status: ReportStatus
 }
 
+// Pre-launch waitlist (WAITLIST_MODE).
+
+/**
+ * One interest submission from the temporary waitlist landing. Insert-only
+ * for the public (no SELECT RLS policy) — reads happen via service role /
+ * the Supabase dashboard. `email` is stored lowercased and unique;
+ * `shelter_name` is null for foster-parent signups.
+ */
+export interface WaitlistSignup {
+  id: string
+  created_at: string
+  role: 'foster' | 'shelter'
+  name: string
+  email: string
+  shelter_name: string | null
+  city_state: string
+  note: string | null
+}
+
 // Composite types for UI
 
 export interface DogWithShelter extends Dog {
